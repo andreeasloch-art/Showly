@@ -138,6 +138,7 @@ function Dashboard() {
     payouts,
     favorites,
     session,
+    hydrated,
     toast,
     catLabel,
   } = useShowly();
@@ -218,6 +219,14 @@ function Dashboard() {
     profile: [t("dash.profileH"), t("dash.profileSub")],
   };
   const [headT, headP] = heads[active] ?? [current[2], ""];
+
+  /* Nur mit Anmeldung. Wer nicht eingeloggt ist, landet auf der Seite zum
+     Anmelden. Bis der gespeicherte Zustand geladen ist, zeigen wir nichts,
+     damit kein fremdes Beispielkonto aufblitzt. */
+  useEffect(() => {
+    if (hydrated && !session) void navigate({ to: "/konto", replace: true });
+  }, [hydrated, session, navigate]);
+  if (!hydrated || !session) return null;
 
   return (
     <div className="page active ui26 dash26">

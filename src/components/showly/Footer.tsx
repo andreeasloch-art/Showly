@@ -42,7 +42,7 @@ function PlayMark() {
 }
 
 export function Footer() {
-  const { t, lang, setLang } = useShowly();
+  const { t, lang, setLang, session } = useShowly();
   const navigate = useNavigate();
 
   return (
@@ -118,7 +118,7 @@ export function Footer() {
               <li onClick={() => navigate({ to: "/shop", search: { bereich: "deko" } })}>{t("shop.deko")}</li>
               <li onClick={() => navigate({ to: "/torten" })}>{t("nav.sweets")}</li>
               <li onClick={() => navigate({ to: "/mitmachen" })}>{t("foot.become")}</li>
-              <li onClick={() => navigate({ to: "/dashboard" })}>{t("foot.dash")}</li>
+              {session && <li onClick={() => navigate({ to: "/dashboard" })}>{t("foot.dash")}</li>}
             </ul>
           </div>
           <div>

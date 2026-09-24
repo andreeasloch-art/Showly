@@ -3,7 +3,6 @@
 import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
-import { isInstant } from "@/showly/booking";
 
 const COPY = {
   de: {
@@ -27,13 +26,13 @@ const COPY = {
 } as const;
 
 export function BookingModeNote({ artist, compact }: { artist: Artist; compact?: boolean }) {
-  const { lang, L, hydrated } = useShowly();
+  const { lang, L, hydrated, instantFor } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   /* Die Einstellung kann im Browser gespeichert sein, die der Server beim
      ersten Zeichnen nicht kennt. Erst danach anzeigen, sonst passt die
      Server-Fassung nicht zur Browser-Fassung. */
   if (!hydrated) return null;
-  const instant = isInstant(artist);
+  const instant = instantFor(artist);
   return (
     <div className={"bm-note" + (instant ? " instant" : " request") + (compact ? " compact" : "")}>
       <Icon name={instant ? "check" : "clock"} />

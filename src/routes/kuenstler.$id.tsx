@@ -31,7 +31,7 @@ function Face({ a }: { a: Artist }) {
 function Detail() {
   const { id } = useParams({ from: "/kuenstler/$id" });
   const navigate = useNavigate();
-  const { t, lang, L, fmt, num, fmtDate, favorites, toggleFav, toast, session, catLabel } =
+  const { t, lang, L, fmt, num, fmtDate, favorites, toggleFav, toast, session, catLabel, standing } =
     useShowly();
   const cal = useCalendar();
   const [pkgId, setPkgId] = useState<string | null>(null);
@@ -478,6 +478,19 @@ function Detail() {
         </div>
 
         <aside className="detail-side">
+          {!standing(a.id).bookable ? (
+            <div className="booking-widget booking-off">
+              <Icon name="calendar" />
+              <b>{lang === "en" ? "Currently not bookable" : lang === "es" ? "No reservable por ahora" : "Derzeit nicht buchbar"}</b>
+              <p>
+                {lang === "en"
+                  ? "This profile can't be booked at the moment. Have a look at similar acts."
+                  : lang === "es"
+                    ? "Este perfil no se puede reservar por ahora. Echa un vistazo a artistas parecidos."
+                    : "Dieses Profil kann gerade nicht gebucht werden. Schau dir ähnliche Acts an."}
+              </p>
+            </div>
+          ) : (
           <div className="booking-widget">
             <div className="booking-price">
               <div className="price-main">
@@ -645,6 +658,7 @@ function Detail() {
               </button>
             </div>
           </div>
+          )}
         </aside>
       </div>
 

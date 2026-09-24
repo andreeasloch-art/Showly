@@ -76,7 +76,7 @@ const COPY = {
 } as const;
 
 function Home() {
-  const { t, L, num, lang, catLabel } = useShowly();
+  const { t, L, num, lang, catLabel, standing } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const [cat, setCat] = useState("all");
@@ -86,16 +86,21 @@ function Home() {
 
   const list = useMemo(
     () =>
-      ARTISTS.filter((a) =>
-        matchArtist(a, {
-          cat,
-          query: query.trim().toLowerCase(),
-          city: city.trim().toLowerCase(),
-          L,
-          catLabel,
-        }),
-      ),
-    [cat, query, city, L, catLabel],
+      ARTISTS.filter(
+        (a) =>
+          /* Gesperrte oder entfernte Profile nicht zeigen (AGB § 23) */
+          standing(a.id).bookable &&
+          matchArtist(a, {
+            cat,
+            query: query.trim().toLowerCase(),
+            city: city.trim().toLowerCase(),
+            L,
+            catLabel,
+          }),
+      )
+        /* Nach einem Nichterscheinen 30 Tage weiter unten (AGB § 22) */
+        .sort((x, y) => Number(standing(x.id).demoted) - Number(standing(y.id).demoted)),
+    [cat, query, city, L, catLabel, standing],
   );
   const filtered = cat !== "all" || query || city;
 

@@ -12,7 +12,7 @@ import { useShowly, type Booking } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { figName } from "@/showly/figures";
 import { bookingPrice, minHoursOf } from "@/showly/pricing";
-import { PENALTY_RATE, isInstant, isLateCancel, respondBy } from "@/showly/booking";
+import { PENALTY_RATE, checkinOpen, isLateCancel, respondBy } from "@/showly/booking";
 
 const COPY = {
   de: {
@@ -35,10 +35,23 @@ const COPY = {
     doneProof: "Abgesagt. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de, wir prüfen ihn.",
     donePenalty: (p: string) => `Abgesagt. Die Vertragsstrafe von ${p} wird dir in Rechnung gestellt.`,
     penDue: (p: string) => `Vertragsstrafe ${p}: wird in Rechnung gestellt`,
-    penProof: "Notfall-Nachweis wird geprüft (support@showly.de)",
+    penProof: "Deine Stellungnahme oder dein Nachweis wird geprüft (support@showly.de)",
     penWaived: "Nachweis anerkannt, keine Vertragsstrafe",
     claim: "Notfall belegen",
     claimed: "Danke. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de.",
+    penHearing: (d: string) => `Der Kunde meldet: nicht erschienen. Du kannst dich bis ${d} äußern oder einen Notfall belegen, danach wird die Vertragsstrafe fällig.`,
+    wasThere: "Ich war da",
+    disputed: "Danke. Schick uns kurz, was passiert ist (z. B. Fotos vom Auftritt), an support@showly.de. Wir prüfen das.",
+    checkinH: "Check-in vor Ort",
+    checkinP: "Frag den Kunden nach seinem 4-stelligen Code und gib ihn hier ein. Das belegt, dass du da warst.",
+    checkinBtn: "Einchecken",
+    checkinOk: "Eingecheckt. Danke!",
+    checkinBad: "Der Code stimmt nicht. Bitte frag noch einmal nach.",
+    checkedIn: (t: string) => `Eingecheckt um ${t}`,
+    stWarn: (d: string) => `Wegen eines Nichterscheinens kannst du bis ${d} nur per Anfrage gebucht werden und stehst in der Suche weiter unten (AGB § 23).`,
+    stSusp: (d: string) => `Dein Profil ist wegen wiederholten Nichterscheinens bis ${d} gesperrt (AGB § 23).`,
+    stRemoved: "Dein Profil wurde wegen dreimaligen Nichterscheinens innerhalb von 12 Monaten dauerhaft entfernt (AGB § 23).",
+    stAppeal: "Du kannst innerhalb von 6 Monaten kostenlos widersprechen: support@showly.de.",
     yes: "Ja, ablehnen",
     no: "Zurück",
     until: (d: string) => `Antwort bis ${d}`,
@@ -80,10 +93,23 @@ const COPY = {
     doneProof: "Cancelled. Send the proof to support@showly.de within 7 days and we'll review it.",
     donePenalty: (p: string) => `Cancelled. The contractual penalty of ${p} will be invoiced to you.`,
     penDue: (p: string) => `Contractual penalty ${p}: will be invoiced`,
-    penProof: "Emergency proof under review (support@showly.de)",
+    penProof: "Your response or proof is under review (support@showly.de)",
     penWaived: "Proof accepted, no penalty",
     claim: "Prove emergency",
     claimed: "Thanks. Send the proof to support@showly.de within 7 days.",
+    penHearing: (d: string) => `The customer reports: no-show. You can respond or prove an emergency until ${d}; after that, the contractual penalty becomes due.`,
+    wasThere: "I was there",
+    disputed: "Thanks. Briefly send us what happened (e.g. photos of the gig) at support@showly.de. We'll review it.",
+    checkinH: "Check-in on site",
+    checkinP: "Ask the customer for their 4-digit code and enter it here. It proves you were there.",
+    checkinBtn: "Check in",
+    checkinOk: "Checked in. Thanks!",
+    checkinBad: "The code is wrong. Please ask again.",
+    checkedIn: (t: string) => `Checked in at ${t}`,
+    stWarn: (d: string) => `Because of a no-show, you can only be booked by request until ${d} and appear lower in search (T&C § 23).`,
+    stSusp: (d: string) => `Your profile is suspended until ${d} because of repeated no-shows (T&C § 23).`,
+    stRemoved: "Your profile was permanently removed after three no-shows within 12 months (T&C § 23).",
+    stAppeal: "You can appeal free of charge within 6 months: support@showly.de.",
     yes: "Yes, decline",
     no: "Back",
     until: (d: string) => `Reply by ${d}`,
@@ -125,10 +151,23 @@ const COPY = {
     doneProof: "Cancelada. Envía el justificante a support@showly.de en 7 días y lo revisaremos.",
     donePenalty: (p: string) => `Cancelada. Se te facturará la penalización de ${p}.`,
     penDue: (p: string) => `Penalización ${p}: se facturará`,
-    penProof: "Justificante de emergencia en revisión (support@showly.de)",
+    penProof: "Tu respuesta o justificante está en revisión (support@showly.de)",
     penWaived: "Justificante aceptado, sin penalización",
     claim: "Justificar emergencia",
     claimed: "Gracias. Envía el justificante a support@showly.de en 7 días.",
+    penHearing: (d: string) => `El cliente indica: no se presentó. Puedes responder o justificar una emergencia hasta el ${d}; después, la penalización será exigible.`,
+    wasThere: "Estuve allí",
+    disputed: "Gracias. Envíanos lo que pasó (p. ej. fotos de la actuación) a support@showly.de. Lo revisaremos.",
+    checkinH: "Check-in en el lugar",
+    checkinP: "Pide al cliente su código de 4 cifras e introdúcelo aquí. Demuestra que estuviste allí.",
+    checkinBtn: "Hacer check-in",
+    checkinOk: "Check-in hecho. ¡Gracias!",
+    checkinBad: "El código no es correcto. Vuelve a preguntar.",
+    checkedIn: (t: string) => `Check-in a las ${t}`,
+    stWarn: (d: string) => `Por no presentarte, hasta el ${d} solo se te puede reservar por solicitud y apareces más abajo en la búsqueda (CG § 23).`,
+    stSusp: (d: string) => `Tu perfil está suspendido hasta el ${d} por no presentarte varias veces (CG § 23).`,
+    stRemoved: "Tu perfil se ha eliminado definitivamente tras tres ausencias en 12 meses (CG § 23).",
+    stAppeal: "Puedes reclamar gratis en un plazo de 6 meses: support@showly.de.",
     yes: "Sí, rechazar",
     no: "Volver",
     until: (d: string) => `Responder antes del ${d}`,
@@ -153,7 +192,8 @@ const COPY = {
 } as const;
 
 export function IncomingBookings({ artistId, onEditProfile }: { artistId: number; onEditProfile?: () => void }) {
-  const { lang, fmt, fmtDate, t, bookings, respondBooking, cancelByArtist, claimEmergency, penalties, toast } = useShowly();
+  const { lang, fmt, fmtDate, t, bookings, respondBooking, cancelByArtist, claimEmergency, penalties, checkIn, standing, instantFor, toast } = useShowly();
+  const [codes, setCodes] = useState<Record<number, string>>({});
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const [asking, setAsking] = useState<number | null>(null);
@@ -224,8 +264,26 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           {b.status === "requested" && until && <p className="inb-until">{C.until(when(until))}</p>}
           {pen && (
             <p className={"inb-pen s-" + pen.status}>
-              {pen.status === "due" ? C.penDue(fmt(pen.amount)) : pen.status === "proof" ? C.penProof : C.penWaived}
-              {pen.status === "due" && (
+              {pen.status === "hearing"
+                ? C.penHearing(fmtDate(pen.hearingUntil))
+                : pen.status === "due"
+                  ? C.penDue(fmt(pen.amount))
+                  : pen.status === "proof"
+                    ? C.penProof
+                    : C.penWaived}
+              {pen.status === "hearing" && pen.reason === "noshow" && (
+                <button
+                  type="button"
+                  className="inb-mode-btn"
+                  onClick={() => {
+                    claimEmergency(pen.id);
+                    toast(C.disputed);
+                  }}
+                >
+                  {C.wasThere}
+                </button>
+              )}
+              {(pen.status === "due" || pen.status === "hearing") && (
                 <button
                   type="button"
                   className="inb-mode-btn"
@@ -238,6 +296,37 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
                 </button>
               )}
             </p>
+          )}
+          {b.checkedInAt ? (
+            <p className="inb-checked">
+              <Icon name="check" /> {C.checkedIn(new Date(b.checkedInAt).toLocaleTimeString(lang === "en" ? "en-GB" : lang === "es" ? "es-ES" : "de-DE", { hour: "2-digit", minute: "2-digit" }))}
+            </p>
+          ) : (
+            (b.status === "confirmed" || b.status === "pending") &&
+            checkinOpen(b) && (
+              <div className="inb-checkin">
+                <b>{C.checkinH}</b>
+                <small>{C.checkinP}</small>
+                <div>
+                  <input
+                    id={"checkin-" + b.id}
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="0000"
+                    value={codes[b.id] || ""}
+                    onChange={(e) => setCodes((c) => ({ ...c, [b.id]: e.target.value.replace(/\D/g, "").slice(0, 4) }))}
+                  />
+                  <button
+                    type="button"
+                    className="dash26-mini inb-accept"
+                    disabled={(codes[b.id] || "").length !== 4}
+                    onClick={() => toast(checkIn(b.id, codes[b.id] || "") ? C.checkinOk : C.checkinBad)}
+                  >
+                    {C.checkinBtn}
+                  </button>
+                </div>
+              </div>
+            )
           )}
         </div>
         <div className="dash26-item-side">
@@ -323,9 +412,19 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
     );
   }
 
-  const instant = isInstant(a);
+  const instant = instantFor(a);
+  const st = standing(a.id);
   return (
     <div className="inb">
+      {(st.removed || !st.bookable || !st.instantAllowed) && (
+        <div className="inb-standing" role="alert">
+          <Icon name="shield" />
+          <span>
+            <b>{st.removed ? C.stRemoved : !st.bookable ? C.stSusp(fmtDate(st.until)) : C.stWarn(fmtDate(st.until))}</b>
+            <small>{C.stAppeal}</small>
+          </span>
+        </div>
+      )}
       <div className="inb-mode">
         <Icon name={instant ? "check" : "clock"} />
         <span className="inb-mode-text">{instant ? C.modeInstant : C.modeRequest}</span>

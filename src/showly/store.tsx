@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouterState } from "@tanstack/react-router";
-import { I18N, ARTISTS, SHOP_ITEMS, type Lang } from "./data";
+import { I18N, ARTISTS, SHOP_ITEMS, type Artist, type Lang } from "./data";
 import { ES } from "./i18n.es";
 import { detectCountry, langForCountry } from "./country";
 import { deleteLocalAccount, hydrateArtists, loadJSON, saveJSON } from "./persist";
@@ -20,7 +20,23 @@ import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { deleteMyAccount } from "@/utils/account.functions";
 import { addRequest, hydrateSweets } from "./sweets";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
-import { PENALTY_RATE, VOUCHER_EUR, isInstant, isLateCancel, requestExpired, voucherCode, voucherValidUntil } from "./booking";
+import {
+  HEARING_DAYS,
+  PENALTY_RATE,
+  RESERVE_DAYS,
+  RESERVE_FIRST_BOOKINGS,
+  RESERVE_RATE,
+  VOUCHER_EUR,
+  checkinCodeOf,
+  isInstant,
+  isLateCancel,
+  newCheckinCode,
+  requestExpired,
+  standingOf,
+  voucherCode,
+  voucherValidUntil,
+  type Standing,
+} from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
 
 
@@ -122,6 +138,10 @@ export interface Booking {
   status: "confirmed" | "pending" | "completed" | "requested" | "declined" | "cancelled" | "noshow";
   /** Wer abgesagt hat, für die Anzeige beim Kunden */
   cancelledBy?: "customer" | "artist";
+  /** Code, den der Künstler vor Ort eingibt (Nachweis, dass er da war) */
+  checkinCode?: string;
+  checkedInAt?: string;
+  checkedInBy?: "artist" | "customer";
   /** Zeitpunkt der Anfrage, für die Antwortfrist */
   requestedAt?: string;
   /** Zahlung bereits autorisiert (online), wird bei Zusage abgebucht */
@@ -151,6 +171,9 @@ export interface Payout {
   fee: number;
   net: number;
   status: "pending" | "paid";
+  /** Sicherheitseinbehalt der ersten Buchungen, wird später ausgezahlt */
+  reserve?: number;
+  reserveUntil?: string;
 }
 /** Vertragsstrafe eines Künstlers (AGB § 9): späte Absage oder nicht erschienen */
 export interface Penalty {
@@ -160,10 +183,14 @@ export interface Penalty {
   /** Höhe: 50 % der Gage bei später Absage, 100 % bei Nichterscheinen */
   amount: number;
   reason: "late" | "noshow";
-  /** due: wird in Rechnung gestellt · proof: Notfall-Nachweis wird geprüft ·
-      waived: Nachweis anerkannt, keine Strafe */
-  status: "due" | "proof" | "waived";
+  /** hearing: Künstler kann sich 7 Tage äußern · due: wird in Rechnung
+      gestellt · proof: Notfall-Nachweis wird geprüft · waived: keine Strafe */
+  status: "hearing" | "due" | "proof" | "waived";
   dateISO: string;
+  /** Ende der Anhörungsfrist */
+  hearingUntil?: string;
+  /** Zeitpunkt, ab dem die Strafe fällig ist (zählt fürs Stufenmodell) */
+  dueAt?: string;
 }
 /** Gutschein für Kunden nach später Absage oder Nichterscheinen */
 export interface Voucher {
@@ -234,6 +261,14 @@ interface Ctx {
   reportNoShow: (id: number) => void;
   /** Künstler reicht einen Notfall-Nachweis zu einer Vertragsstrafe ein */
   claimEmergency: (penaltyId: number) => void;
+  /** Künstler checkt mit dem Code des Kunden ein. false: Code falsch */
+  checkIn: (bookingId: number, code: string) => boolean;
+  /** Kunde bestätigt: Der Künstler ist da */
+  confirmPresence: (bookingId: number) => void;
+  /** Stufenmodell: Einschränkungen eines Künstlers */
+  standing: (artistId: number) => Standing;
+  /** Darf dieser Künstler gerade sofort gebucht werden? */
+  instantFor: (a: Artist | null | undefined) => boolean;
   penalties: Penalty[];
   vouchers: Voucher[];
   /** Kunde storniert. true, wenn es weniger als 24 Stunden vor Beginn war */
@@ -649,8 +684,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         if (!a) continue;
         const p = bookingPrice(a, b.hours, b.pkg);
         const id = counters.current.booking++;
-        /* Künstler mit Anfrage-Modus: erst nach Zusage verbindlich */
-        const instant = isInstant(a);
+        /* Künstler mit Anfrage-Modus (oder nach einem Verstoß eingeschränkt):
+           erst nach Zusage verbindlich */
+        const instant = isInstant(a) && standingOf(a.id, penalties).instantAllowed;
         setBookings((x) => [
           {
             id,
@@ -659,6 +695,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
             slot: b.slot,
             amount: p.total,
             status: !instant ? "requested" : paid ? "confirmed" : "pending",
+            checkinCode: newCheckinCode(),
             ...(!instant ? { requestedAt: new Date().toISOString(), paid } : {}),
             ...(snap.contact.name ? { customer: snap.contact.name } : {}),
             ...(b.occasion ? { occasion: b.occasion } : {}),
@@ -676,19 +713,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           return { ...av, [b.artistId]: forArtist };
         });
         if (paid && instant) {
-          setPayouts((x) => [
-            {
-              id: counters.current.payout++,
-              artistId: a.id,
-              artistName: String(L(a.name)),
-              dateISO: b.dateISO,
-              gross: p.total,
-              fee: p.total - p.payout,
-              net: p.payout,
-              status: "pending",
-            },
-            ...x,
-          ]);
+          setPayouts((x) => [makePayout(x, a, b.dateISO, p.total, p.payout), ...x]);
         }
       }
       if (snap.shop.length) {
@@ -728,7 +753,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       setCart((l) => l.filter((x) => !sk.has(x.shopId + ":" + x.mode)));
       setCartOpen(false);
     },
-    [L],
+    // makePayout steht weiter unten und hängt selbst nur von L ab
+    [L, penalties],
   );
 
   /* Slot bei einer Buchung freigeben bzw. belegen */
@@ -791,19 +817,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         const a = findArtist(b.artistId);
         if (b.paid && a) {
           const p = bookingPrice(a, b.hours || minHoursOf(a), b.pkg);
-          setPayouts((x) => [
-            {
-              id: counters.current.payout++,
-              artistId: a.id,
-              artistName: String(L(a.name)),
-              dateISO: b.dateISO,
-              gross: b.amount,
-              fee: b.amount - p.payout,
-              net: p.payout,
-              status: "pending",
-            },
-            ...x,
-          ]);
+          setPayouts((x) => [makePayout(x, a, b.dateISO, b.amount, p.payout), ...x]);
         }
       } else {
         setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "declined" } : x)));
@@ -813,8 +827,49 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [bookings, shiftSlot, L],
   );
 
-  /* Vertragsstrafe in Höhe der Gage und Gutschein für den Kunden */
-  const penalize = useCallback((b: Booking, reason: Penalty["reason"], emergency: boolean) => {
+  /* Auszahlung vormerken; bei den ersten Buchungen eines Künstlers mit
+     Sicherheitseinbehalt (AGB § 21 Abs. 5) */
+  const makePayout = useCallback(
+    (list: Payout[], a: Artist, dateISO: string, gross: number, net: number): Payout => {
+      const earlier = list.filter((p) => p.artistId === a.id).length;
+      const reserve = earlier < RESERVE_FIRST_BOOKINGS ? Math.round(net * RESERVE_RATE) : 0;
+      const until = new Date(new Date(dateISO + "T12:00:00").getTime() + RESERVE_DAYS * 86400000)
+        .toISOString()
+        .slice(0, 10);
+      return {
+        id: counters.current.payout++,
+        artistId: a.id,
+        artistName: String(L(a.name)),
+        dateISO,
+        gross,
+        fee: gross - net,
+        net,
+        status: "pending",
+        ...(reserve ? { reserve, reserveUntil: until } : {}),
+      };
+    },
+    [L],
+  );
+
+  const issueVoucher = useCallback((bookingId: number) => {
+    setVouchers((x) =>
+      x.some((v) => v.bookingId === bookingId)
+        ? x
+        : [
+            {
+              code: voucherCode(),
+              amount: VOUCHER_EUR,
+              bookingId,
+              dateISO: new Date().toISOString(),
+              validUntil: voucherValidUntil(),
+            },
+            ...x,
+          ],
+    );
+  }, []);
+
+  /* Vertragsstrafe anlegen. Gutschein für den Kunden, sobald sie fällig ist */
+  const penalize = useCallback((b: Booking, reason: Penalty["reason"], status: Penalty["status"]) => {
     const a = findArtist(b.artistId);
     const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
     const amount = Math.round(net * PENALTY_RATE[reason]);
@@ -825,23 +880,17 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         artistId: b.artistId,
         amount,
         reason,
-        status: emergency ? "proof" : "due",
+        status,
         dateISO: new Date().toISOString(),
+        ...(status === "due" ? { dueAt: new Date().toISOString() } : {}),
+        ...(status === "hearing"
+          ? { hearingUntil: new Date(Date.now() + HEARING_DAYS * 86400000).toISOString() }
+          : {}),
       },
       ...x,
     ]);
-    if (!emergency)
-      setVouchers((x) => [
-        {
-          code: voucherCode(),
-          amount: VOUCHER_EUR,
-          bookingId: b.id,
-          dateISO: new Date().toISOString(),
-          validUntil: voucherValidUntil(),
-        },
-        ...x,
-      ]);
-  }, []);
+    if (status === "due") issueVoucher(b.id);
+  }, [issueVoucher]);
 
   /* Künstler sagt ab (AGB § 9). Bis 24 Stunden vorher ohne Grund und ohne
      Folgen. Danach Vertragsstrafe, außer bei einem belegten Notfall; dann
@@ -859,7 +908,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
       );
       if (!late) return "free";
-      penalize(b, "late", emergency);
+      penalize(b, "late", emergency ? "proof" : "due");
       return emergency ? "proof" : "penalty";
     },
     [bookings, shiftSlot, penalize],
@@ -873,14 +922,58 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       setPayouts((x) =>
         x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
       );
-      penalize(b, "noshow", false);
+      /* Erst anhören: 7 Tage für Stellungnahme oder Notfall-Nachweis */
+      penalize(b, "noshow", "hearing");
     },
     [bookings, penalize],
   );
 
   const claimEmergency = useCallback((penaltyId: number) => {
-    setPenalties((x) => x.map((p) => (p.id === penaltyId && p.status === "due" ? { ...p, status: "proof" } : p)));
+    setPenalties((x) =>
+      x.map((p) => (p.id === penaltyId && (p.status === "due" || p.status === "hearing") ? { ...p, status: "proof" } : p)),
+    );
   }, []);
+
+  /* Anhörungsfrist abgelaufen ohne Nachweis: Strafe fällig, Gutschein raus */
+  useEffect(() => {
+    if (!hydrated) return;
+    const now = Date.now();
+    const over = penalties.filter((p) => p.status === "hearing" && p.hearingUntil && new Date(p.hearingUntil).getTime() < now);
+    if (!over.length) return;
+    const ids = new Set(over.map((p) => p.id));
+    setPenalties((x) => x.map((p) => (ids.has(p.id) ? { ...p, status: "due", dueAt: new Date().toISOString() } : p)));
+    for (const p of over) issueVoucher(p.bookingId);
+  }, [hydrated, penalties, issueVoucher]);
+
+  const checkIn = useCallback(
+    (bookingId: number, code: string) => {
+      const b = bookings.find((x) => x.id === bookingId);
+      if (!b || code.replace(/\D/g, "") !== checkinCodeOf(b)) return false;
+      setBookings((list) =>
+        list.map((x) =>
+          x.id === bookingId ? { ...x, checkedInAt: new Date().toISOString(), checkedInBy: "artist" } : x,
+        ),
+      );
+      return true;
+    },
+    [bookings],
+  );
+
+  const confirmPresence = useCallback((bookingId: number) => {
+    setBookings((list) =>
+      list.map((x) =>
+        x.id === bookingId && !x.checkedInAt
+          ? { ...x, checkedInAt: new Date().toISOString(), checkedInBy: "customer" }
+          : x,
+      ),
+    );
+  }, []);
+
+  const standing = useCallback((artistId: number) => standingOf(artistId, penalties), [penalties]);
+  const instantFor = useCallback(
+    (a: Artist | null | undefined) => isInstant(a) && (!a || standingOf(a.id, penalties).instantAllowed),
+    [penalties],
+  );
 
   /* Stornierung durch den Kunden (AGB § 8): bis 24 Stunden vor Beginn
      kostenlos, danach bleibt die Gage für den Künstler vorgemerkt. Eine
@@ -1028,6 +1121,10 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     cancelByCustomer,
     reportNoShow,
     claimEmergency,
+    checkIn,
+    confirmPresence,
+    standing,
+    instantFor,
     penalties,
     vouchers,
     payouts,

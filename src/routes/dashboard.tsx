@@ -12,7 +12,7 @@ import { MyRequests } from "@/components/showly/Sweets";
 import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
-import { isLateCancel } from "@/showly/booking";
+import { checkinCodeOf, isLateCancel, presenceQuestion, startOf } from "@/showly/booking";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
 
@@ -32,13 +32,19 @@ const COPY = {
     stNoShow: "Nicht erschienen, erstattet",
     stByArtist: "Vom Künstler abgesagt, erstattet",
     noShow: "Künstler nicht erschienen?",
-    noShowSure: "Wir erstatten dir den vollen Betrag und schenken dir einen Gutschein über 50 €. Bitte melde nur, was wirklich passiert ist; falsche Meldungen können zur Sperrung führen.",
+    noShowSure: "Wir erstatten dir den vollen Betrag. Der Künstler kann sich 7 Tage dazu äußern; bestätigt sich das Nichterscheinen, bekommst du zusätzlich einen Gutschein über 50 €. Bitte melde nur, was wirklich passiert ist; falsche Meldungen können zur Sperrung führen.",
     noShowYes: "Ja, nicht erschienen",
-    noShowDone: "Danke für die Meldung. Du bekommst alles zurück, dein Gutschein steht oben.",
+    noShowDone: "Danke für die Meldung. Du bekommst alles zurück. Den Gutschein siehst du hier, sobald die Prüfung abgeschlossen ist (spätestens nach 7 Tagen).",
     vouchH: "Deine Gutscheine",
     vouchP: (d: string) => `Gültig bis ${d}. Zum Einlösen schick den Code mit deiner nächsten Buchung an support@showly.de, wir ziehen ihn vom Betrag ab.`,
     copy: "Kopieren",
     copied: "Code kopiert",
+    codeLine: (c: string) => `Check-in-Code: ${c}. Nenne ihn dem Künstler vor Ort.`,
+    presenceQ: (n: string) => `Ist ${n} da?`,
+    presenceP: "Der Künstler hat noch nicht eingecheckt.",
+    presenceYes: "Ja, ist da",
+    presenceNo: "Nein, nicht erschienen",
+    presenceThanks: "Danke! Viel Spaß beim Event.",
     stCancelled: "Storniert",
     cancel: "Stornieren",
     withdraw: "Anfrage zurückziehen",
@@ -72,13 +78,19 @@ const COPY = {
     stNoShow: "No-show, refunded",
     stByArtist: "Cancelled by the artist, refunded",
     noShow: "Artist didn't show up?",
-    noShowSure: "We'll refund the full amount and give you a €50 voucher. Please only report what really happened; false reports can lead to a ban.",
+    noShowSure: "We'll refund the full amount. The artist has 7 days to respond; if the no-show is confirmed, you also get a €50 voucher. Please only report what really happened; false reports can lead to a ban.",
     noShowYes: "Yes, no-show",
-    noShowDone: "Thanks for letting us know. You get a full refund; your voucher is shown above.",
+    noShowDone: "Thanks for letting us know. You get a full refund. Your voucher appears here once the review is done (within 7 days).",
     vouchH: "Your vouchers",
     vouchP: (d: string) => `Valid until ${d}. To redeem, send the code with your next booking to support@showly.de and we'll deduct it.`,
     copy: "Copy",
     copied: "Code copied",
+    codeLine: (c: string) => `Check-in code: ${c}. Give it to the artist on site.`,
+    presenceQ: (n: string) => `Is ${n} there?`,
+    presenceP: "The artist hasn't checked in yet.",
+    presenceYes: "Yes, they're here",
+    presenceNo: "No, didn't show up",
+    presenceThanks: "Thanks! Enjoy the event.",
     stCancelled: "Cancelled",
     cancel: "Cancel",
     withdraw: "Withdraw request",
@@ -112,13 +124,19 @@ const COPY = {
     stNoShow: "No se presentó, reembolsada",
     stByArtist: "Cancelada por el artista, reembolsada",
     noShow: "¿El artista no se presentó?",
-    noShowSure: "Te devolvemos el importe completo y te regalamos un vale de 50 €. Denuncia solo lo que ocurrió de verdad; las denuncias falsas pueden llevar al bloqueo.",
+    noShowSure: "Te devolvemos el importe completo. El artista tiene 7 días para responder; si se confirma la ausencia, recibes además un vale de 50 €. Denuncia solo lo que ocurrió de verdad; las denuncias falsas pueden llevar al bloqueo.",
     noShowYes: "Sí, no se presentó",
-    noShowDone: "Gracias por avisar. Recibes el reembolso completo; tu vale aparece arriba.",
+    noShowDone: "Gracias por avisar. Recibes el reembolso completo. Tu vale aparecerá aquí cuando termine la revisión (máx. 7 días).",
     vouchH: "Tus vales",
     vouchP: (d: string) => `Válido hasta el ${d}. Para canjearlo, envía el código con tu próxima reserva a support@showly.de y lo descontamos.`,
     copy: "Copiar",
     copied: "Código copiado",
+    codeLine: (c: string) => `Código de check-in: ${c}. Dáselo al artista en el lugar.`,
+    presenceQ: (n: string) => `¿Está ${n} allí?`,
+    presenceP: "El artista aún no ha hecho check-in.",
+    presenceYes: "Sí, está aquí",
+    presenceNo: "No, no se presentó",
+    presenceThanks: "¡Gracias! Disfruta del evento.",
     stCancelled: "Cancelada",
     cancel: "Cancelar",
     withdraw: "Retirar solicitud",
@@ -220,6 +238,7 @@ function Dashboard() {
     cancelByCustomer,
     reportNoShow,
     vouchers,
+    confirmPresence,
   } = useShowly();
   const [cancelAsk, setCancelAsk] = useState<number | null>(null);
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -498,6 +517,11 @@ function Dashboard() {
                             </span>
                           )}
                         </div>
+                        {(b.status === "confirmed" || b.status === "pending") && b.dateISO >= todayISO && (
+                          <p className="dash26-code">
+                            <Icon name="lock" /> {C.codeLine(checkinCodeOf(b))}
+                          </p>
+                        )}
                       </div>
                       <div className="dash26-item-side">
                         <b>{fmt(b.amount)}</b>
@@ -507,7 +531,8 @@ function Dashboard() {
                         </button>
                       </div>
                       {(b.status === "confirmed" || b.status === "pending" || b.status === "requested") &&
-                        b.dateISO >= todayISO && (
+                        b.dateISO >= todayISO &&
+                        startOf(b) > Date.now() && (
                           <div className="inb-actions">
                             {cancelAsk === b.id ? (
                               <>
@@ -542,7 +567,34 @@ function Dashboard() {
                             )}
                           </div>
                         )}
+                      {presenceQuestion(b) && (
+                        <div className="inb-actions dash26-presence">
+                          <span className="inb-sure">
+                            <b>{C.presenceQ(String(L(a.name)))}</b> {C.presenceP}
+                          </span>
+                          <button
+                            className="dash26-mini outline"
+                            onClick={() => {
+                              reportNoShow(b.id);
+                              toast(C.noShowDone);
+                            }}
+                          >
+                            {C.presenceNo}
+                          </button>
+                          <button
+                            className="dash26-mini inb-accept"
+                            onClick={() => {
+                              confirmPresence(b.id);
+                              toast(C.presenceThanks);
+                            }}
+                          >
+                            {C.presenceYes}
+                          </button>
+                        </div>
+                      )}
                       {(b.status === "confirmed" || b.status === "pending") &&
+                        !b.checkedInAt &&
+                        !presenceQuestion(b) &&
                         b.dateISO < todayISO &&
                         b.dateISO >= noShowFrom && (
                           <div className="inb-actions">

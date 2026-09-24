@@ -17,7 +17,6 @@ import { setPending } from "@/showly/pending";
 import { MAX_HOURS, bookingPrice, cartTotals, findArtist, minHoursOf, shopUnit } from "@/showly/pricing";
 import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
-import { isInstant } from "@/showly/booking";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
 
@@ -229,6 +228,7 @@ export function CartCheckout() {
     removeFromCart,
     removeCartRequest,
     completeCart,
+    instantFor,
   } = useShowly();
   const X = (TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de) as T;
   const navigate = useNavigate();
@@ -676,7 +676,7 @@ export function CartCheckout() {
                   <Icon name="calendar" /> {X.cancel}
                 </p>
               )}
-              {cartBookings.some((b) => !isInstant(findArtist(b.artistId))) && (
+              {cartBookings.some((b) => !instantFor(findArtist(b.artistId))) && (
                 <p className="co-side-note">
                   <Icon name="clock" /> {X.reqNote}
                 </p>

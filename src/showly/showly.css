@@ -6241,3 +6241,26 @@ body:has(.modal-overlay) .tabbar{display:none!important}
 /* Hinweis bei Kontaktdaten in Textfeldern */
 .contact-hint{display:flex;gap:8px;align-items:flex-start;margin:8px 0 0;padding:10px 12px;border-radius:12px;background:#FFF1E2;color:#8A4A0F;font-size:13.5px;line-height:1.45;text-align:left}
 .contact-hint svg{flex:none;width:16px;height:16px;margin-top:2px}
+.booking-off{display:flex;flex-direction:column;align-items:flex-start;gap:8px}
+.booking-off svg{width:22px;height:22px;color:var(--h-muted,#6B6480)}
+.booking-off b{font:600 17px/1.2 "Outfit",system-ui,sans-serif}
+.booking-off p{margin:0;font-size:14px;color:var(--h-muted,#6B6480)}
+
+/* Stufenmodell, Check-in und Anhörung */
+.inb-standing{display:flex;gap:10px;align-items:flex-start;padding:14px;border-radius:14px;background:#FCE4E8;color:#7A1E30;font-size:14px;line-height:1.45}
+.inb-standing svg{flex:none;width:18px;height:18px;margin-top:2px}
+.inb-standing span{display:flex;flex-direction:column;gap:4px}
+.inb-standing small{font-size:13px;opacity:.85}
+.inb-checkin{margin-top:8px;padding:12px;border-radius:14px;background:#EEF7F2;display:flex;flex-direction:column;gap:6px}
+.inb-checkin b{font:600 14.5px/1.2 'Outfit',system-ui,sans-serif;color:#1B6F4C}
+.inb-checkin small{font-size:13px;line-height:1.4;color:var(--h-ink2,#3A3350)}
+.inb-checkin>div{display:flex;gap:8px;align-items:center}
+.inb-checkin input{width:110px;height:40px;padding:0 12px;border:1.5px solid #BFE3CF;border-radius:10px;font:600 18px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-align:center;background:#fff}
+.inb-checkin .dash26-mini{margin:0}
+.inb-checkin .dash26-mini:disabled{opacity:.5}
+.inb-checked{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:#1B6F4C}
+.inb-checked svg{width:15px;height:15px}
+.inb-pen.s-hearing{color:#8A4A0F}
+.dash26-code{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--h-ink2,#3A3350)}
+.dash26-code svg{width:14px;height:14px;color:var(--h-violet,#6B3BE8)}
+.dash26-presence{background:#FFF4E5;border-radius:14px;padding:12px;border-top:none}

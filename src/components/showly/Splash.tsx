@@ -1,8 +1,9 @@
 /* Startbild beim Öffnen der App, wie bei Kleinanzeigen: ein Foto mit
  * Künstlerinnen und Künstlern aus allen Sparten, in der Mitte das Logo.
  *
- * Es erscheint einmal pro App-Start (sessionStorage), bleibt gut 3 Sekunden
- * stehen und blendet dann aus. Ein Tippen schließt es sofort. Beim Wechsel
+ * Es erscheint einmal pro App-Start (sessionStorage), steht zusammen mit dem
+ * Ausblenden 3,5 Sekunden. Das Logo kommt dabei aus der Tiefe nach vorne:
+ * klein, unscharf und durchsichtig, dann immer größer und klar. Ein Tippen schließt es sofort. Beim Wechsel
  * zwischen Seiten oder beim Neuladen innerhalb derselben Sitzung kommt es
  * nicht noch einmal.
  *
@@ -11,21 +12,28 @@
 import { useEffect, useState } from "react";
 
 const KEY = "showly.splashShown";
-const SHOW_MS = 3400;
-const FADE_MS = 550;
+const SHOW_MS = 3000;
+const FADE_MS = 500;
+
+/* Entscheidung einmal pro Seitenaufruf treffen. Der Effekt kann in der
+   Entwicklung doppelt laufen; beim zweiten Mal stünde sonst schon "gezeigt"
+   im Speicher und das Bild verschwände sofort. */
+let showThisLoad: boolean | null = null;
 
 export function Splash() {
   const [phase, setPhase] = useState<"show" | "fade" | "gone">("show");
 
   useEffect(() => {
-    let seen = false;
-    try {
-      seen = sessionStorage.getItem(KEY) === "1";
-      sessionStorage.setItem(KEY, "1");
-    } catch {
-      /* ohne Speicher einfach jedes Mal zeigen */
+    if (showThisLoad === null) {
+      showThisLoad = true;
+      try {
+        showThisLoad = sessionStorage.getItem(KEY) !== "1";
+        sessionStorage.setItem(KEY, "1");
+      } catch {
+        /* ohne Speicher einfach jedes Mal zeigen */
+      }
     }
-    if (seen) {
+    if (!showThisLoad) {
       setPhase("gone");
       return;
     }
@@ -48,7 +56,7 @@ export function Splash() {
       <img className="splash-photo" src="/splash-acts.webp" alt="" decoding="async" fetchPriority="high" />
       <div className="splash-shade" />
       <div className="splash-logo">
-        <img src="/logo-showly@2x.png" alt="Showly" />
+        <img src="/splash-logo.webp" alt="Showly" />
       </div>
     </div>
   );

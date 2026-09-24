@@ -6087,3 +6087,13 @@ button.cart-addon{cursor:pointer}
   .shop26 .shop-area button svg{width:14px;height:14px}
 }
 @media(max-width:370px){.shop26 .shop-area button{padding:0 7px;gap:4px}}
+
+/* Logo in der Fußzeile: Das bunte Logo ging auf dem dunklen Lila fast unter.
+   Ein weißes Schild dahinter, wie oben im Kopf, lässt die Farben leuchten,
+   ohne den Hintergrund der Fußzeile zu ändern. */
+.site-footer .footer-brand{display:inline-flex}
+.site-footer .footer-brand .logo-img{
+  box-sizing:content-box;height:30px;width:auto;
+  padding:9px 16px 7px;border-radius:14px;background:#fff;
+  box-shadow:0 6px 20px rgba(0,0,0,.28);
+}

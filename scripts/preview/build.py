@@ -52,14 +52,16 @@ os.rename("_shell.html", "index.html")
 for f in ("robots.txt", "manifest.webmanifest"):
     if os.path.exists(f): os.remove(f)
 
-# Absolute Pfade (/acts/1.svg, /./assets/x.js) relativ machen
+# Absolute Pfade (/acts/1.svg, /./assets/x.js) relativ machen. Ordner nur
+# mit folgendem Schrägstrich: "/shop" ist auch eine Seite der App und muss
+# bleiben, nur "/shop/1.svg" ist ein Bild.
 top = sorted(os.listdir("."), key=len, reverse=True)
-alt = "|".join(re.escape(e) for e in top if e != "index.html")
+alt = "|".join(re.escape(e) + ("/" if os.path.isdir(e) else "") for e in top if e != "index.html")
 for p in glob.glob("index.html") + glob.glob("assets/*.js") + glob.glob("assets/*.css"):
     s = open(p, encoding="utf-8").read()
     s = s.replace("/./assets/", "./assets/")
     pre = "../" if p.endswith(".css") else "./"
-    s = re.sub(r'(["\'`(,\s])/(' + alt + r')(?=[/"\'`)\s,?#]|$)', lambda m: m.group(1) + pre + m.group(2), s)
+    s = re.sub(r'(["\'`(,\s])/(' + alt + r')(?=[\w/"\'`)\s,?#.$-]|$)', lambda m: m.group(1) + pre + m.group(2), s)
     # Steuer- und Ersatzzeichen als Escape schreiben, sonst lehnt der Upload ab
     s = s.replace("\ufffd", "\\uFFFD").replace("\x00", "\\u0000")
     if p == "index.html":

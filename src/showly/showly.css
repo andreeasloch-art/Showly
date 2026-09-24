@@ -6097,3 +6097,66 @@ button.cart-addon{cursor:pointer}
   padding:9px 16px 7px;border-radius:14px;background:#fff;
   box-shadow:0 6px 20px rgba(0,0,0,.28);
 }
+
+/* Buchungsmodus: Wahl im Profil-Editor */
+.pe-mode{border:none;margin:18px 0 0;padding:0;display:grid;gap:10px}
+.pe-mode legend{margin-bottom:8px}
+.pe-mode-opt{display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1.5px solid var(--h-line);border-radius:16px;background:#fff;cursor:pointer;transition:border-color .2s,background .2s}
+.pe-mode-opt:hover{border-color:#CFC2FB}
+.pe-mode-opt.on{border-color:var(--h-violet);background:var(--h-soft)}
+.pe-mode-opt input{position:absolute;opacity:0;pointer-events:none}
+.pe-mode-opt:has(input:focus-visible){outline:2px solid var(--h-violet);outline-offset:2px}
+.pe-mode-ic{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--h-soft);color:var(--h-violet)}
+.pe-mode-opt.on .pe-mode-ic{background:var(--h-violet);color:#fff}
+.pe-mode-ic svg{width:17px;height:17px}
+.pe-mode-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.pe-mode-text b{font:600 15px/1.3 'Outfit',system-ui,sans-serif;color:var(--h-ink)}
+.pe-mode-text small{font-size:13.5px;line-height:1.45;color:var(--h-muted)}
+
+/* Hinweis für Kunden: sofort bestätigt oder Anfrage */
+.bm-note{display:flex;gap:10px;align-items:flex-start;margin:12px 0;padding:11px 13px;border-radius:14px;font-size:13.5px;line-height:1.4}
+.bm-note svg{flex:none;width:17px;height:17px;margin-top:1px}
+.bm-note span{display:flex;flex-direction:column;gap:2px}
+.bm-note b{font-weight:600}
+.bm-note small{font-size:13px;opacity:.85}
+.bm-note.instant{background:#E6F6EE;color:#1B6F4C}
+.bm-note.request{background:#FFF4E5;color:#8A4A0F}
+
+/* Eingehende Buchungen beim Künstler */
+.dash26-status.s-requested{background:#FFF4E5;color:#B45F14}
+.dash26-status.s-declined{background:#F3F1F7;color:#6B6480}
+.inb{display:flex;flex-direction:column;gap:14px}
+.inb-mode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--h-soft);font-size:14px;color:var(--h-ink2)}
+.inb-mode svg{width:17px;height:17px;color:var(--h-violet);flex:none}
+.inb-mode{flex-wrap:nowrap}
+.inb-mode span{flex:1 1 0;min-width:0}
+.inb-mode-btn{border:none;background:none;padding:4px 0;font:600 14px/1 'Outfit',system-ui,sans-serif;color:var(--h-violet);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.inb-h{margin:8px 0 0;font:600 17px/1.2 'Outfit',system-ui,sans-serif;color:var(--h-ink);display:flex;align-items:center;gap:8px}
+.inb-count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#E0892A;color:#fff;font-size:12.5px}
+.dash26-item.inb-item{grid-template-columns:minmax(0,1fr) auto;padding:14px 16px}
+@media(max-width:860px){.dash26-item.inb-item{grid-template-columns:minmax(0,1fr)}}
+.inb-item.s-requested{border-color:#F3C58F}
+.inb-item.s-declined{opacity:.7}
+.inb-until{margin:2px 0 0;font-size:13px;font-weight:600;color:#B45F14}
+.inb-actions{grid-column:1/-1;display:flex;justify-content:flex-end;align-items:center;gap:8px;flex-wrap:wrap;padding-top:10px;margin-top:4px;border-top:1px solid var(--h-line)}
+.inb-sure{flex:1 1 100%;font-size:13.5px;color:var(--h-ink2)}
+@media(min-width:561px){.inb-sure{flex:1 1 auto}}
+.inb-accept{background:#1F9D6E!important;border-color:#1F9D6E!important;color:#fff!important}
+.inb-decline{background:#C2334A!important;border-color:#C2334A!important;color:#fff!important}
+.inb-decline-ghost{color:#C2334A!important}
+.inb-actions .dash26-mini{margin:0}
+
+/* Solange ein Fenster (Buchung, Warenkorb …) offen ist, verschwindet die
+   Leiste unten. Sonst lag sie über den Knöpfen am Fensterende, etwa über
+   "Weiter zur Zahlung", und die ließen sich auf dem Handy nicht antippen. */
+body:has(.modal-overlay) .tabbar{display:none!important}
+
+/* Speicherleiste im Profil-Editor auf dem Handy: Hinweis oben, die beiden
+   Knöpfe darunter nebeneinander. Vorher ragte "Änderungen speichern" rechts
+   aus dem Bildschirm. */
+@media(max-width:560px){
+  .pe-savebar{flex-wrap:wrap;gap:10px;padding:12px}
+  .pe-savebar>span{flex:1 1 100%}
+  .pe-savebar>div{flex:1 1 100%}
+  .pe-savebar .home-btn{flex:1 1 0;justify-content:center;padding:0 12px}
+}

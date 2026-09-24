@@ -10,6 +10,7 @@ import { Calendar, useCalendar } from "@/components/showly/Calendar";
 import { AddOnShelf, EventBundle, suggestForArtist } from "@/components/showly/AddOns";
 import { BookingModal } from "@/components/showly/BookingModal";
 import { Footer } from "@/components/showly/Footer";
+import { BookingModeNote } from "@/components/showly/BookingModeNote";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ReviewComposer, UserReviewList } from "@/components/showly/Reviews";
 
@@ -506,6 +507,7 @@ function Detail() {
               </div>
               <div className="price-note">✓ {t("book.freeCancel")}</div>
             </div>
+            <BookingModeNote artist={a} />
 
             <div className="booking-fields">
               <button

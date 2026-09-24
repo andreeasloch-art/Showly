@@ -1,5 +1,6 @@
 /* Dreistufiges Buchungs-Modal: Details → Zahlung → Bestätigung. */
 import { useState } from "react";
+import { BookingModeNote } from "@/components/showly/BookingModeNote";
 import { useNavigate } from "@tanstack/react-router";
 import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
@@ -221,6 +222,7 @@ export function BookingModal({
                     <span>{fmt(total)}</span>
                   </div>
                 </div>
+                <BookingModeNote artist={a} />
                 <div className="policy-box">
                   <Icon name="lock" /> <strong>{t("mod.cancelPolicy")}</strong> {t("mod.cancelText")}
                 </div>

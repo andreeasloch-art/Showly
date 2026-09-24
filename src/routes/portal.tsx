@@ -28,6 +28,7 @@ import { useShowly } from "@/showly/store";
 import { ARTISTS } from "@/showly/data";
 import { Icon, SLOTS, todayISO } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
+import { IncomingBookings } from "@/components/showly/IncomingBookings";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { IdentityCheck } from "@/components/showly/IdentityCheck";
 import { updateArtistProfile, findAccount } from "@/showly/persist";
@@ -461,7 +462,6 @@ function Portal() {
     );
   }
 
-  const editing = mine.find((b) => b.id === editId) || null;
 
   function saveProfile() {
     const patch = {
@@ -825,35 +825,9 @@ function Portal() {
         </div>
       )}
 
-      {tab === "b" && (
+      {tab === "b" && pid != null && (
         <div className="portal-body">
-          {mine.length === 0 && <p className="portal-empty">{T.none}</p>}
-          {mine.map((b) => (
-            <div className="portal-row" key={b.id}>
-              <div className="portal-row-main">
-                <strong>{fmtDate(b.dateISO)}</strong>
-                <span>{b.slot || T.noSlot}</span>
-                {b.figure && <span>{b.figure}</span>}
-                <span className={"portal-status s-" + b.status}>{b.status}</span>
-              </div>
-              <div className="portal-row-side">
-                <span className="portal-amount">{fmt(b.amount)}</span>
-                <button className="action-btn" onClick={() => setEditId(b.id)}>
-                  {T.edit}
-                </button>
-                <button
-                  className="action-btn danger"
-                  onClick={() => {
-                    if (typeof window !== "undefined" && !window.confirm(T.confirmCancel)) return;
-                    cancelBooking(b.id);
-                    toast(T.cancelled);
-                  }}
-                >
-                  {T.cancel}
-                </button>
-              </div>
-            </div>
-          ))}
+          <IncomingBookings artistId={pid} onEditProfile={() => setTab("p")} />
         </div>
       )}
 
@@ -957,60 +931,6 @@ function Portal() {
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {editing && (
-        <div className="modal-overlay" onClick={() => setEditId(null)}>
-          <div className="portal-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="portal-h2">{T.edit}</h2>
-            <label>
-              {T.date}
-              <input
-                type="date"
-                value={editing.dateISO}
-                onChange={(e) => updateBooking(editing.id, { dateISO: e.target.value })}
-              />
-            </label>
-            <label>
-              {T.slot}
-              <select
-                value={editing.slot || ""}
-                onChange={(e) => updateBooking(editing.id, { slot: e.target.value })}
-              >
-                <option value="">{T.noSlot}</option>
-                {SLOTS.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              {T.figure}
-              <input
-                value={editing.figure || ""}
-                onChange={(e) => updateBooking(editing.id, { figure: e.target.value })}
-              />
-            </label>
-            <label>
-              {T.amount}
-              <input
-                type="number"
-                value={editing.amount}
-                onChange={(e) => updateBooking(editing.id, { amount: Number(e.target.value) || 0 })}
-              />
-            </label>
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setEditId(null);
-                toast(T.saved);
-              }}
-            >
-              {T.save}
-            </button>
           </div>
         </div>
       )}

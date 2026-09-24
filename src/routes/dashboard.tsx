@@ -11,6 +11,7 @@ import { ArtistCard } from "@/components/showly/ArtistCard";
 import { MyRequests } from "@/components/showly/Sweets";
 import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
+import { IncomingBookings } from "@/components/showly/IncomingBookings";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -24,6 +25,10 @@ export const Route = createFileRoute("/dashboard")({
 const COPY = {
   de: {
     sweetReq: "Torten-Anfragen",
+    incoming: "Buchungen",
+    incomingSub: "Anfragen annehmen oder ablehnen und kommende Auftritte im Blick behalten.",
+    stRequested: "Wartet auf Zusage",
+    stDeclined: "Abgelehnt",
     noReqH: "Noch keine Anfragen",
     noReqP: "Torten, Kuchen und Candy Bars fragst du direkt bei Konditoreien und Privatbäckern an.",
     noReqBtn: "Torten ansehen",
@@ -40,6 +45,10 @@ const COPY = {
   },
   en: {
     sweetReq: "Cake requests",
+    incoming: "Bookings",
+    incomingSub: "Accept or decline requests and keep track of upcoming gigs.",
+    stRequested: "Awaiting reply",
+    stDeclined: "Declined",
     noReqH: "No requests yet",
     noReqP: "Request cakes, bakes and candy bars directly from patisseries and home bakers.",
     noReqBtn: "See cakes",
@@ -56,6 +65,10 @@ const COPY = {
   },
   es: {
     sweetReq: "Solicitudes de tartas",
+    incoming: "Reservas",
+    incomingSub: "Acepta o rechaza solicitudes y controla tus próximas actuaciones.",
+    stRequested: "Esperando respuesta",
+    stDeclined: "Rechazada",
     noReqH: "Aún no hay solicitudes",
     noReqP: "Pide tartas y candy bars directamente a pastelerías y particulares.",
     noReqBtn: "Ver tartas",
@@ -150,6 +163,7 @@ function Dashboard() {
   useEffect(() => setSweetReqCount(listRequests().length), []);
   const items: [string, string, string, string | number][] = myProfile
     ? [
+        ["incoming", "clipboard", C.incoming, bookings.filter((b) => b.artistId === myProfile.id && b.status === "requested").length || ""],
         ["edit", "sparkle", C.edit, ""],
         ["calendar", "calendar", t("dash.calendar"), ""],
         ...(((myProfile as any).packages || []).length
@@ -187,7 +201,15 @@ function Dashboard() {
       : t("auth.customer")
     : "";
   const statusLabel = (st: string) =>
-    st === "confirmed" ? t("mod.confirmed") : st === "pending" ? t("dash.pending") : t("dash.done");
+    st === "confirmed"
+      ? t("mod.confirmed")
+      : st === "pending"
+        ? t("dash.pending")
+        : st === "requested"
+          ? C.stRequested
+          : st === "declined"
+            ? C.stDeclined
+            : t("dash.done");
 
   const spent =
     bookings.reduce((s, b) => s + b.amount, 0) + orders.reduce((s, o) => s + o.total, 0);
@@ -209,6 +231,7 @@ function Dashboard() {
 
   const heads: Record<string, [string, string]> = {
     bookings: [t("dash.bookingsH"), t("dash.bookingsSub")],
+    incoming: [C.incoming, C.incomingSub],
     orders: [t("dash.ordersH"), t("dash.ordersSub")],
     favorites: [t("dash.favsH"), t("dash.favsSub")],
     payments: [t("dash.paymentsH"), t("dash.paymentsSub")],
@@ -556,6 +579,10 @@ function Dashboard() {
               </div>
             )}
           </>
+        )}
+
+        {active === "incoming" && myProfile && (
+          <IncomingBookings artistId={myProfile.id} onEditProfile={() => setSection("edit")} />
         )}
 
         {active === "edit" && myProfile && <ProfileEditor artist={myProfile} key={myProfile.id} />}

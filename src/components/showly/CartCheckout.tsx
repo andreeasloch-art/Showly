@@ -17,6 +17,7 @@ import { setPending } from "@/showly/pending";
 import { MAX_HOURS, bookingPrice, cartTotals, findArtist, minHoursOf, shopUnit } from "@/showly/pricing";
 import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
+import { isInstant } from "@/showly/booking";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
 
@@ -66,6 +67,7 @@ const TEXT = {
     sumLater: "Torten-Anfragen (Preis folgt)",
     secure: "Sichere Zahlung über Stripe. Showly sieht keine Kartendaten.",
     cancel: "Buchungen sind bis 48 Stunden vorher kostenlos stornierbar.",
+    reqNote: "Einige Künstler bestätigen erst innerhalb von 48 Stunden. Für diese Buchungen wird erst bei Zusage abgebucht.",
     offH: "Online-Zahlung noch nicht freigeschaltet",
     offP: "Du kannst trotzdem verbindlich reservieren. Künstler und Anbieter bestätigen, bezahlt wird danach. Jetzt wird nichts abgebucht.",
     offBtn: "Zahlungspflichtig reservieren",
@@ -124,6 +126,7 @@ const TEXT = {
     sumLater: "Cake requests (price follows)",
     secure: "Secure payment via Stripe. Showly never sees card details.",
     cancel: "Bookings can be cancelled free of charge up to 48 hours before.",
+    reqNote: "Some artists confirm within 48 hours. For those bookings, payment is only taken once they accept.",
     offH: "Online payment is not switched on yet",
     offP: "You can still reserve. Artists and providers confirm, payment follows afterwards. Nothing is charged now.",
     offBtn: "Reserve with obligation to pay",
@@ -182,6 +185,7 @@ const TEXT = {
     sumLater: "Solicitudes de tartas (precio a confirmar)",
     secure: "Pago seguro con Stripe. Showly no ve los datos de la tarjeta.",
     cancel: "Las reservas se pueden cancelar gratis hasta 48 horas antes.",
+    reqNote: "Algunos artistas confirman en 48 horas. En esas reservas solo se cobra cuando aceptan.",
     offH: "El pago en línea todavía no está activado",
     offP: "Aun así puedes reservar. Artistas y proveedores confirman y el pago llega después. Ahora no se cobra nada.",
     offBtn: "Reservar con obligación de pago",
@@ -670,6 +674,11 @@ export function CartCheckout() {
               {cartBookings.length > 0 && (
                 <p className="co-side-note">
                   <Icon name="calendar" /> {X.cancel}
+                </p>
+              )}
+              {cartBookings.some((b) => !isInstant(findArtist(b.artistId))) && (
+                <p className="co-side-note">
+                  <Icon name="clock" /> {X.reqNote}
                 </p>
               )}
             </div>

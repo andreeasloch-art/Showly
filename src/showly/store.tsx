@@ -17,7 +17,8 @@ import { ES } from "./i18n.es";
 import { detectCountry, langForCountry } from "./country";
 import { hydrateArtists, loadJSON, saveJSON } from "./persist";
 import { addRequest, hydrateSweets } from "./sweets";
-import { bookingPrice, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
+import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
+import { isInstant, requestExpired } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
 
 
@@ -114,7 +115,17 @@ export interface Booking {
   dateISO: string;
   slot?: string;
   amount: number;
-  status: "confirmed" | "pending" | "completed";
+  /* requested: wartet auf Zusage des Künstlers · declined: abgelehnt oder
+     verfallen, Termin wieder frei, Zahlung wird nicht abgebucht */
+  status: "confirmed" | "pending" | "completed" | "requested" | "declined";
+  /** Zeitpunkt der Anfrage, für die Antwortfrist */
+  requestedAt?: string;
+  /** Zahlung bereits autorisiert (online), wird bei Zusage abgebucht */
+  paid?: boolean;
+  /** Name des Kunden, für die Anzeige beim Künstler */
+  customer?: string;
+  occasion?: string;
+  guests?: string;
   figure?: string;
   pkg?: string;
   hours?: number;
@@ -187,6 +198,10 @@ interface Ctx {
   addBooking: (b: Omit<Booking, "id">) => void;
   updateBooking: (id: number, patch: Partial<Omit<Booking, "id" | "artistId">>) => void;
   cancelBooking: (id: number) => void;
+  /** Künstler nimmt eine Anfrage an (true) oder lehnt sie ab (false) */
+  respondBooking: (id: number, accept: boolean) => void;
+  /** Künstler sagt eine bestätigte Buchung ab: Termin frei, Kunde bekommt alles zurück */
+  cancelByArtist: (id: number) => void;
   orders: Order[];
 
   session: Session | null;
@@ -586,6 +601,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         if (!a) continue;
         const p = bookingPrice(a, b.hours, b.pkg);
         const id = counters.current.booking++;
+        /* Künstler mit Anfrage-Modus: erst nach Zusage verbindlich */
+        const instant = isInstant(a);
         setBookings((x) => [
           {
             id,
@@ -593,7 +610,11 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
             dateISO: b.dateISO,
             slot: b.slot,
             amount: p.total,
-            status: paid ? "confirmed" : "pending",
+            status: !instant ? "requested" : paid ? "confirmed" : "pending",
+            ...(!instant ? { requestedAt: new Date().toISOString(), paid } : {}),
+            ...(snap.contact.name ? { customer: snap.contact.name } : {}),
+            ...(b.occasion ? { occasion: b.occasion } : {}),
+            ...(b.guests ? { guests: b.guests } : {}),
             hours: p.hours,
             ...(b.figure ? { figure: b.figure } : {}),
             ...(b.pkg ? { pkg: b.pkg } : {}),
@@ -606,7 +627,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot];
           return { ...av, [b.artistId]: forArtist };
         });
-        if (paid) {
+        if (paid && instant) {
           setPayouts((x) => [
             {
               id: counters.current.payout++,
@@ -708,6 +729,65 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [shiftSlot],
   );
 
+  /* Anfrage beantworten. Bei Zusage wird die reservierte Zahlung abgebucht
+     und die Gage zur Auszahlung vorgemerkt; bei Absage wird der Termin
+     wieder frei und nichts abgebucht. */
+  const respondBooking = useCallback(
+    (id: number, accept: boolean) => {
+      const b = bookings.find((x) => x.id === id);
+      if (!b || b.status !== "requested") return;
+      if (accept) {
+        setBookings((list) =>
+          list.map((x) => (x.id === id ? { ...x, status: b.paid ? "confirmed" : "pending" } : x)),
+        );
+        const a = findArtist(b.artistId);
+        if (b.paid && a) {
+          const p = bookingPrice(a, b.hours || minHoursOf(a), b.pkg);
+          setPayouts((x) => [
+            {
+              id: counters.current.payout++,
+              artistId: a.id,
+              artistName: String(L(a.name)),
+              dateISO: b.dateISO,
+              gross: b.amount,
+              fee: b.amount - p.payout,
+              net: p.payout,
+              status: "pending",
+            },
+            ...x,
+          ]);
+        }
+      } else {
+        setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "declined" } : x)));
+        shiftSlot(b.artistId, b.dateISO, b.slot, false);
+      }
+    },
+    [bookings, shiftSlot, L],
+  );
+
+  const cancelByArtist = useCallback(
+    (id: number) => {
+      const b = bookings.find((x) => x.id === id);
+      if (!b) return;
+      setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "declined" } : x)));
+      shiftSlot(b.artistId, b.dateISO, b.slot, false);
+      setPayouts((x) =>
+        x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
+      );
+    },
+    [bookings, shiftSlot],
+  );
+
+  /* Unbeantwortete Anfragen verfallen nach der Frist */
+  useEffect(() => {
+    if (!hydrated) return;
+    const stale = bookings.filter((b) => requestExpired(b));
+    if (!stale.length) return;
+    const ids = new Set(stale.map((b) => b.id));
+    setBookings((list) => list.map((x) => (ids.has(x.id) ? { ...x, status: "declined" } : x)));
+    for (const b of stale) shiftSlot(b.artistId, b.dateISO, b.slot, false);
+  }, [hydrated, bookings, shiftSlot]);
+
   const bookedSlots = useCallback(
     (providerId: number, iso: string) => (avail[providerId] && avail[providerId]![iso]) || [],
     [avail],
@@ -758,6 +838,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     addBooking,
     updateBooking,
     cancelBooking,
+    respondBooking,
+    cancelByArtist,
     payouts,
     addPayout,
     orders,

@@ -6,6 +6,7 @@ import { Icon, mediaBg } from "@/showly/ui";
 import { figName, figureList, figuresOf, realName } from "@/showly/figures";
 import { MediaError, deleteMedia, preloadMedia, putMedia, type MediaRef } from "@/showly/media";
 import { updateArtistProfile } from "@/showly/persist";
+import { isInstant } from "@/showly/booking";
 import { RADIUS_OPTIONS, radiusOf, travelOption } from "@/showly/travel";
 import { ArtistCard } from "@/components/showly/ArtistCard";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
@@ -67,6 +68,11 @@ const COPY = {
     priceP: "Deine Gage gilt immer pro Stunde. Kunden wählen die Dauer beim Buchen.",
     hourly: "Stundengage (€ pro Stunde)",
     minHours: "Mindestdauer",
+    modeH: "Wie wirst du gebucht?",
+    modeInstant: "Sofort buchbar",
+    modeInstantP: "Kunden buchen freie Termine direkt. Die Buchung ist sofort verbindlich.",
+    modeRequest: "Erst anfragen",
+    modeRequestP: "Jede Buchung kommt als Anfrage. Du nimmst sie innerhalb von 48 Stunden an oder lehnst sie ab. Bezahlt wird erst bei Zusage.",
     hoursN: (n: number) => (n === 1 ? "1 Stunde" : `${n} Stunden`),
     preview: (p: string) => `Kunden sehen: ${p} pro Stunde inkl. Servicegebühr`,
     pkgNote: "Als Planer verkaufst du feste Pakete. Der Betrag hier ist dein Einstiegspreis.",
@@ -137,6 +143,11 @@ const COPY = {
     priceP: "Your fee is always per hour. Clients choose the duration when booking.",
     hourly: "Hourly fee (€ per hour)",
     minHours: "Minimum duration",
+    modeH: "How do customers book you?",
+    modeInstant: "Instant booking",
+    modeInstantP: "Customers book free slots directly. The booking is binding right away.",
+    modeRequest: "Request first",
+    modeRequestP: "Every booking arrives as a request. You accept or decline within 48 hours. Payment is only taken once you accept.",
     hoursN: (n: number) => (n === 1 ? "1 hour" : `${n} hours`),
     preview: (p: string) => `Clients see: ${p} per hour incl. service fee`,
     pkgNote: "As a planner you sell fixed packages. This amount is your starting price.",
@@ -207,6 +218,11 @@ const COPY = {
     priceP: "Tu caché es siempre por hora. Los clientes eligen la duración al reservar.",
     hourly: "Caché por hora (€ por hora)",
     minHours: "Duración mínima",
+    modeH: "¿Cómo te reservan?",
+    modeInstant: "Reserva inmediata",
+    modeInstantP: "Los clientes reservan huecos libres directamente. La reserva es vinculante al momento.",
+    modeRequest: "Primero solicitud",
+    modeRequestP: "Cada reserva llega como solicitud. La aceptas o rechazas en 48 horas. El pago solo se cobra si aceptas.",
     hoursN: (n: number) => (n === 1 ? "1 hora" : `${n} horas`),
     preview: (p: string) => `Los clientes ven: ${p} por hora con tarifa de servicio`,
     pkgNote: "Como organizador vendes paquetes fijos. Este importe es tu precio de entrada.",
@@ -250,6 +266,7 @@ type Draft = {
   specs: string;
   price: string;
   minHours: number;
+  instantBook: boolean;
   loc: string;
   radiusKm: number;
   photos: MediaRef[];
@@ -298,6 +315,7 @@ function initialDraft(a: Artist, lang: string): Draft {
     specs: listOf(a["specs"], lang).join(", "),
     price: String(a.price ?? ""),
     minHours: Math.max(1, Number(a["minHours"]) || 1),
+    instantBook: isInstant(a),
     loc: textOf(a.loc, lang),
     radiusKm: radiusOf(a),
     photos: ((a["photos"] as MediaRef[] | undefined) || []).slice(),
@@ -410,6 +428,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       specs: splitComma(draft.specs),
       price: Math.round(Number(draft.price) || 0),
       minHours: draft.minHours,
+      instantBook: draft.instantBook,
       loc: draft.loc.trim(),
       radiusKm: draft.radiusKm,
       photos: draft.photos,
@@ -783,6 +802,31 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
               <Icon name="eye" /> {C.preview(fmt(Math.round(patch.price * 1.2)))}
             </p>
           )}
+          <fieldset className="pe-mode">
+            <legend className="pe-label">{C.modeH}</legend>
+            {(
+              [
+                [true, "check", C.modeInstant, C.modeInstantP],
+                [false, "clock", C.modeRequest, C.modeRequestP],
+              ] as const
+            ).map(([v, ic, h, p]) => (
+              <label className={"pe-mode-opt" + (draft.instantBook === v ? " on" : "")} key={String(v)}>
+                <input
+                  type="radio"
+                  name="pe-mode"
+                  checked={draft.instantBook === v}
+                  onChange={() => set("instantBook", v)}
+                />
+                <span className="pe-mode-ic">
+                  <Icon name={ic} />
+                </span>
+                <span className="pe-mode-text">
+                  <b>{h}</b>
+                  <small>{p}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
         </section>
 
         {/* Kontakt */}

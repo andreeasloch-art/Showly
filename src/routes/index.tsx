@@ -1,6 +1,6 @@
 import { seoHead } from "@/showly/seo";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { ARTISTS, CATS } from "@/showly/data";
 import { CatIcon, Icon, bgOf } from "@/showly/ui";
@@ -118,8 +118,30 @@ function Home() {
   }
 
   function pickCat(id: string) {
+    /* Kam die Kategorie aus dem Suchfeld, steht dort noch ihr Name. Bei
+       einer anderen Kategorie würde er alles wegfiltern. */
+    if (catFromSearch.current) {
+      catFromSearch.current = false;
+      setQuery("");
+    }
     setCat(id);
     setTimeout(scrollToGrid, 60);
+  }
+
+  /* Vorschlag im Suchfeld: Kategorie setzen, aber nicht wegscrollen, damit
+     man danach noch Datum und Ort eintragen kann. */
+  const catFromSearch = useRef(false);
+  function pickCatFromSearch(id: string) {
+    catFromSearch.current = true;
+    setCat(id);
+  }
+  /* Tippt man nach der Auswahl weiter, gilt wieder nur der Text */
+  function typeQuery(v: string) {
+    if (catFromSearch.current) {
+      catFromSearch.current = false;
+      setCat("all");
+    }
+    setQuery(v);
   }
 
   /* Aus dem Shop führt "Künstler in dieser Kategorie" auf /#fairy und
@@ -139,6 +161,7 @@ function Home() {
   }, []);
 
   function reset() {
+    catFromSearch.current = false;
     setCat("all");
     setQuery("");
     setCity("");
@@ -175,8 +198,8 @@ function Home() {
                   <div className="search-field-lbl">{t("search.what")}</div>
                   <ArtistAutocomplete
                     value={query}
-                    onChange={setQuery}
-                    onPickCat={pickCat}
+                    onChange={typeQuery}
+                    onPickCat={pickCatFromSearch}
                     placeholder={t("search.ph")}
                   />
                 </div>

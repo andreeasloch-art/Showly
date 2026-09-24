@@ -3,6 +3,7 @@ import { useShowly } from "@/showly/store";
 import { CATS, ICON, type Artist } from "@/showly/data";
 import { CatIcon, Html, Icon, bgOf, hasImg } from "@/showly/ui";
 import { radiusOf, travelShort } from "@/showly/travel";
+import { catScore } from "@/showly/catTerms";
 
 /* Karte im Raster der Startseite.
  *
@@ -110,7 +111,8 @@ export function matchArtist(
       .concat(L(a["specs"]) || [])
       .join(" ")
       .toLowerCase();
-    if (!hay.includes(query)) return false;
+    /* Auch ähnliche Wörter zählen: "Magier" findet Zauberer, "Sänger" Musiker */
+    if (!hay.includes(query) && !catScore(a.cat, query, catLabel(a.cat))) return false;
   }
   return true;
 }

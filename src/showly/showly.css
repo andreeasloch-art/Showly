@@ -3046,7 +3046,7 @@ footer{background:#190A3C}
 /* App-Store-Schaltflächen in der Fußzeile.
    Zwei Schaltflächen im vertrauten Zuschnitt: Markenzeichen links, darüber
    die kleine Zeile, darunter der Name des Ladens. Auf dem Handy stehen sie
-   untereinander und nehmen die volle Breite ein. */
+   kompakt nebeneinander statt über die volle Breite. */
 .footer-apps{margin-top:26px}
 .footer-apps-p{font-size:13.5px;color:rgba(255,255,255,.55);line-height:1.6;margin:0 0 12px;max-width:320px}
 .store-row{display:flex;gap:10px;flex-wrap:wrap}
@@ -3064,8 +3064,11 @@ footer{background:#190A3C}
 .store-text small{font-size:10.5px;letter-spacing:.02em;color:rgba(255,255,255,.8)}
 .store-text strong{font-size:16px;font-weight:600;letter-spacing:-.01em;color:#fff}
 @media(max-width:560px){
-  .store-row{flex-direction:column}
-  .store-badge{width:100%;justify-content:flex-start}
+  .store-row{flex-wrap:nowrap;gap:8px}
+  .store-badge{min-width:0;height:40px;padding:0 12px 0 10px;gap:7px;border-radius:9px}
+  .store-mark{width:18px;height:18px}
+  .store-text small{font-size:8.5px}
+  .store-text strong{font-size:13.5px}
 }
 
 /* Symbole der sozialen Netze */

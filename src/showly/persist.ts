@@ -140,6 +140,29 @@ export function findAccount(email: string, pw: string): Account | null {
   return list.find((x) => x.email === e && x.pwHash === hash(pw)) ?? null;
 }
 
+/** Konto aus dem Browser entfernen, bei Anbietern auch das eigene Profil. */
+export function deleteLocalAccount(email: string, providerId?: number) {
+  const e = email.trim().toLowerCase();
+  saveJSON(
+    "accounts",
+    loadJSON<Account[]>("accounts", []).filter((x) => x.email !== e),
+  );
+  if (providerId === undefined) return;
+  const stored = loadJSON<Record<string, unknown>[]>("artists", []);
+  const wasOwn = stored.some((a) => a && a["id"] === providerId);
+  saveJSON(
+    "artists",
+    stored.filter((a) => a && a["id"] !== providerId),
+  );
+  const edits = loadJSON<Record<string, unknown>>("artistEdits", {});
+  delete edits[String(providerId)];
+  saveJSON("artistEdits", edits);
+  const i = ARTISTS.findIndex((x: { id: number }) => x.id === providerId);
+  /* Nur selbst angelegte Profile verschwinden sofort; Beispielprofile aus dem
+     festen Katalog bleiben in dieser Vorschau stehen. */
+  if (i >= 0 && wasOwn) ARTISTS.splice(i, 1);
+}
+
 /** Gibt es zu dieser Adresse schon ein Konto? */
 export function accountExists(email: string): boolean {
   const list = loadJSON<Account[]>("accounts", []);

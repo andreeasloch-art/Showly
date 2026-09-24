@@ -15,7 +15,9 @@ import { useRouterState } from "@tanstack/react-router";
 import { I18N, ARTISTS, SHOP_ITEMS, type Lang } from "./data";
 import { ES } from "./i18n.es";
 import { detectCountry, langForCountry } from "./country";
-import { hydrateArtists, loadJSON, saveJSON } from "./persist";
+import { deleteLocalAccount, hydrateArtists, loadJSON, saveJSON } from "./persist";
+import { isBackendConfigured, supabase } from "@/lib/supabase";
+import { deleteMyAccount } from "@/utils/account.functions";
 import { addRequest, hydrateSweets } from "./sweets";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
 import { isInstant, requestExpired } from "./booking";
@@ -117,7 +119,7 @@ export interface Booking {
   amount: number;
   /* requested: wartet auf Zusage des Künstlers · declined: abgelehnt oder
      verfallen, Termin wieder frei, Zahlung wird nicht abgebucht */
-  status: "confirmed" | "pending" | "completed" | "requested" | "declined";
+  status: "confirmed" | "pending" | "completed" | "requested" | "declined" | "cancelled";
   /** Zeitpunkt der Anfrage, für die Antwortfrist */
   requestedAt?: string;
   /** Zahlung bereits autorisiert (online), wird bei Zusage abgebucht */
@@ -153,7 +155,10 @@ export interface Session {
   email: string;
   role: "customer" | "artist" | "planner";
   providerId?: number;
+  /** Angemeldet über die Datenbank (Supabase) statt nur im Browser */
+  backend?: boolean;
 }
+export type DeleteOutcome = "ok" | "open" | "failed";
 /* providerId -> { 'YYYY-MM-DD': slots } */
 export type Avail = Record<number, Record<string, string[]>>;
 
@@ -202,10 +207,16 @@ interface Ctx {
   respondBooking: (id: number, accept: boolean) => void;
   /** Künstler sagt eine bestätigte Buchung ab: Termin frei, Kunde bekommt alles zurück */
   cancelByArtist: (id: number) => void;
+  /** Kunde storniert. true, wenn es weniger als 48 Stunden vor Beginn war */
+  cancelByCustomer: (id: number) => boolean;
   orders: Order[];
 
   session: Session | null;
   setSession: (s: Session | null) => void;
+  /** Abmelden, auch bei der Datenbank */
+  signOut: () => Promise<void>;
+  /** Eigenes Konto löschen. "open": es gibt noch offene Buchungen */
+  deleteAccount: () => Promise<DeleteOutcome>;
 
   payouts: Payout[];
   addPayout: (p: Omit<Payout, "id" | "status">) => void;
@@ -778,6 +789,26 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [bookings, shiftSlot],
   );
 
+  /* Stornierung durch den Kunden (AGB § 8): bis 48 Stunden vor Beginn
+     kostenlos, danach bleibt die Gage für den Künstler vorgemerkt. Eine
+     unbeantwortete Anfrage lässt sich immer kostenlos zurückziehen. */
+  const cancelByCustomer = useCallback(
+    (id: number) => {
+      const b = bookings.find((x) => x.id === id);
+      if (!b) return false;
+      const start = new Date(`${b.dateISO}T${b.slot || "00:00"}:00`).getTime();
+      const late = b.status !== "requested" && start - Date.now() < 48 * 3600 * 1000;
+      setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
+      shiftSlot(b.artistId, b.dateISO, b.slot, false);
+      if (!late)
+        setPayouts((x) =>
+          x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
+        );
+      return late;
+    },
+    [bookings, shiftSlot],
+  );
+
   /* Unbeantwortete Anfragen verfallen nach der Frist */
   useEffect(() => {
     if (!hydrated) return;
@@ -787,6 +818,68 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     setBookings((list) => list.map((x) => (ids.has(x.id) ? { ...x, status: "declined" } : x)));
     for (const b of stale) shiftSlot(b.artistId, b.dateISO, b.slot, false);
   }, [hydrated, bookings, shiftSlot]);
+
+  /* Anmeldung über die Datenbank in die App übernehmen. Ohne hinterlegte
+     Schlüssel passiert hier nichts und die lokale Anmeldung gilt weiter. */
+  useEffect(() => {
+    if (!hydrated || !isBackendConfigured()) return;
+    const sb = supabase();
+    const apply = async (u: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
+      if (!u) return;
+      const { data: prof } = await sb
+        .from("profiles")
+        .select("role, display_name, email")
+        .eq("id", u.id)
+        .maybeSingle();
+      const { data: own } = await sb.from("artists").select("id").eq("owner", u.id).limit(1);
+      const role = prof?.role === "artist" || prof?.role === "planner" ? prof.role : "customer";
+      const meta = u.user_metadata || {};
+      setSession({
+        name: prof?.display_name || String(meta["full_name"] || meta["name"] || "") || u.email || "",
+        email: prof?.email || u.email || "",
+        role,
+        ...(own && own[0] ? { providerId: own[0].id } : {}),
+        backend: true,
+      });
+    };
+    void sb.auth.getUser().then(({ data }) => apply(data.user));
+    const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
+      if (event === "SIGNED_OUT") setSession((cur) => (cur?.backend ? null : cur));
+      else if (s?.user) void apply(s.user);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [hydrated]);
+
+  const signOut = useCallback(async () => {
+    if (session?.backend && isBackendConfigured()) await supabase().auth.signOut();
+    setSession(null);
+  }, [session]);
+
+  const deleteAccount = useCallback(async (): Promise<DeleteOutcome> => {
+    if (!session) return "failed";
+    const today = new Date().toISOString().slice(0, 10);
+    const open = bookings.some(
+      (b) =>
+        (b.status === "pending" || b.status === "confirmed" || b.status === "requested") &&
+        b.dateISO >= today &&
+        (session.providerId === undefined || b.artistId === session.providerId),
+    );
+    if (open) return "open";
+    if (session.backend && isBackendConfigured()) {
+      const r = await deleteMyAccount();
+      if ("error" in r) return r.error === "open" ? "open" : "failed";
+      await supabase().auth.signOut();
+    }
+    deleteLocalAccount(session.email, session.providerId);
+    /* Buchungen bleiben für die Buchhaltung, aber ohne Name und Adresse */
+    setBookings((list) => list.map(({ customer: _c, address: _a, ...rest }) => rest));
+    setFavorites([]);
+    setCart([]);
+    setCartBookings([]);
+    setCartRequests([]);
+    setSession(null);
+    return "ok";
+  }, [session, bookings]);
 
   const bookedSlots = useCallback(
     (providerId: number, iso: string) => (avail[providerId] && avail[providerId]![iso]) || [],
@@ -840,12 +933,15 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     cancelBooking,
     respondBooking,
     cancelByArtist,
+    cancelByCustomer,
     payouts,
     addPayout,
     orders,
     session,
     hydrated,
     setSession,
+    signOut,
+    deleteAccount,
     avail,
     bookedSlots,
     toggleBlock,

@@ -6160,3 +6160,27 @@ body:has(.modal-overlay) .tabbar{display:none!important}
   .pe-savebar>div{flex:1 1 100%}
   .pe-savebar .home-btn{flex:1 1 0;justify-content:center;padding:0 12px}
 }
+
+/* Konto löschen */
+.del-acc{margin-top:28px;padding:18px;border:1px solid #F1D3D9;border-radius:20px;background:#FFF8F9;display:flex;flex-direction:column;gap:14px;text-align:left}
+.del-acc-head{display:flex;gap:12px;align-items:flex-start}
+.del-acc-head h3{margin:0 0 4px;font:600 16px/1.2 'Outfit',system-ui,sans-serif;color:var(--h-ink,#15102A)}
+.del-acc-head p{margin:0;font-size:14px;line-height:1.45;color:var(--h-muted,#6B6480)}
+.del-acc-ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:#FCE4E8;color:#C2334A}
+.del-acc-ic svg{width:17px;height:17px}
+.del-acc-btn{align-self:flex-start;height:40px;padding:0 16px;border-radius:999px;border:1px solid #E7B3BD;background:#fff;color:#C2334A;font:600 14px/1 'Outfit',system-ui,sans-serif;cursor:pointer}
+.del-acc-btn:hover{background:#FCE4E8}
+.del-acc-box{display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--h-ink2,#3A3350)}
+.del-acc-box ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.del-acc-box li{display:flex;gap:8px;align-items:flex-start;line-height:1.4}
+.del-acc-box li svg{flex:none;width:14px;height:14px;margin-top:3px;color:#C2334A}
+.del-acc-kept{margin:0;font-size:13.5px;line-height:1.45;color:var(--h-muted,#6B6480)}
+.del-acc-check{display:flex;gap:10px;align-items:flex-start;line-height:1.45;cursor:pointer}
+.del-acc-check input{margin-top:3px;width:18px;height:18px;flex:none;accent-color:#C2334A}
+.del-acc-msg{margin:0;padding:10px 12px;border-radius:12px;background:#FFF1E2;color:#8A4A0F;font-size:13.5px;line-height:1.45}
+.del-acc-actions{display:flex;gap:10px;flex-wrap:wrap}
+.del-acc-actions .home-btn{height:44px}
+.del-acc-go{height:44px;padding:0 18px;border-radius:999px;border:none;background:#C2334A;color:#fff;font:600 14.5px/1 'Outfit',system-ui,sans-serif;cursor:pointer}
+.del-acc-go:disabled{opacity:.45;cursor:not-allowed}
+.dash26-status.s-cancelled{background:#F3F1F7;color:#6B6480}
+.dash26-item .inb-actions{grid-column:1/-1}

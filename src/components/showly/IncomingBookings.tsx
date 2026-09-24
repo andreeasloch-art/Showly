@@ -45,6 +45,7 @@ const COPY = {
       pending: "Zahlung offen",
       completed: "Erledigt",
       declined: "Abgelehnt",
+      cancelled: "Vom Kunden storniert",
     },
   },
   en: {
@@ -77,6 +78,7 @@ const COPY = {
       pending: "Payment open",
       completed: "Done",
       declined: "Declined",
+      cancelled: "Cancelled by customer",
     },
   },
   es: {
@@ -109,6 +111,7 @@ const COPY = {
       pending: "Pago pendiente",
       completed: "Hecha",
       declined: "Rechazada",
+      cancelled: "Cancelada por el cliente",
     },
   },
 } as const;

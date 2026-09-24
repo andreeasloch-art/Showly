@@ -312,6 +312,7 @@ function Portal() {
     fmtDate,
     session,
     setSession,
+    signOut,
     bookings,
     updateBooking,
     cancelBooking,
@@ -495,7 +496,7 @@ function Portal() {
   }
 
   function logout() {
-    setSession(null);
+    void signOut();
     navigate({ to: "/" });
   }
 

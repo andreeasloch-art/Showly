@@ -13,6 +13,7 @@ import { seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
+import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { accountExists, findAccount, saveAccount } from "@/showly/persist";
 import { pwScore } from "@/showly/figures";
 
@@ -126,7 +127,7 @@ const COPY = {
 const MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function AccountPage() {
-  const { lang, session, setSession, toast } = useShowly();
+  const { lang, session, setSession, signOut, toast } = useShowly();
   const T = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
 
@@ -185,13 +186,14 @@ function AccountPage() {
               <button
                 className="btn-secondary"
                 onClick={() => {
-                  setSession(null);
+                  void signOut();
                   toast(T.out);
                 }}
               >
                 {T.out}
               </button>
             </div>
+            <DeleteAccount />
           </div>
         </div>
         <Footer />

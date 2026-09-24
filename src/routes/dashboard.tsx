@@ -12,6 +12,7 @@ import { MyRequests } from "@/components/showly/Sweets";
 import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
+import { DeleteAccount } from "@/components/showly/DeleteAccount";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -26,6 +27,16 @@ const COPY = {
   de: {
     sweetReq: "Torten-Anfragen",
     incoming: "Buchungen",
+    stCancelled: "Storniert",
+    cancel: "Stornieren",
+    withdraw: "Anfrage zurückziehen",
+    cancelFree: "Kostenlos stornieren? Du bekommst den vollen Betrag zurück.",
+    cancelLate: "Weniger als 48 Stunden vor Beginn: Die Gage bleibt fällig (AGB § 8). Trotzdem stornieren?",
+    cancelReq: "Anfrage zurückziehen? Es wird nichts abgebucht.",
+    cancelYes: "Ja, stornieren",
+    cancelNo: "Zurück",
+    cancelDone: "Buchung storniert. Der Betrag wird erstattet.",
+    cancelDoneLate: "Buchung storniert. Die Gage bleibt nach AGB § 8 fällig.",
     incomingSub: "Anfragen annehmen oder ablehnen und kommende Auftritte im Blick behalten.",
     stRequested: "Wartet auf Zusage",
     stDeclined: "Abgelehnt",
@@ -46,6 +57,16 @@ const COPY = {
   en: {
     sweetReq: "Cake requests",
     incoming: "Bookings",
+    stCancelled: "Cancelled",
+    cancel: "Cancel",
+    withdraw: "Withdraw request",
+    cancelFree: "Cancel for free? You get a full refund.",
+    cancelLate: "Less than 48 hours before the start: the fee remains due (T&C § 8). Cancel anyway?",
+    cancelReq: "Withdraw the request? Nothing will be charged.",
+    cancelYes: "Yes, cancel",
+    cancelNo: "Back",
+    cancelDone: "Booking cancelled. The amount will be refunded.",
+    cancelDoneLate: "Booking cancelled. The fee remains due under T&C § 8.",
     incomingSub: "Accept or decline requests and keep track of upcoming gigs.",
     stRequested: "Awaiting reply",
     stDeclined: "Declined",
@@ -66,6 +87,16 @@ const COPY = {
   es: {
     sweetReq: "Solicitudes de tartas",
     incoming: "Reservas",
+    stCancelled: "Cancelada",
+    cancel: "Cancelar",
+    withdraw: "Retirar solicitud",
+    cancelFree: "¿Cancelar gratis? Recibes el importe completo.",
+    cancelLate: "Faltan menos de 48 horas: el caché sigue siendo debido (CG § 8). ¿Cancelar igualmente?",
+    cancelReq: "¿Retirar la solicitud? No se cobrará nada.",
+    cancelYes: "Sí, cancelar",
+    cancelNo: "Volver",
+    cancelDone: "Reserva cancelada. Se te reembolsará el importe.",
+    cancelDoneLate: "Reserva cancelada. El caché sigue siendo debido según CG § 8.",
     incomingSub: "Acepta o rechaza solicitudes y controla tus próximas actuaciones.",
     stRequested: "Esperando respuesta",
     stDeclined: "Rechazada",
@@ -154,7 +185,12 @@ function Dashboard() {
     hydrated,
     toast,
     catLabel,
+    cancelByCustomer,
   } = useShowly();
+  const [cancelAsk, setCancelAsk] = useState<number | null>(null);
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const isLate = (b: { dateISO: string; slot?: string }) =>
+    new Date(`${b.dateISO}T${b.slot || "00:00"}:00`).getTime() - Date.now() < 48 * 3600 * 1000;
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const cal = useCalendar();
@@ -209,10 +245,14 @@ function Dashboard() {
           ? C.stRequested
           : st === "declined"
             ? C.stDeclined
-            : t("dash.done");
+            : st === "cancelled"
+              ? C.stCancelled
+              : t("dash.done");
 
   const spent =
-    bookings.reduce((s, b) => s + b.amount, 0) + orders.reduce((s, o) => s + o.total, 0);
+    bookings
+      .filter((b) => b.status !== "cancelled" && b.status !== "declined")
+      .reduce((s, b) => s + b.amount, 0) + orders.reduce((s, o) => s + o.total, 0);
   const favArtists = ARTISTS.filter((a) => favorites.includes(a.id));
   const payRows = [
     ...bookings.map((b) => ({
@@ -401,6 +441,42 @@ function Dashboard() {
                           {t("dash.again")} <Icon name="arrow" />
                         </button>
                       </div>
+                      {(b.status === "confirmed" || b.status === "pending" || b.status === "requested") &&
+                        b.dateISO >= todayISO && (
+                          <div className="inb-actions">
+                            {cancelAsk === b.id ? (
+                              <>
+                                <span className="inb-sure">
+                                  {b.status === "requested"
+                                    ? C.cancelReq
+                                    : isLate(b)
+                                      ? C.cancelLate
+                                      : C.cancelFree}
+                                </span>
+                                <button className="dash26-mini outline" onClick={() => setCancelAsk(null)}>
+                                  {C.cancelNo}
+                                </button>
+                                <button
+                                  className="dash26-mini inb-decline"
+                                  onClick={() => {
+                                    const late = cancelByCustomer(b.id);
+                                    setCancelAsk(null);
+                                    toast(late ? C.cancelDoneLate : C.cancelDone);
+                                  }}
+                                >
+                                  {C.cancelYes}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="dash26-mini outline inb-decline-ghost"
+                                onClick={() => setCancelAsk(b.id)}
+                              >
+                                <Icon name="close" /> {b.status === "requested" ? C.withdraw : C.cancel}
+                              </button>
+                            )}
+                          </div>
+                        )}
                     </article>
                   );
                 })}
@@ -725,6 +801,7 @@ function Dashboard() {
                 {t("profile.save")}
               </button>
             </div>
+            <DeleteAccount />
           </div>
         )}
       </main>

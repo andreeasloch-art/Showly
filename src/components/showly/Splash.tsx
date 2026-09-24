@@ -53,10 +53,14 @@ export function Splash() {
   if (phase === "gone") return null;
   return (
     <div className={"splash" + (phase === "fade" ? " out" : "")} onClick={skip} role="presentation" aria-hidden="true">
-      <img className="splash-photo" src="/splash-acts.webp" alt="" decoding="async" fetchPriority="high" />
-      <div className="splash-shade" />
-      <div className="splash-logo">
-        <img src="/splash-logo.webp" alt="Showly" />
+      {/* Foto und Logo liegen in einer gemeinsamen Fläche mit dem
+          Seitenverhältnis des Fotos, die den Bildschirm füllt. So landet das
+          Logo auf jedem Handy genau im Lichtschein in der Bildmitte. */}
+      <div className="splash-stage">
+        <img className="splash-photo" src="/splash-acts.webp" alt="" decoding="async" fetchPriority="high" />
+        <div className="splash-logo">
+          <img src="/splash-logo.webp" alt="Showly" />
+        </div>
       </div>
     </div>
   );

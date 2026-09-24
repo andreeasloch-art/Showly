@@ -25,6 +25,7 @@ const COPY = {
     h1: "Willkommen bei Showly",
     sub: "Melde dich an, um zu buchen, zu bewerten und Beiträge zu schreiben. Ein Passwort brauchst du nicht.",
     google: "Mit Google anmelden",
+    apple: "Mit Apple anmelden",
     or: "oder",
     tabMail: "E-Mail",
     tabPhone: "Telefon",
@@ -53,6 +54,7 @@ const COPY = {
     h1: "Welcome to Showly",
     sub: "Sign in to book, review and post. You do not need a password.",
     google: "Continue with Google",
+    apple: "Continue with Apple",
     or: "or",
     tabMail: "Email",
     tabPhone: "Phone",
@@ -81,6 +83,7 @@ const COPY = {
     h1: "Bienvenida a Showly",
     sub: "Entra para reservar, reseñar y publicar. No necesitas contraseña.",
     google: "Continuar con Google",
+    apple: "Continuar con Apple",
     or: "o",
     tabMail: "Correo",
     tabPhone: "Teléfono",
@@ -139,11 +142,14 @@ function SignInPage() {
     );
   }
 
-  async function withGoogle() {
+  /* Apple verlangt in Apps mit Google-Anmeldung eine gleichwertige
+     datenschutzfreundliche Alternative (Richtlinie 4.8); "Mit Apple anmelden"
+     erfüllt das. Einrichtung siehe EINRICHTUNG.md, Abschnitt Apple. */
+  async function withProvider(provider: "google" | "apple") {
     setErr("");
     setBusy(true);
     const { error } = await supabase().auth.signInWithOAuth({
-      provider: "google",
+      provider,
       options: { redirectTo: authRedirectTo("/dashboard") },
     });
     if (error) {
@@ -198,7 +204,10 @@ function SignInPage() {
 
           {!sent ? (
             <>
-              <button className="btn-google" onClick={() => void withGoogle()} disabled={busy}>
+              <button className="btn-google btn-apple" onClick={() => void withProvider("apple")} disabled={busy}>
+                <AppleMark /> {T.apple}
+              </button>
+              <button className="btn-google" onClick={() => void withProvider("google")} disabled={busy}>
                 <GoogleMark /> {T.google}
               </button>
 
@@ -299,6 +308,15 @@ function SignInPage() {
 }
 
 /* Das Google-Zeichen in den Originalfarben, wie es die Markenvorgaben verlangen. */
+function AppleMark() {
+  return (
+    <svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" aria-hidden="true">
+      <path d="M16.9 12.6c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.7.8-3.3.8-.7 0-1.7-.8-2.8-.8-1.4 0-2.8.8-3.5 2.1-1.5 2.6-.4 6.5 1.1 8.6.7 1 1.6 2.2 2.7 2.2 1.1 0 1.5-.7 2.8-.7 1.3 0 1.6.7 2.8.7 1.2 0 1.9-1.1 2.6-2.1.8-1.2 1.2-2.4 1.2-2.4 0-.1-2.3-.9-2.3-3.3Z" />
+      <path d="M14.8 6.2c.6-.7 1-1.8.9-2.8-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-.9 2.8 1 .1 2-.6 2.7-1.4Z" />
+    </svg>
+  );
+}
+
 function GoogleMark() {
   return (
     <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">

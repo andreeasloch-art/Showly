@@ -6219,3 +6219,5 @@ body:has(.modal-overlay) .tabbar{display:none!important}
 .blk li span{display:flex;align-items:center;gap:8px;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .blk li svg{width:15px;height:15px;flex:none}
 .blk li button{border:none;background:none;color:var(--h-violet,#6B3BE8);font:600 14px/1 'Outfit',system-ui,sans-serif;cursor:pointer}
+.btn-google.btn-apple{background:#000;color:#fff;border-color:#000;margin-bottom:10px}
+.btn-google.btn-apple:hover:not(:disabled){background:#1a1a1a;border-color:#1a1a1a}

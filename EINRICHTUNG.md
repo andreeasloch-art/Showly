@@ -14,7 +14,9 @@ Solange die Schlüssel fehlen, läuft Showly wie bisher im örtlichen
 1. Auf **supabase.com** ein kostenloses Projekt anlegen, Region Frankfurt.
 2. Im Projekt auf **SQL Editor** gehen, den Inhalt von
    `supabase/migrations/0001_showly_grundlage.sql` einfügen und ausführen.
-   Damit stehen alle Tabellen und die Zugriffsregeln.
+   Danach genauso `supabase/migrations/0002_anfragen_konto_meldungen.sql`.
+   Damit stehen alle Tabellen und die Zugriffsregeln, auch für Buchungs-
+   anfragen, das Löschen von Konten und für Meldungen.
 3. Unter **Project Settings → API** drei Werte abholen und in die Datei `.env`
    eintragen, Vorlage ist `.env.example`:
    - Project URL → `VITE_SUPABASE_URL`
@@ -34,6 +36,23 @@ auf den Server und niemals in ein Repository.
    `https://<deinprojekt>.supabase.co/auth/v1/callback`
 3. Die erhaltene Client-ID und das Client-Geheimnis in Supabase unter
    **Authentication → Providers → Google** eintragen und einschalten.
+
+## 2b. Mit Apple anmelden
+
+Pflicht, sobald die App im App Store steht und „Mit Google anmelden“
+anbietet (Apple-Richtlinie 4.8).
+
+1. Im **Apple Developer**-Konto unter *Certificates, Identifiers & Profiles*
+   eine **Services ID** anlegen (z. B. `com.showly.app.signin`) und
+   *Sign in with Apple* aktivieren.
+2. Als Domain die Supabase-Adresse eintragen, als Return-URL
+   `https://<deinprojekt>.supabase.co/auth/v1/callback`.
+3. Unter *Keys* einen Schlüssel mit *Sign in with Apple* erzeugen und die
+   `.p8`-Datei herunterladen (geht nur einmal).
+4. In Supabase unter **Authentication → Providers → Apple** Services ID,
+   Team-ID, Key-ID und den Inhalt der `.p8`-Datei eintragen und einschalten.
+
+Der Knopf „Mit Apple anmelden“ steht schon auf der Seite `/anmelden`.
 
 ## 3. Anmeldung per E-Mail
 
@@ -62,6 +81,29 @@ direkt an Stripe. Showly speichert weder Bilder noch biometrische Merkmale,
 sondern nur das Ergebnis in der Tabelle `verifications`. Das Prüfsiegel am
 Profil setzt allein der Server; über die Zugriffsregeln kann es sich niemand
 selbst geben.
+
+---
+
+## 6. Meldungen bearbeiten
+
+Meldungen zu Beiträgen, Kommentaren, Bewertungen und Profilen landen in der
+Tabelle `reports` (Supabase → **Table Editor**). Für jede Meldung:
+
+1. Inhalt ansehen (`target_type` und `target_id` sagen, was gemeldet wurde).
+2. Entscheiden: entfernen oder stehen lassen. In `status` `removed` oder
+   `kept` eintragen, in `decision` kurz begründen, `decided_at` setzen.
+3. Der betroffenen Person die Begründung schicken (Pflicht nach Art. 17
+   Digital Services Act), bei Entfernung auch der meldenden Person.
+
+Offensichtlich rechtswidrige Inhalte (Beleidigung, Nacktbilder,
+Urheberrechtsverstoß) zeitnah entfernen, am besten innerhalb von 24 Stunden.
+
+## 7. Konto löschen
+
+Läuft über die Server-Funktion `deleteMyAccount`
+(`src/utils/account.functions.ts`) und braucht den Dienstschlüssel
+`SUPABASE_SERVICE_ROLE_KEY`. Buchungen bleiben ohne Personenbezug erhalten;
+offene Buchungen verhindern das Löschen.
 
 ---
 

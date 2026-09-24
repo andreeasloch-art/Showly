@@ -13,6 +13,12 @@ const ROUTES: [string, string][] = [
   ["/portal", "/portal"],
   ["/kuenstler/$id", "/kuenstler/3"],
   ["/rechtliches/$doc", "/rechtliches/privacy"],
+  ["/anmelden", "/anmelden"],
+  ["/konto", "/konto"],
+  ["/blog", "/blog"],
+  ["/torten", "/torten"],
+  ["/torten/$id", "/torten/1"],
+  ["/torten/anbieten", "/torten/anbieten"],
 ];
 
 /* Priorität: ?lang > gespeicherte Auswahl > Erkennung */

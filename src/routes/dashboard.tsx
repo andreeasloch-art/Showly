@@ -13,6 +13,7 @@ import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
+import { BlockedList } from "@/components/showly/BlockedList";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -801,6 +802,7 @@ function Dashboard() {
                 {t("profile.save")}
               </button>
             </div>
+            <BlockedList />
             <DeleteAccount />
           </div>
         )}

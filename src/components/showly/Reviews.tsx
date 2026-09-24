@@ -12,6 +12,8 @@ import {
 } from "@/showly/community";
 import { MediaPicker } from "./MediaPicker";
 import { MediaGrid } from "./MediaView";
+import { ReportMenu, useModeration } from "./ReportMenu";
+import { isHidden } from "@/showly/moderation";
 
 const EMPTY: UserReview[] = [];
 
@@ -90,9 +92,14 @@ function niceDate(iso: string, lang: string) {
 }
 
 export function UserReviewList({ artistId }: { artistId: number }) {
-  const { lang } = useShowly();
+  const { lang, session } = useShowly();
   const T = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
-  const list = useUserReviews(artistId);
+  const mod = useModeration();
+  const list = useUserReviews(artistId).filter((r) => !isHidden(mod, "review", r.id, r.author));
+  /* Löschen darf nur, wer die Bewertung geschrieben hat. Vorher stand der
+     Knopf unter jeder Bewertung, auch der Künstler hätte sie entfernen können. */
+  const mine = (r: { author: string }) =>
+    !!session && r.author.trim().toLowerCase() === session.name.trim().toLowerCase();
   if (!list.length) return null;
 
   return (
@@ -111,6 +118,7 @@ export function UserReviewList({ artistId }: { artistId: number }) {
               </div>
             </div>
             <div className="rev-mark">{"★".repeat(r.rating)}</div>
+            {!mine(r) && <ReportMenu target="review" id={r.id} author={r.author} className="small" />}
           </div>
           <p className="rev-text">{r.text}</p>
           {r.media.length > 0 && (
@@ -121,9 +129,11 @@ export function UserReviewList({ artistId }: { artistId: number }) {
               <MediaGrid items={r.media} />
             </>
           )}
-          <button className="rev-del" onClick={() => removeReview(r.id)}>
-            <Icon name="trash" /> {T.del}
-          </button>
+          {mine(r) && (
+            <button className="rev-del" onClick={() => removeReview(r.id)}>
+              <Icon name="trash" /> {T.del}
+            </button>
+          )}
         </div>
       ))}
     </div>

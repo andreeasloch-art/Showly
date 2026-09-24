@@ -19,6 +19,8 @@ import { MediaPicker } from "@/components/showly/MediaPicker";
 import { MediaCarousel } from "@/components/showly/MediaView";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ArtistTagPicker } from "@/components/showly/ArtistTagPicker";
+import { ReportMenu, useModeration } from "@/components/showly/ReportMenu";
+import { isHidden } from "@/showly/moderation";
 import type { MediaRef } from "@/showly/media";
 import {
   addComment,
@@ -242,12 +244,14 @@ function BlogPage() {
     return [...ARTISTS].map((a) => ({ a, n: count.get(a.id) || 0 })).sort((x, y) => y.n - x.n);
   }, [posts]);
 
+  const mod = useModeration();
   const shown = useMemo(() => {
-    let list = posts;
+    /* Gemeldete Beiträge und Beiträge blockierter Personen ausblenden */
+    let list = posts.filter((p) => !isHidden(mod, "post", p.id, p.author));
     if (mine && me) list = list.filter((p) => p.author === me);
     if (actFilter !== null) list = list.filter((p) => (p.artistIds || []).includes(actFilter));
     return list;
-  }, [posts, mine, me, actFilter]);
+  }, [posts, mine, me, actFilter, mod]);
 
   const filterAct = actFilter !== null ? ARTISTS.find((a) => a.id === actFilter) : undefined;
 
@@ -583,8 +587,10 @@ function PostCard({
     setShowAll(true);
   }
 
+  const mod = useModeration();
   const long = post.text.length > 140;
-  const comments = showAll ? post.comments : post.comments.slice(-2);
+  const visibleComments = post.comments.filter((c) => !isHidden(mod, "comment", c.id, c.author));
+  const comments = showAll ? visibleComments : visibleComments.slice(-2);
 
   return (
     <article className="ig-post" data-reveal>
@@ -618,10 +624,12 @@ function PostCard({
             {when(post.dateISO, localeKey)}
           </div>
         </div>
-        {post.author === me && me && (
+        {post.author === me && me ? (
           <button className="ig-icon-btn" onClick={() => removePost(post.id)} aria-label={T.del}>
             <Icon name="trash" />
           </button>
+        ) : (
+          <ReportMenu target="post" id={post.id} author={post.author} className="ig-icon-btn" />
         )}
       </header>
 
@@ -688,16 +696,19 @@ function PostCard({
           </div>
         )}
 
-        {post.comments.length > 2 && (
+        {visibleComments.length > 2 && (
           <button className="ig-more" onClick={() => setShowAll((v) => !v)}>
-            {showAll ? T.hide : T.viewAll(post.comments.length)}
+            {showAll ? T.hide : T.viewAll(visibleComments.length)}
           </button>
         )}
         {comments.length > 0 && (
           <ul className="ig-comments">
             {comments.map((c) => (
               <li key={c.id}>
-                <b>{c.author}</b> {c.text}
+                <span>
+                  <b>{c.author}</b> {c.text}
+                </span>
+                {c.author !== me && <ReportMenu target="comment" id={c.id} author={c.author} className="small" />}
               </li>
             ))}
           </ul>

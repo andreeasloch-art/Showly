@@ -104,15 +104,38 @@ export const createCartCheckout = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
       shop: { shopId: number; mode: "rent" | "buy"; qty: number }[];
-      bookings: { artistId: number; hours: number; pkg?: string; dateISO: string; slot: string }[];
+      bookings: {
+        artistId: number;
+        hours: number;
+        pkg?: string;
+        dateISO: string;
+        slot: string;
+      }[];
+      /** direkt gebuchte Süßwaren-Pakete; der Preis kommt aus dem Katalog */
+      sweets?: { sweetId: number; qty: number; dateISO: string }[];
       customerEmail?: string;
       returnUrl: string;
       environment: StripeEnv;
       locale?: "de" | "en" | "es";
     }) => {
-      if (!Array.isArray(data.shop) || !Array.isArray(data.bookings)) throw new Error("Invalid cart");
-      if (data.shop.length + data.bookings.length === 0) throw new Error("Empty cart");
-      if (data.shop.length > 50 || data.bookings.length > 10) throw new Error("Cart too large");
+      if (!Array.isArray(data.shop) || !Array.isArray(data.bookings))
+        throw new Error("Invalid cart");
+      const sweets = data.sweets ?? [];
+      if (!Array.isArray(sweets) || sweets.length > 20)
+        throw new Error("Invalid sweets");
+      for (const x of sweets) {
+        if (
+          !Number.isInteger(x.sweetId) ||
+          !Number.isInteger(x.qty) ||
+          x.qty < 1 ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(x.dateISO)
+        )
+          throw new Error("Invalid sweet");
+      }
+      if (data.shop.length + data.bookings.length + sweets.length === 0)
+        throw new Error("Empty cart");
+      if (data.shop.length > 50 || data.bookings.length > 10)
+        throw new Error("Cart too large");
       for (const l of data.shop) {
         if (!Number.isInteger(l.shopId) || (l.mode !== "rent" && l.mode !== "buy")) throw new Error("Invalid item");
       }
@@ -138,7 +161,13 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         : lang === "es"
           ? { rent: "alquiler", buy: "compra", fee: "Tarifa de servicio" }
           : { rent: "Miete", buy: "Kauf", fee: "Servicegebühr" };
-    const { lines, unknown } = priceLines(data.shop, data.bookings, name, labels);
+    const { lines, unknown } = priceLines(
+      data.shop,
+      data.bookings,
+      name,
+      labels,
+      data.sweets ?? [],
+    );
     if (unknown.length) {
       return {
         error:

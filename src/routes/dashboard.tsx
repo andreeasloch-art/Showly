@@ -15,6 +15,7 @@ import { IncomingBookings } from "@/components/showly/IncomingBookings";
 import { checkinCodeOf, isLateCancel, presenceQuestion, startOf } from "@/showly/booking";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
+import { PayoutPanel } from "@/components/showly/PayoutPanel";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -729,7 +730,11 @@ function Dashboard() {
             />
           ))}
 
-        {active === "payments" && (
+        {active === "payments" && myProfile && (
+          <PayoutPanel artistId={myProfile.id} />
+        )}
+
+        {active === "payments" && !myProfile && (
           <>
             <div className="dash26-panel">
               <div className="dash26-panel-head">

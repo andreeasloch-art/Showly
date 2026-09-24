@@ -5,6 +5,7 @@
  * Kennungen entgegen (Künstler, Stunden, Artikel, Menge), nie Beträge.
  * So kann niemand im Browser einen Preis auf 1 Euro ändern. */
 import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
+import { SWEETS, estimate, isDirectSweet } from "./sweets";
 
 /** Servicegebühr auf Buchungen */
 export const FEE_RATE = 0.2;
@@ -41,6 +42,8 @@ export interface CartRequestLine {
   city: string;
   wishes: string;
   estimate: number;
+  /** Festpreis-Paket, wird sofort bezahlt statt angefragt */
+  direct?: boolean;
 }
 
 export function minHoursOf(a: Artist) {
@@ -74,7 +77,26 @@ export function findItem(id: number) {
 }
 
 /** Summen für den ganzen Warenkorb */
-export function cartTotals(shop: CartShopLine[], bookings: CartBookingLine[]) {
+/** Preis eines direkt buchbaren Süßwaren-Pakets, nur aus dem Katalog */
+export function sweetPrice(sweetId: number, qty: number): number | null {
+  const s = SWEETS.find((x) => x.id === sweetId);
+  if (!s || s.own || !isDirectSweet(s)) return null;
+  return estimate(
+    s,
+    Math.min(s.unit === "set" ? 20 : 2000, Math.max(1, Math.round(qty) || 1)),
+  );
+}
+
+export function cartTotals(
+  shop: CartShopLine[],
+  bookings: CartBookingLine[],
+  requests: {
+    sweetId: number;
+    qty: number;
+    direct?: boolean;
+    estimate: number;
+  }[] = [],
+) {
   let items = 0;
   for (const l of shop) {
     const i = findItem(l.shopId);
@@ -89,7 +111,18 @@ export function cartTotals(shop: CartShopLine[], bookings: CartBookingLine[]) {
     artists += p.base;
     fees += p.fee;
   }
-  return { items, artists, fees, total: items + artists + fees };
+  /* Direkt gebuchte Süßwaren zählen zu den Artikeln. Eigene Angebote aus
+     dem Browser haben noch keinen Katalogpreis; dann gilt der angezeigte. */
+  let sweets = 0;
+  for (const r of requests)
+    if (r.direct) sweets += sweetPrice(r.sweetId, r.qty) ?? r.estimate;
+  return {
+    items,
+    artists,
+    fees,
+    sweets,
+    total: items + artists + fees + sweets,
+  };
 }
 
 export interface PriceLine {
@@ -105,6 +138,7 @@ export function priceLines(
   bookings: { artistId: number; hours: number; pkg?: string | undefined; dateISO: string; slot: string }[],
   name: (v: unknown) => string,
   labels: { rent: string; buy: string; fee: string },
+  sweets: { sweetId: number; qty: number; dateISO: string }[] = [],
 ): { lines: PriceLine[]; unknown: string[] } {
   const lines: PriceLine[] = [];
   const unknown: string[] = [];
@@ -136,6 +170,24 @@ export function priceLines(
       quantity: qty,
     });
   }
-  if (fee > 0) lines.push({ name: labels.fee, amountInCents: Math.round(fee * 100), quantity: 1 });
+  for (const x of sweets) {
+    const s = SWEETS.find((y) => y.id === x.sweetId);
+    const price = sweetPrice(x.sweetId, x.qty);
+    if (!s || price === null) {
+      unknown.push(`sweet:${x.sweetId}`);
+      continue;
+    }
+    lines.push({
+      name: `${name(s.name)} · ${x.dateISO} · ${x.qty}×`,
+      amountInCents: Math.round(price * 100),
+      quantity: 1,
+    });
+  }
+  if (fee > 0)
+    lines.push({
+      name: labels.fee,
+      amountInCents: Math.round(fee * 100),
+      quantity: 1,
+    });
   return { lines, unknown };
 }

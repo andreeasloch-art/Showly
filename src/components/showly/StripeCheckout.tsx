@@ -46,11 +46,19 @@ export function StripeCheckout({
 export function StripeCartCheckout({
   shop,
   bookings,
+  sweets = [],
   customerEmail,
   locale,
 }: {
   shop: { shopId: number; mode: "rent" | "buy"; qty: number }[];
-  bookings: { artistId: number; hours: number; pkg?: string; dateISO: string; slot: string }[];
+  bookings: {
+    artistId: number;
+    hours: number;
+    pkg?: string;
+    dateISO: string;
+    slot: string;
+  }[];
+  sweets?: { sweetId: number; qty: number; dateISO: string }[];
   customerEmail?: string | undefined;
   locale?: "de" | "en" | "es";
 }) {
@@ -59,6 +67,7 @@ export function StripeCartCheckout({
       data: {
         shop,
         bookings,
+        ...(sweets.length ? { sweets } : {}),
         ...(customerEmail ? { customerEmail } : {}),
         returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),

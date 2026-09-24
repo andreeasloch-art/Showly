@@ -19,6 +19,7 @@ import {
   type SweetCat,
   type SweetRequest,
   type Unit,
+  isDirectSweet,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
@@ -45,6 +46,13 @@ export const SWEETS_COPY = {
     unit: { person: "/ Person", piece: "/ Stück", set: "" } as Record<Unit, string>,
     min: (n: number, u: Unit) => (u === "person" ? `ab ${n} Personen` : u === "piece" ? `ab ${n} Stück` : ""),
     ask: "Anfragen",
+    book: "Direkt buchen",
+    badgeDirect: "Sofort buchbar",
+    bookH: "Direkt buchen",
+    fixed: "Festpreis",
+    fixedP:
+      "Fester Preis. Bezahlt wird an der Kasse, zusammen mit allem anderen im Warenkorb.",
+    inCartDirect: "Liegt im Warenkorb. Bezahlt wird an der Kasse.",
     lead: (d: number) => `${d} Tage Vorlauf`,
     delivery: (km: number) => (km > 0 ? `Lieferung bis ${km} km` : "Nur Abholung"),
     newP: "Neu",
@@ -60,7 +68,12 @@ export const SWEETS_COPY = {
     moreForEvent: "Dazu für dein Event",
     moreForEventP: "Künstler und Deko, die zu dieser Feier passen",
     mine: "Deine Anfragen",
-    status: { sent: "Gesendet", confirmed: "Zugesagt", declined: "Abgesagt" } as Record<SweetRequest["status"], string>,
+    status: {
+      sent: "Gesendet",
+      confirmed: "Zugesagt",
+      declined: "Abgesagt",
+      booked: "Gebucht",
+    } as Record<SweetRequest["status"], string>,
     req: {
       h: "Anfrage senden",
       needDate: "Bitte ein Datum wählen.",
@@ -106,6 +119,13 @@ export const SWEETS_COPY = {
     unit: { person: "/ person", piece: "/ piece", set: "" } as Record<Unit, string>,
     min: (n: number, u: Unit) => (u === "person" ? `min. ${n} guests` : u === "piece" ? `min. ${n} pieces` : ""),
     ask: "Request",
+    book: "Book now",
+    badgeDirect: "Instant booking",
+    bookH: "Book now",
+    fixed: "Fixed price",
+    fixedP:
+      "Fixed price. You pay at checkout together with everything else in your cart.",
+    inCartDirect: "Added to your cart. You pay at checkout.",
     lead: (d: number) => `${d} days notice`,
     delivery: (km: number) => (km > 0 ? `Delivery up to ${km} km` : "Pickup only"),
     newP: "New",
@@ -121,7 +141,12 @@ export const SWEETS_COPY = {
     moreForEvent: "More for your event",
     moreForEventP: "Artists and decor that suit this celebration",
     mine: "Your requests",
-    status: { sent: "Sent", confirmed: "Confirmed", declined: "Declined" } as Record<SweetRequest["status"], string>,
+    status: {
+      sent: "Sent",
+      confirmed: "Confirmed",
+      declined: "Declined",
+      booked: "Booked",
+    } as Record<SweetRequest["status"], string>,
     req: {
       h: "Send request",
       needDate: "Please pick a date.",
@@ -167,6 +192,13 @@ export const SWEETS_COPY = {
     unit: { person: "/ persona", piece: "/ unidad", set: "" } as Record<Unit, string>,
     min: (n: number, u: Unit) => (u === "person" ? `mín. ${n} personas` : u === "piece" ? `mín. ${n} unidades` : ""),
     ask: "Solicitar",
+    book: "Reservar ya",
+    badgeDirect: "Reserva inmediata",
+    bookH: "Reservar ya",
+    fixed: "Precio fijo",
+    fixedP:
+      "Precio fijo. Pagas en la caja junto con todo lo demás del carrito.",
+    inCartDirect: "Está en el carrito. Pagas en la caja.",
     lead: (d: number) => `${d} días de antelación`,
     delivery: (km: number) => (km > 0 ? `Entrega hasta ${km} km` : "Solo recogida"),
     newP: "Nuevo",
@@ -182,7 +214,12 @@ export const SWEETS_COPY = {
     moreForEvent: "Más para tu evento",
     moreForEventP: "Artistas y decoración para esta celebración",
     mine: "Tus solicitudes",
-    status: { sent: "Enviada", confirmed: "Confirmada", declined: "Rechazada" } as Record<SweetRequest["status"], string>,
+    status: {
+      sent: "Enviada",
+      confirmed: "Confirmada",
+      declined: "Rechazada",
+      booked: "Reservada",
+    } as Record<SweetRequest["status"], string>,
     req: {
       h: "Enviar solicitud",
       needDate: "Elige una fecha.",
@@ -310,7 +347,12 @@ export function SweetCard({
     <article className="act-card prod-card sweet-card" id={"sweet-" + s.id}>
       <div className="act-card-media prod-media">
         <div className="act-card-img" style={sweetBg(s)} />
-        <span className="act-card-badge prod-badge">{catName(s.cat, lang)}</span>
+        <span className="act-card-badge prod-badge">
+          {catName(s.cat, lang)}
+        </span>
+        {isDirectSweet(s) && (
+          <span className="sweet-direct">{C.badgeDirect}</span>
+        )}
       </div>
       <div className="act-card-body">
         <h3 className="act-card-name prod-name">{L(s.name)}</h3>
@@ -333,8 +375,8 @@ export function SweetCard({
         {actions ?? (
           <div className="prod-btns one">
             <button className="prod-btn solid" onClick={() => onAsk?.(s)}>
-              <Icon name="mail" />
-              {C.ask}
+              <Icon name={isDirectSweet(s) ? "cart" : "mail"} />
+              {isDirectSweet(s) ? C.book : C.ask}
             </button>
           </div>
         )}
@@ -362,6 +404,8 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   const [name, setName] = useState(session?.name ?? "");
   const [email, setEmail] = useState(session?.email ?? "");
   const [direct, setDirect] = useState(false);
+  /* Festpreis-Paket: kommt als Buchung in den Warenkorb und wird bezahlt */
+  const fixed = isDirectSweet(s);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -385,8 +429,9 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
       city: city.trim().slice(0, 80),
       wishes: wishes.trim().slice(0, 800),
       estimate: estimate(s, Math.max(minQty, qty)),
+      ...(fixed ? { direct: true } : {}),
     });
-    toast(R.inCart);
+    toast(fixed ? C.inCartDirect : R.inCart);
     onClose();
     setCartOpen(true);
   }
@@ -418,7 +463,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
           <button className="feed26-x" onClick={onClose} aria-label="✕">
             <Icon name="close" />
           </button>
-          <h2 id="req-h">{R.h}</h2>
+          <h2 id="req-h">{fixed ? C.bookH : R.h}</h2>
           <span />
         </header>
         <div className="feed26-sheet-body">
@@ -461,8 +506,8 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
           </label>
           <div className="req-sum">
             <span>
-              <b>{R.estimate}</b>
-              <em>{R.estimateP}</em>
+              <b>{fixed ? C.fixed : R.estimate}</b>
+              <em>{fixed ? C.fixedP : R.estimateP}</em>
             </span>
             <strong>{fmt(est)}</strong>
           </div>
@@ -471,28 +516,45 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
               <Icon name="cart" />
               {R.toCart}
             </button>
-            <button className={"home-btn soft" + (direct ? " on" : "")} onClick={() => setDirect((d) => !d)} aria-expanded={direct}>
-              {R.direct}
-            </button>
+            {!fixed && (
+              <button
+                className={"home-btn soft" + (direct ? " on" : "")}
+                onClick={() => setDirect((d) => !d)}
+                aria-expanded={direct}
+              >
+                {R.direct}
+              </button>
+            )}
           </div>
-          {direct && (
-          <>
-          <p className="pe-hint">{R.directP}</p>
-          <div className="pe-grid2">
-            <label className="pe-field">
-              <span className="pe-label">{R.name}</span>
-              <input value={name} maxLength={80} autoComplete="name" onChange={(e) => setName(e.target.value)} />
-            </label>
-            <label className="pe-field">
-              <span className="pe-label">{R.email}</span>
-              <input type="email" value={email} maxLength={120} autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
-            </label>
-          </div>
-          <button className="home-btn primary req-send" onClick={send}>
-            {R.send}
-            <Icon name="send" />
-          </button>
-          </>
+          {direct && !fixed && (
+            <>
+              <p className="pe-hint">{R.directP}</p>
+              <div className="pe-grid2">
+                <label className="pe-field">
+                  <span className="pe-label">{R.name}</span>
+                  <input
+                    value={name}
+                    maxLength={80}
+                    autoComplete="name"
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </label>
+                <label className="pe-field">
+                  <span className="pe-label">{R.email}</span>
+                  <input
+                    type="email"
+                    value={email}
+                    maxLength={120}
+                    autoComplete="email"
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </label>
+              </div>
+              <button className="home-btn primary req-send" onClick={send}>
+                {R.send}
+                <Icon name="send" />
+              </button>
+            </>
           )}
         </div>
       </div>

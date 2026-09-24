@@ -1,5 +1,5 @@
 import { seoHead } from "@/showly/seo";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ARTISTS, CATS } from "@/showly/data";
 import { useShowly } from "@/showly/store";
@@ -105,6 +105,38 @@ function Become() {
     desc: "",
   });
   const [figs, setFigs] = useState<string[]>([]);
+  /* Pflichtangaben für die Regeln zu Absage und Nichterscheinen (AGB §§ 9,
+     18): Vertragsstrafen in AGB sind nur gegenüber Unternehmern zulässig,
+     und die Klausel soll nicht im Kleingedruckten verschwinden. */
+  const [business, setBusiness] = useState(false);
+  const [rulesOk, setRulesOk] = useState(false);
+  const RG =
+    {
+      de: {
+        business:
+          "Ich trete gewerblich oder selbständig auf (nicht nur als Hobby).",
+        rules:
+          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen, danach 50 % der Gage als Vertragsstrafe, bei Nichterscheinen 100 %, außer bei einem belegten Notfall (AGB § 9).",
+        rulesLink: "AGB lesen",
+        need: "Bitte bestätige die beiden Punkte unten.",
+      },
+      en: {
+        business:
+          "I perform on a commercial or self-employed basis (not just as a hobby).",
+        rules:
+          "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences, after that a penalty of 50% of the fee, 100% for a no-show, unless there is a proven emergency (T&C § 9).",
+        rulesLink: "Read T&C",
+        need: "Please confirm the two points below.",
+      },
+      es: {
+        business:
+          "Actúo de forma profesional o como autónomo (no solo como afición).",
+        rules:
+          "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias; después, penalización del 50 % del caché y del 100 % si no me presento, salvo emergencia justificada (CG § 9).",
+        rulesLink: "Leer CG",
+        need: "Confirma los dos puntos de abajo.",
+      },
+    }[(lang as "de" | "en" | "es") ?? "de"] ?? null;
   const planner = role === "planner";
 
   const cats = useMemo(
@@ -139,7 +171,9 @@ function Become() {
     const real = `${form.first} ${form.last}`.trim();
     if (!real || !form.loc.trim()) return toast(t("toast.regNeed"));
     if (!okText(form.desc)) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return toast(t("sec.badEmail"));
+    if (!business || !rulesOk) return toast(RG!.need);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
+      return toast(t("sec.badEmail"));
     if (pw.score < 2) return toast(t("sec.weakPw"));
     const cat = form.cat;
     if (!CATS.some((c) => c.id === cat)) return toast(t("sec.badCat"));
@@ -191,6 +225,8 @@ function Become() {
         : { de: ["Auftritt", "Kostüm", "Musik"], en: ["Performance", "Costume", "Music"] },
       specs: [catLabel(cat)],
       rev: [],
+      business: true,
+      rulesAcceptedAt: new Date().toISOString(),
       ...(planner ? { kind: "planner", packages: defaultPackages() } : {}),
     };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -661,6 +697,33 @@ function Become() {
                 <Icon name="gift" /> {t("reg.pkgHint")}
               </div>
             )}
+            <label className="reg-check">
+              <input
+                id="reg-business"
+                type="checkbox"
+                checked={business}
+                onChange={(e) => setBusiness(e.target.checked)}
+              />
+              <span>{RG!.business}</span>
+            </label>
+            <label className="reg-check">
+              <input
+                id="reg-rules"
+                type="checkbox"
+                checked={rulesOk}
+                onChange={(e) => setRulesOk(e.target.checked)}
+              />
+              <span>
+                {RG!.rules}{" "}
+                <Link
+                  to="/rechtliches/$doc"
+                  params={{ doc: "terms" }}
+                  target="_blank"
+                >
+                  {RG!.rulesLink}
+                </Link>
+              </span>
+            </label>
             <button className="home-btn primary wide" onClick={submit}>
               {planner ? t("reg.btnP") : t("reg.btn")}
               <Icon name="arrow" />

@@ -6150,7 +6150,7 @@ button.cart-addon{cursor:pointer}
 /* Solange ein Fenster (Buchung, Warenkorb …) offen ist, verschwindet die
    Leiste unten. Sonst lag sie über den Knöpfen am Fensterende, etwa über
    "Weiter zur Zahlung", und die ließen sich auf dem Handy nicht antippen. */
-body:has(.modal-overlay) .tabbar{display:none!important}
+body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:none!important}
 
 /* Speicherleiste im Profil-Editor auf dem Handy: Hinweis oben, die beiden
    Knöpfe darunter nebeneinander. Vorher ragte "Änderungen speichern" rechts
@@ -6247,20 +6247,47 @@ body:has(.modal-overlay) .tabbar{display:none!important}
 .booking-off p{margin:0;font-size:14px;color:var(--h-muted,#6B6480)}
 
 /* Stufenmodell, Check-in und Anhörung */
-.inb-standing{display:flex;gap:10px;align-items:flex-start;padding:14px;border-radius:14px;background:#FCE4E8;color:#7A1E30;font-size:14px;line-height:1.45}
+.inb-standing{display:flex;gap:10px;align-items:flex-start;padding:14px;border-radius:14px;background:#fce4e8;color:#7a1e30;font-size:14px;line-height:1.45}
 .inb-standing svg{flex:none;width:18px;height:18px;margin-top:2px}
 .inb-standing span{display:flex;flex-direction:column;gap:4px}
-.inb-standing small{font-size:13px;opacity:.85}
-.inb-checkin{margin-top:8px;padding:12px;border-radius:14px;background:#EEF7F2;display:flex;flex-direction:column;gap:6px}
-.inb-checkin b{font:600 14.5px/1.2 'Outfit',system-ui,sans-serif;color:#1B6F4C}
-.inb-checkin small{font-size:13px;line-height:1.4;color:var(--h-ink2,#3A3350)}
-.inb-checkin>div{display:flex;gap:8px;align-items:center}
-.inb-checkin input{width:110px;height:40px;padding:0 12px;border:1.5px solid #BFE3CF;border-radius:10px;font:600 18px/1 ui-monospace,Menlo,monospace;letter-spacing:.2em;text-align:center;background:#fff}
+.inb-standing small{font-size:13px;opacity:0.85}
+.inb-checkin{margin-top:8px;padding:12px;border-radius:14px;background:#eef7f2;display:flex;flex-direction:column;gap:6px}
+.inb-checkin b{font:;600 14.5px/1.2 "Outfit",;system-ui,;sans-serif;color:#1b6f4c}
+.inb-checkin small{font-size:13px;line-height:1.4;color:var(--h-ink2, #3a3350)}
+.inb-checkin > div{display:flex;gap:8px;align-items:center}
+.inb-checkin input{width:110px;height:40px;padding:0 12px;border:1.5px solid #bfe3cf;border-radius:10px;font:;600 18px/1 ui-monospace,;Menlo,;monospace;letter-spacing:0.2em;text-align:center;background:#fff}
 .inb-checkin .dash26-mini{margin:0}
-.inb-checkin .dash26-mini:disabled{opacity:.5}
-.inb-checked{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:#1B6F4C}
+.inb-checkin .dash26-mini:disabled{opacity:0.5}
+.inb-checked{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:#1b6f4c}
 .inb-checked svg{width:15px;height:15px}
-.inb-pen.s-hearing{color:#8A4A0F}
-.dash26-code{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--h-ink2,#3A3350)}
-.dash26-code svg{width:14px;height:14px;color:var(--h-violet,#6B3BE8)}
-.dash26-presence{background:#FFF4E5;border-radius:14px;padding:12px;border-top:none}
+.inb-pen.s-hearing{color:#8a4a0f}
+.dash26-code{margin:6px 0 0;display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--h-ink2, #3a3350)}
+.dash26-code svg{width:14px;height:14px;color:var(--h-violet, #6b3be8)}
+.dash26-presence{background:#fff4e5;border-radius:14px;padding:12px;border-top:none}
+.reg-check{display:flex;gap:10px;align-items:flex-start;margin:12px 0 0;font-size:14px;line-height:1.45;color:var(--h-ink2, #3a3350);text-align:left;cursor:pointer}
+.reg-check input{flex:none;width:18px;height:18px;margin-top:2px;accent-color:var(--h-violet, #6b3be8)}
+.reg-check a{color:var(--h-violet, #6b3be8);font-weight:600}
+
+/* Auszahlungskonto und Auszahlungen */
+.payout{display:flex;flex-direction:column;gap:16px}
+.bank{padding:18px;border-radius:20px;background:#fff;border:1px solid var(--h-line, #e8e3f2);display:flex;flex-direction:column;gap:14px;text-align:left}
+.bank.missing{border-color:#f3c58f;background:#fffaf2}
+.bank-head{display:flex;gap:12px;align-items:flex-start}
+.bank-head h3{margin:0 0 4px;font:;600 16px/1.2 "Outfit",;system-ui,;sans-serif}
+.bank-head p{margin:0;font-size:14px;line-height:1.45;color:var(--h-muted, #6b6480)}
+.bank.missing .bank-head p{color:#8a4a0f;font-weight:600}
+.bank-ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:var(--h-soft, #f4f0ff);color:var(--h-violet, #6b3be8)}
+.bank-ic svg{width:17px;height:17px}
+.bank-show{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#f6f4fb}
+.bank-show span{display:flex;flex-direction:column;gap:4px;min-width:0}
+.bank-show code{font:;600 14px/1 ui-monospace,;Menlo,;monospace}
+.bank-form{display:flex;flex-direction:column;gap:10px}
+.bank-form input{width:100%}
+.payout-info{margin:0 0 10px;font-size:13.5px;line-height:1.45;color:var(--h-muted, #6b6480)}
+.payout-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px}
+.payout-list li{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:#f8f7fc}
+.payout-list li > div:first-child{display:flex;flex-direction:column;gap:3px;min-width:0}
+.payout-list small{font-size:12.5px;color:var(--h-muted, #6b6480)}
+.payout-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.sweet-direct{position:absolute;right:10px;bottom:10px;z-index:2;padding:5px 9px;border-radius:999px;background:#1f9d6e;color:#fff;font:;600 11.5px/1 "Outfit",;system-ui,;sans-serif}
+.my-req-st.booked{background:#e6f6ee;color:#1b8a5e}

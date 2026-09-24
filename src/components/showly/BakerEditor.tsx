@@ -18,8 +18,10 @@ import {
   type Sweet,
   type SweetCat,
   type Unit,
+  isDirectSweet,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { BankForm } from "@/components/showly/PayoutPanel";
 
 const MAX_PHOTOS = 8;
 
@@ -270,6 +272,8 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
           </div>
         </section>
 
+        <BankForm ownerKey={`baker:${b.id}`} />
+
         <section className="pe-card">
           <div className="pe-card-head">
             <span className="pe-ic">
@@ -475,6 +479,8 @@ export interface OfferDraft {
   minQty: number;
   photo?: MediaRef | undefined;
   img?: number | undefined;
+  /** direkt buchbar zum Festpreis; ohne Angabe gilt die Regel je Kategorie */
+  direct?: boolean | undefined;
 }
 
 export const emptyOffer = (cat: SweetCat = "birthday"): OfferDraft => ({
@@ -492,7 +498,38 @@ export function parsePrice(v: string) {
 }
 
 /** Felder eines Angebots, auch im Anmeldeformular genutzt */
-export function OfferFields({ d, onChange }: { d: OfferDraft; onChange: (d: OfferDraft) => void }) {
+/* Direkt buchbar oder nur auf Anfrage, je Angebot */
+const DIRECT = {
+  de: {
+    h: "Wie wird dieses Angebot gebucht?",
+    yes: "Direkt buchbar zum Festpreis",
+    yesP: "Für feste Pakete, z. B. 20 Macarons oder 12 Cupcakes. Kunden buchen und bezahlen sofort.",
+    no: "Nur auf Anfrage",
+    noP: "Für individuelle Torten mit Motiv, Etagen oder Text. Du bestätigst Termin und Endpreis.",
+  },
+  en: {
+    h: "How is this offer booked?",
+    yes: "Instant booking at a fixed price",
+    yesP: "For fixed packages, e.g. 20 macarons or 12 cupcakes. Customers book and pay right away.",
+    no: "Request only",
+    noP: "For custom cakes with a theme, tiers or text. You confirm date and final price.",
+  },
+  es: {
+    h: "¿Cómo se reserva esta oferta?",
+    yes: "Reserva inmediata a precio fijo",
+    yesP: "Para paquetes fijos, p. ej. 20 macarons o 12 cupcakes. El cliente reserva y paga al momento.",
+    no: "Solo por solicitud",
+    noP: "Para tartas personalizadas con motivo, pisos o texto. Tú confirmas fecha y precio final.",
+  },
+} as const;
+
+export function OfferFields({
+  d,
+  onChange,
+}: {
+  d: OfferDraft;
+  onChange: (d: OfferDraft) => void;
+}) {
   const { lang } = useShowly();
   const X = (TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de) as T;
   const up = <K extends keyof OfferDraft>(k: K, v: OfferDraft[K]) => onChange({ ...d, [k]: v });
@@ -560,6 +597,35 @@ export function OfferFields({ d, onChange }: { d: OfferDraft; onChange: (d: Offe
         <textarea value={d.desc} maxLength={600} onChange={(e) => up("desc", e.target.value)} />
         <ContactHint text={d.name + "\n" + d.desc} />
       </label>
+      <fieldset className="pe-mode">
+        <legend className="pe-label">
+          {DIRECT[lang as "de" | "en" | "es"]?.h ?? DIRECT.de.h}
+        </legend>
+        {([true, false] as const).map((v) => {
+          const D = DIRECT[lang as "de" | "en" | "es"] ?? DIRECT.de;
+          const on = (d.direct ?? isDirectSweet({ cat: d.cat })) === v;
+          return (
+            <label
+              className={"pe-mode-opt" + (on ? " on" : "")}
+              key={String(v)}
+            >
+              <input
+                type="radio"
+                name={"offer-direct-" + (d.id ?? "new")}
+                checked={on}
+                onChange={() => up("direct", v)}
+              />
+              <span className="pe-mode-ic">
+                <Icon name={v ? "cart" : "mail"} />
+              </span>
+              <span className="pe-mode-text">
+                <b>{v ? D.yes : D.no}</b>
+                <small>{v ? D.yesP : D.noP}</small>
+              </span>
+            </label>
+          );
+        })}
+      </fieldset>
     </>
   );
 }
@@ -582,6 +648,7 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       minQty: s.minQty,
       photo: s.photo,
       img: s.img,
+      direct: isDirectSweet(s),
     });
   }
 
@@ -603,6 +670,7 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       minQty: open.unit === "set" ? 1 : open.minQty,
       photo: open.photo,
       img: open.photo ? undefined : open.img,
+      direct: open.direct ?? isDirectSweet({ cat: open.cat }),
     });
     toast(X.offerSaved);
     setOpen(null);

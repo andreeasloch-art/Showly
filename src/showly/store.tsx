@@ -31,6 +31,7 @@ import {
   isInstant,
   isLateCancel,
   newCheckinCode,
+  payoutDate,
   requestExpired,
   standingOf,
   voucherCode,
@@ -174,6 +175,16 @@ export interface Payout {
   /** Sicherheitseinbehalt der ersten Buchungen, wird später ausgezahlt */
   reserve?: number;
   reserveUntil?: string;
+  /** Auszahlung 5 Werktage nach dem Termin */
+  payoutOn?: string;
+}
+/** Auszahlungskonto eines Anbieters. Im Echtbetrieb erfasst Stripe Connect
+ *  diese Daten, Showly speichert dann keine IBAN selbst. */
+export interface BankAccount {
+  holder: string;
+  iban: string;
+  bic?: string;
+  savedAt: string;
 }
 /** Vertragsstrafe eines Künstlers (AGB § 9): späte Absage oder nicht erschienen */
 export interface Penalty {
@@ -271,6 +282,9 @@ interface Ctx {
   instantFor: (a: Artist | null | undefined) => boolean;
   penalties: Penalty[];
   vouchers: Voucher[];
+  /** Kontodaten je Anbieter, Schlüssel "artist:3" oder "baker:5" */
+  bankAccounts: Record<string, BankAccount>;
+  saveBank: (key: string, acc: BankAccount | null) => void;
   /** Kunde storniert. true, wenn es weniger als 24 Stunden vor Beginn war */
   cancelByCustomer: (id: number) => boolean;
   orders: Order[];
@@ -338,6 +352,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<Record<string, BankAccount>>(
+    {},
+  );
   const [avail, setAvail] = useState<Avail>(() => seedAvail());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const counters = useRef({ booking: 105, order: 9002, payout: 5001 });
@@ -370,6 +387,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       avail?: Avail;
       penalties?: Penalty[];
       vouchers?: Voucher[];
+      bankAccounts?: Record<string, BankAccount>;
       counters?: { booking: number; order: number; payout: number };
     } | null>("state", null);
     if (saved) {
@@ -384,6 +402,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       if (saved.avail) setAvail(saved.avail);
       if (Array.isArray(saved.penalties)) setPenalties(saved.penalties);
       if (Array.isArray(saved.vouchers)) setVouchers(saved.vouchers);
+      if (saved.bankAccounts) setBankAccounts(saved.bankAccounts);
       if (saved.counters) counters.current = saved.counters;
     }
     setHydrated(true);
@@ -403,9 +422,24 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       avail,
       penalties,
       vouchers,
+      bankAccounts,
       counters: counters.current,
     });
-  }, [hydrated, bookings, orders, payouts, cart, cartBookings, cartRequests, favorites, session, avail, penalties, vouchers]);
+  }, [
+    hydrated,
+    bookings,
+    orders,
+    payouts,
+    cart,
+    cartBookings,
+    cartRequests,
+    favorites,
+    session,
+    avail,
+    penalties,
+    vouchers,
+    bankAccounts,
+  ]);
 
   const t = useCallback(
     (k: string, vars?: Record<string, string | number>) => {
@@ -743,6 +777,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           name: snap.contact.name,
           email: snap.contact.email,
           estimate: r.estimate,
+          ...(r.direct ? { direct: true } : {}),
         });
       }
       const bk = new Set(snap.bookings.map((b) => b.key));
@@ -828,7 +863,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   );
 
   /* Auszahlung vormerken; bei den ersten Buchungen eines Künstlers mit
-     Sicherheitseinbehalt (AGB § 21 Abs. 5) */
+     Sicherheitseinbehalt (AGB § 21 Abs. 4) */
   const makePayout = useCallback(
     (list: Payout[], a: Artist, dateISO: string, gross: number, net: number): Payout => {
       const earlier = list.filter((p) => p.artistId === a.id).length;
@@ -845,6 +880,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         fee: gross - net,
         net,
         status: "pending",
+        payoutOn: payoutDate(dateISO),
         ...(reserve ? { reserve, reserveUntil: until } : {}),
       };
     },
@@ -969,7 +1005,19 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  const standing = useCallback((artistId: number) => standingOf(artistId, penalties), [penalties]);
+  const saveBank = useCallback((key: string, acc: BankAccount | null) => {
+    setBankAccounts((x) => {
+      const next = { ...x };
+      if (acc) next[key] = acc;
+      else delete next[key];
+      return next;
+    });
+  }, []);
+
+  const standing = useCallback(
+    (artistId: number) => standingOf(artistId, penalties),
+    [penalties],
+  );
   const instantFor = useCallback(
     (a: Artist | null | undefined) => isInstant(a) && (!a || standingOf(a.id, penalties).instantAllowed),
     [penalties],
@@ -1127,6 +1175,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     instantFor,
     penalties,
     vouchers,
+    bankAccounts,
+    saveBank,
     payouts,
     addPayout,
     orders,

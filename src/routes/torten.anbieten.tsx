@@ -5,8 +5,19 @@ import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { useImageStore } from "@/components/showly/ImagePick";
-import { OfferFields, SpecPicker, emptyOffer, parsePrice, type OfferDraft } from "@/components/showly/BakerEditor";
-import { createBaker, saveSweet, type SweetCat } from "@/showly/sweets";
+import {
+  OfferFields,
+  SpecPicker,
+  emptyOffer,
+  parsePrice,
+  type OfferDraft,
+} from "@/components/showly/BakerEditor";
+import {
+  createBaker,
+  saveSweet,
+  type SweetCat,
+  isDirectSweet,
+} from "@/showly/sweets";
 import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
@@ -196,6 +207,7 @@ function Onboard() {
       price,
       unit: offer.unit,
       minQty: offer.unit === "set" ? 1 : offer.minQty,
+      direct: offer.direct ?? isDirectSweet({ cat: offer.cat }),
       photo: offer.photo,
     });
     toast(C.done);

@@ -61,6 +61,8 @@ const TEXT = {
     sumH: "Deine Bestellung",
     sumActs: "Künstler",
     sumItems: "Artikel",
+    sumSweets: "Torten & Süßes",
+    fixed: "Festpreis",
     sumFee: "Servicegebühr",
     sumTotal: "Jetzt zu zahlen",
     sumLater: "Torten-Anfragen (Preis folgt)",
@@ -120,6 +122,8 @@ const TEXT = {
     sumH: "Your order",
     sumActs: "Artists",
     sumItems: "Items",
+    sumSweets: "Cakes & sweets",
+    fixed: "Fixed price",
     sumFee: "Service fee",
     sumTotal: "To pay now",
     sumLater: "Cake requests (price follows)",
@@ -179,6 +183,8 @@ const TEXT = {
     sumH: "Tu pedido",
     sumActs: "Artistas",
     sumItems: "Artículos",
+    sumSweets: "Tartas y dulces",
+    fixed: "Precio fijo",
     sumFee: "Tarifa de servicio",
     sumTotal: "A pagar ahora",
     sumLater: "Solicitudes de tartas (precio a confirmar)",
@@ -262,8 +268,10 @@ export function CartCheckout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
-  const totals = cartTotals(cart, cartBookings);
-  const reqSum = cartRequests.reduce((s, r) => s + r.estimate, 0);
+  const totals = cartTotals(cart, cartBookings, cartRequests);
+  /* Nur echte Anfragen haben einen Richtpreis; Festpreis-Pakete sind in totals */
+  const askReqs = cartRequests.filter((r) => !r.direct);
+  const reqSum = askReqs.reduce((s, r) => s + r.estimate, 0);
   const empty = !cart.length && !cartBookings.length && !cartRequests.length;
   const hasOwnItems = cart.some((c) => SHOP_ITEMS.find((i) => i.id === c.shopId)?.own);
 
@@ -305,8 +313,12 @@ export function CartCheckout() {
 
   function finishWithoutPayment() {
     const snap = snapshot();
-    const req = snap.requests.length > 0;
-    const reserved = snap.bookings.length + snap.shop.length > 0;
+    const req = snap.requests.some((r) => !r.direct);
+    const reserved =
+      snap.bookings.length +
+        snap.shop.length +
+        snap.requests.filter((r) => r.direct).length >
+      0;
     completeCart(snap, false);
     setDone({ paid: false, req, reserved });
   }
@@ -491,7 +503,12 @@ export function CartCheckout() {
                           </div>
                           <div className="co-line-end">
                             <b>
-                              <small>{X.approx}</small> {fmt(r.estimate)}
+                              {r.direct ? (
+                                <small>{X.fixed}</small>
+                              ) : (
+                                <small>{X.approx}</small>
+                              )}{" "}
+                              {fmt(r.estimate)}
                             </b>
                             <button className="co-rm" onClick={() => removeCartRequest(r.key)}>
                               {X.remove}
@@ -592,6 +609,13 @@ export function CartCheckout() {
                   paying ? (
                     <StripeCartCheckout
                       shop={cart}
+                      sweets={cartRequests
+                        .filter((r) => r.direct)
+                        .map((r) => ({
+                          sweetId: r.sweetId,
+                          qty: r.qty,
+                          dateISO: r.dateISO,
+                        }))}
                       bookings={cartBookings.map((b) => ({
                         artistId: b.artistId,
                         hours: b.hours,
@@ -649,6 +673,12 @@ export function CartCheckout() {
                     <span>{fmt(totals.items)}</span>
                   </li>
                 )}
+                {totals.sweets > 0 && (
+                  <li>
+                    <span>{X.sumSweets}</span>
+                    <span>{fmt(totals.sweets)}</span>
+                  </li>
+                )}
                 {totals.fees > 0 && (
                   <li>
                     <span>{X.sumFee}</span>
@@ -659,7 +689,7 @@ export function CartCheckout() {
                   <span>{X.sumTotal}</span>
                   <strong>{fmt(totals.total)}</strong>
                 </li>
-                {cartRequests.length > 0 && (
+                {askReqs.length > 0 && (
                   <li className="later">
                     <span>{X.sumLater}</span>
                     <span>

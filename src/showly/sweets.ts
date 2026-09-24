@@ -96,6 +96,17 @@ export interface Sweet {
   img?: number | undefined;
   photo?: MediaRef | undefined;
   own?: boolean;
+  /** Festpreis-Paket, direkt buchbar (z. B. 20 Macarons). Ohne Angabe gilt
+   *  die Regel in isDirectSweet: Spezial- und Motivtorten nur auf Anfrage. */
+  direct?: boolean;
+}
+
+/* Individuelle Torten brauchen Absprache (Motiv, Etagen, Text), feste
+   Pakete wie Cupcakes, Macarons oder eine Candy Bar lassen sich sofort
+   buchen. Der Anbieter kann das je Angebot umstellen. */
+const REQUEST_CATS = ["wedding", "birthday", "motif"];
+export function isDirectSweet(s: Pick<Sweet, "cat" | "direct">): boolean {
+  return s.direct ?? !REQUEST_CATS.includes(s.cat);
 }
 
 export interface SweetRequest {
@@ -110,7 +121,9 @@ export interface SweetRequest {
   email: string;
   estimate: number;
   createdISO: string;
-  status: "sent" | "confirmed" | "declined";
+  /** booked: direkt zum Festpreis gebucht */
+  status: "sent" | "confirmed" | "declined" | "booked";
+  direct?: boolean;
 }
 
 const L = (de: string, en: string, es: string) => ({ de, en, es });
@@ -456,7 +469,7 @@ export function addRequest(r: Omit<SweetRequest, "id" | "createdISO" | "status">
     ...r,
     id: "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
     createdISO: new Date().toISOString(),
-    status: "sent",
+    status: r.direct ? "booked" : "sent",
   };
   saveJSON(K_REQ, [full, ...listRequests()]);
   return full;

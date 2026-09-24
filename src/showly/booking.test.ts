@@ -55,3 +55,20 @@ describe("Stufenmodell", () => {
     expect(standingOf(1, [{ ...strike(3), artistId: 2 }], now).strikes).toBe(0);
   });
 });
+
+import { isValidIban, maskIban, payoutDate } from "./booking";
+
+describe("Auszahlung", () => {
+  it("5 Werktage nach dem Termin, Wochenende zählt nicht", () => {
+    expect(payoutDate("2026-09-25")).toBe("2026-10-02"); // Freitag -> Freitag
+    expect(payoutDate("2026-09-26")).toBe("2026-10-02"); // Samstag -> Freitag
+    expect(payoutDate("2026-09-28")).toBe("2026-10-05"); // Montag -> Montag
+  });
+  it("prüft die IBAN", () => {
+    expect(isValidIban("DE89 3704 0044 0532 0130 00")).toBe(true);
+    expect(isValidIban("DE89 3704 0044 0532 0130 01")).toBe(false);
+    expect(isValidIban("DE89 3704 0044 0532 0130")).toBe(false);
+    expect(isValidIban("AT61 1904 3002 3457 3201")).toBe(true);
+    expect(maskIban("DE89370400440532013000")).toBe("DE89 •••• •••• •••• 3000");
+  });
+});

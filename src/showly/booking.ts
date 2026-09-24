@@ -124,7 +124,7 @@ export interface Standing {
   until?: string;
 }
 
-/** Stufenmodell (AGB § 23 Abs. 5), gezählt werden fällige Strafen wegen
+/** Stufenmodell (AGB § 23 Abs. 2), gezählt werden fällige Strafen wegen
  *  Nichterscheinens in den letzten 12 Monaten:
  *   1 → Verwarnung, 30 Tage nur Anfragen und weiter unten in der Suche
  *   2 → zusätzlich 60 Tage gesperrt
@@ -146,9 +146,71 @@ export function standingOf(artistId: number, penalties: StrikePenalty[], now = D
   return { strikes: n, bookable: true, instantAllowed: true, demoted: false, removed: false };
 }
 
-/* Sicherheitseinbehalt (AGB § 21 Abs. 5): Von den ersten 5 Buchungen eines
+/* Sicherheitseinbehalt (AGB § 21 Abs. 4): Von den ersten 5 Buchungen eines
    Künstlers werden 20 % der Gage 30 Tage nach dem Termin ausgezahlt statt
    sofort. Wirklich umgesetzt wird das mit Stripe Connect. */
 export const RESERVE_FIRST_BOOKINGS = 5;
 export const RESERVE_RATE = 0.2;
 export const RESERVE_DAYS = 30;
+
+/* ---------------------------------------------------------------------------
+ * Auszahlung an Anbietende (AGB § 21)
+ * ------------------------------------------------------------------------ */
+
+/** Werktage nach dem Termin bis zur Auszahlung */
+export const PAYOUT_WORKDAYS = 5;
+
+/** Datum der Auszahlung: Termin plus 5 Werktage (Montag bis Freitag).
+ *  Feiertage sind nicht berücksichtigt; fällt einer dazwischen, zahlt der
+ *  Zahlungsdienst am nächsten Bankarbeitstag aus. */
+export function payoutDate(
+  eventISO: string,
+  workdays = PAYOUT_WORKDAYS,
+): string {
+  const d = new Date(eventISO.slice(0, 10) + "T12:00:00");
+  let left = workdays;
+  while (left > 0) {
+    d.setDate(d.getDate() + 1);
+    const wd = d.getDay();
+    if (wd !== 0 && wd !== 6) left--;
+  }
+  return d.toISOString().slice(0, 10);
+}
+
+/** IBAN prüfen: Länderlänge und Prüfziffer (Modulo 97) */
+const IBAN_LEN: Record<string, number> = {
+  DE: 22,
+  AT: 20,
+  CH: 21,
+  LI: 21,
+  LU: 20,
+  NL: 18,
+  BE: 16,
+  FR: 27,
+  IT: 27,
+  ES: 24,
+  PL: 28,
+  DK: 18,
+  CZ: 24,
+};
+export function normalizeIban(v: string): string {
+  return v.replace(/\s+/g, "").toUpperCase();
+}
+export function isValidIban(v: string): boolean {
+  const iban = normalizeIban(v);
+  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(iban)) return false;
+  const len = IBAN_LEN[iban.slice(0, 2)];
+  if (len && iban.length !== len) return false;
+  const moved = iban.slice(4) + iban.slice(0, 4);
+  let rest = 0;
+  for (const ch of moved) {
+    const n = /\d/.test(ch) ? ch : String(ch.charCodeAt(0) - 55);
+    for (const digit of n) rest = (rest * 10 + Number(digit)) % 97;
+  }
+  return rest === 1;
+}
+/** "DE89 •••• •••• •••• 3000" für die Anzeige */
+export function maskIban(v: string): string {
+  const i = normalizeIban(v);
+  return `${i.slice(0, 4)} •••• •••• •••• ${i.slice(-4)}`;
+}

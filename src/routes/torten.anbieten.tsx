@@ -8,6 +8,7 @@ import { useImageStore } from "@/components/showly/ImagePick";
 import { OfferFields, SpecPicker, emptyOffer, parsePrice, type OfferDraft } from "@/components/showly/BakerEditor";
 import { createBaker, saveSweet, type SweetCat } from "@/showly/sweets";
 import type { MediaRef } from "@/showly/media";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/torten/anbieten")({
   head: () => seoHead("/torten/anbieten", "/torten/anbieten"),
@@ -135,6 +136,7 @@ const COPY = {
 };
 
 function Onboard() {
+  const okText = useContactCheck();
   const { lang, toast } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
@@ -171,6 +173,7 @@ function Onboard() {
     const price = parsePrice(offer.price);
     if (!offer.name.trim() || !price) return toast(C.needOffer);
     if (!legal || !terms) return toast(C.needLegal);
+    if (!okText(tagline, about, offer.name, offer.desc)) return;
     const b = createBaker({
       kind,
       name: name.trim().slice(0, 80),
@@ -264,6 +267,7 @@ function Onboard() {
             <label className="pe-field">
               <span className="pe-label">{C.about}</span>
               <textarea rows={5} value={about} maxLength={1500} placeholder={C.aboutPh} onChange={(e) => setAbout(e.target.value)} />
+              <ContactHint text={tagline + "\n" + about} />
             </label>
             <div className="pe-field">
               <span className="pe-label">{C.specs}</span>

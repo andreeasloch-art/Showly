@@ -6237,3 +6237,7 @@ body:has(.modal-overlay) .tabbar{display:none!important}
 .vouch-item b{font:700 18px/1 'Outfit',system-ui,sans-serif}
 .vouch-item code{font:600 14px/1 ui-monospace,Menlo,monospace;letter-spacing:.04em;padding:6px 8px;border-radius:8px;background:#F6F4FB;user-select:all}
 .vouch-item small{flex:1 1 100%;font-size:12.5px;line-height:1.45;color:var(--h-muted,#6B6480)}
+
+/* Hinweis bei Kontaktdaten in Textfeldern */
+.contact-hint{display:flex;gap:8px;align-items:flex-start;margin:8px 0 0;padding:10px 12px;border-radius:12px;background:#FFF1E2;color:#8A4A0F;font-size:13.5px;line-height:1.45;text-align:left}
+.contact-hint svg{flex:none;width:16px;height:16px;margin-top:2px}

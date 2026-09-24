@@ -12,7 +12,7 @@ import { useShowly, type Booking } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { figName } from "@/showly/figures";
 import { bookingPrice, minHoursOf } from "@/showly/pricing";
-import { isInstant, isLateCancel, respondBy } from "@/showly/booking";
+import { PENALTY_RATE, isInstant, isLateCancel, respondBy } from "@/showly/booking";
 
 const COPY = {
   de: {
@@ -29,7 +29,7 @@ const COPY = {
     sureCancel: "Wirklich absagen? Der Kunde bekommt den vollen Betrag zurück.",
     yesCancel: "Ja, absagen",
     cancelled: "Buchung abgesagt. Der Kunde bekommt den vollen Betrag zurück.",
-    sureLate: (p: string) => `Weniger als 24 Stunden vor Beginn: Ohne Notfall fällt eine Vertragsstrafe in Höhe deiner Gage an (${p}), und der Kunde bekommt einen Gutschein. Bei einem Notfall (z. B. Unfall, akute Krankheit) schick uns den Nachweis, dann entfällt die Strafe.`,
+    sureLate: (p: string) => `Weniger als 24 Stunden vor Beginn: Ohne Notfall fällt eine Vertragsstrafe von 50 % deiner Gage an (${p}), und der Kunde bekommt einen Gutschein. Bei einem Notfall (z. B. Unfall, akute Krankheit) schick uns den Nachweis, dann entfällt die Strafe.`,
     yesEmergency: "Notfall, Nachweis folgt",
     yesNoEmergency: "Ohne Notfall absagen",
     doneProof: "Abgesagt. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de, wir prüfen ihn.",
@@ -74,7 +74,7 @@ const COPY = {
     sureCancel: "Really cancel? The customer gets a full refund.",
     yesCancel: "Yes, cancel",
     cancelled: "Booking cancelled. The customer gets a full refund.",
-    sureLate: (p: string) => `Less than 24 hours before the start: without an emergency, a contractual penalty equal to your fee applies (${p}) and the customer gets a voucher. In an emergency (e.g. accident, sudden illness), send us proof and the penalty is dropped.`,
+    sureLate: (p: string) => `Less than 24 hours before the start: without an emergency, a contractual penalty of 50% of your fee applies (${p}) and the customer gets a voucher. In an emergency (e.g. accident, sudden illness), send us proof and the penalty is dropped.`,
     yesEmergency: "Emergency, proof to follow",
     yesNoEmergency: "Cancel without emergency",
     doneProof: "Cancelled. Send the proof to support@showly.de within 7 days and we'll review it.",
@@ -119,7 +119,7 @@ const COPY = {
     sureCancel: "¿Seguro que quieres cancelar? El cliente recibe el reembolso completo.",
     yesCancel: "Sí, cancelar",
     cancelled: "Reserva cancelada. El cliente recibe el reembolso completo.",
-    sureLate: (p: string) => `Faltan menos de 24 horas: sin una emergencia se aplica una penalización igual a tu caché (${p}) y el cliente recibe un vale. En caso de emergencia (p. ej. accidente, enfermedad repentina), envíanos el justificante y no habrá penalización.`,
+    sureLate: (p: string) => `Faltan menos de 24 horas: sin una emergencia se aplica una penalización del 50 % de tu caché (${p}) y el cliente recibe un vale. En caso de emergencia (p. ej. accidente, enfermedad repentina), envíanos el justificante y no habrá penalización.`,
     yesEmergency: "Emergencia, envío justificante",
     yesNoEmergency: "Cancelar sin emergencia",
     doneProof: "Cancelada. Envía el justificante a support@showly.de en 7 días y lo revisaremos.",
@@ -248,7 +248,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           <div className="inb-actions">
             {asking === b.id ? (
               <>
-                <span className="inb-sure">{late ? C.sureLate(fmt(net)) : C.sureCancel}</span>
+                <span className="inb-sure">{late ? C.sureLate(fmt(Math.round(net * PENALTY_RATE.late))) : C.sureCancel}</span>
                 <button className="dash26-mini outline" onClick={() => setAsking(null)}>
                   {C.no}
                 </button>
@@ -269,7 +269,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
                   onClick={() => {
                     const r = cancelByArtist(b.id, false);
                     setAsking(null);
-                    toast(r === "penalty" ? C.donePenalty(fmt(net)) : C.cancelled);
+                    toast(r === "penalty" ? C.donePenalty(fmt(Math.round(net * PENALTY_RATE.late))) : C.cancelled);
                   }}
                 >
                   {late ? C.yesNoEmergency : C.yesCancel}

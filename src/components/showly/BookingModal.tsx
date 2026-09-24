@@ -6,6 +6,7 @@ import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
 import { CatIcon, Icon, bgOf, hasImg } from "@/showly/ui";
 import { figName } from "@/showly/figures";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 
 const COPY = {
@@ -36,6 +37,7 @@ export function BookingModal({
   loc: string;
   onClose: () => void;
 }) {
+  const okText = useContactCheck();
   const { t, lang, L, fmt, num, fmtDate, addCartBooking } = useShowly();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -58,6 +60,7 @@ export function BookingModal({
   /* Die Buchung kommt in den Warenkorb, bezahlt wird an der Kasse
      zusammen mit Deko und Torten. „Jetzt bezahlen“ geht direkt dorthin. */
   function toCart(payNow: boolean) {
+    if (!okText(notes)) return;
     addCartBooking(
       {
         artistId: a.id,
@@ -174,8 +177,9 @@ export function BookingModal({
                 <div className="input-group">
                   <label>{t("mod.notes")}</label>
                   <textarea rows={2} maxLength={500} placeholder={t("mod.notesPh")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  <ContactHint text={notes} />
                 </div>
-                <button className="btn-primary" style={{ width: "100%" }} onClick={() => setStep(2)}>
+                <button className="btn-primary" style={{ width: "100%" }} onClick={() => okText(notes) && setStep(2)}>
                   {t("mod.continue")}
                 </button>
               </>

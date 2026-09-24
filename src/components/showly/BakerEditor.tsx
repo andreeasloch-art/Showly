@@ -19,6 +19,7 @@ import {
   type SweetCat,
   type Unit,
 } from "@/showly/sweets";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 const MAX_PHOTOS = 8;
 
@@ -184,6 +185,7 @@ interface Draft {
 }
 
 export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
+  const okText = useContactCheck();
   const { L, lang, toast } = useShowly();
   const X = (TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de) as T;
   const store = useImageStore();
@@ -227,6 +229,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
 
   function save() {
     if (!draft.name.trim()) return toast(X.needName);
+    if (!okText(draft.name, draft.tagline, draft.about)) return;
     updateBaker(b.id, {
       name: draft.name.trim().slice(0, 80),
       tagline: draft.tagline.trim().slice(0, 120),
@@ -346,6 +349,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
           <label className="pe-field">
             <span className="pe-label">{X.about}</span>
             <textarea rows={6} value={draft.about} maxLength={1500} onChange={(e) => set("about", e.target.value)} />
+            <ContactHint text={draft.about + "\n" + draft.tagline} />
             <span className="pe-hint">
               <b>{draft.about.length}/1500</b>
             </span>
@@ -554,12 +558,14 @@ export function OfferFields({ d, onChange }: { d: OfferDraft; onChange: (d: Offe
       <label className="pe-field">
         <span className="pe-label">{X.offerDesc}</span>
         <textarea value={d.desc} maxLength={600} onChange={(e) => up("desc", e.target.value)} />
+        <ContactHint text={d.name + "\n" + d.desc} />
       </label>
     </>
   );
 }
 
 function OffersEditor({ b, X }: { b: Baker; X: T }) {
+  const okText = useContactCheck();
   const { L, toast } = useShowly();
   const [, bump] = useState(0);
   const [open, setOpen] = useState<OfferDraft | null>(null);
@@ -583,6 +589,7 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
     if (!open) return;
     const price = parsePrice(open.price);
     if (!open.name.trim() || !price) return toast(X.offerNeed);
+    if (!okText(open.name, open.desc)) return;
     const prev = open.id ? list.find((s) => s.id === open.id) : undefined;
     if (prev?.photo && prev.photo.id !== open.photo?.id) void deleteMedia(prev.photo.id);
     saveSweet({

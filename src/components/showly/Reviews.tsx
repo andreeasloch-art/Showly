@@ -14,6 +14,7 @@ import { MediaPicker } from "./MediaPicker";
 import { MediaGrid } from "./MediaView";
 import { ReportMenu, useModeration } from "./ReportMenu";
 import { isHidden } from "@/showly/moderation";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 const EMPTY: UserReview[] = [];
 
@@ -141,6 +142,7 @@ export function UserReviewList({ artistId }: { artistId: number }) {
 }
 
 export function ReviewComposer({ artistId }: { artistId: number }) {
+  const okText = useContactCheck();
   const { lang, session, toast } = useShowly();
   const L = (lang as "de" | "en" | "es") ?? "de";
   const T = TEXT[L] ?? TEXT.de;
@@ -161,6 +163,7 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
   function send() {
     if (!name.trim()) return setErr(T.needName);
     if (text.trim().length < 12) return setErr(T.needText);
+    if (!okText(name, text)) return;
     addReview({
       artistId,
       author: name.trim(),
@@ -230,6 +233,7 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
           placeholder={T.textPh}
           onChange={(e) => setText(e.target.value)}
         />
+        <ContactHint text={text} />
       </div>
 
       <MediaPicker value={media} onChange={setMedia} lang={L} />

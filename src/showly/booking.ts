@@ -35,13 +35,15 @@ export function requestExpired(
 }
 
 /* Stornierung ohne Grund bis 24 Stunden vor Beginn (AGB §§ 8, 9). Danach:
- * Kunden schulden die Gage. Künstler zahlen eine Vertragsstrafe in Höhe
- * ihrer Gage, es sei denn, sie belegen einen Notfall (etwa Unfall auf dem
+ * Kunden schulden die Gage. Künstler zahlen eine Vertragsstrafe von 50 %
+ * ihrer Gage (nicht erschienen: 100 %), es sei denn, sie belegen einen Notfall (etwa Unfall auf dem
  * Weg, akute Krankheit mit Attest); der Kunde bekommt dann alles zurück und
  * zusätzlich einen Gutschein. Dasselbe gilt, wenn ein Künstler nicht
  * erscheint. */
 export const FREE_CANCEL_HOURS = 24;
 export const VOUCHER_EUR = 50;
+/** Vertragsstrafe in Prozent der Gage: späte Absage 50 %, nicht erschienen 100 % */
+export const PENALTY_RATE = { late: 0.5, noshow: 1 } as const;
 
 export function startOf(b: { dateISO: string; slot?: string }): number {
   return new Date(`${b.dateISO}T${b.slot || "00:00"}:00`).getTime();

@@ -9,6 +9,7 @@ import { Footer } from "@/components/showly/Footer";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS, travelOption } from "@/showly/travel";
 import { saveArtistProfile, saveAccount } from "@/showly/persist";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/mitmachen")({
   head: () => seoHead("/mitmachen", "/mitmachen"),
@@ -82,6 +83,7 @@ const COPY = {
 } as const;
 
 function Become() {
+  const okText = useContactCheck();
   const { t, lang, fmt, num, toast, setSession, catLabel, L } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
@@ -136,6 +138,7 @@ function Become() {
     if (form.hp) return;
     const real = `${form.first} ${form.last}`.trim();
     if (!real || !form.loc.trim()) return toast(t("toast.regNeed"));
+    if (!okText(form.desc)) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return toast(t("sec.badEmail"));
     if (pw.score < 2) return toast(t("sec.weakPw"));
     const cat = form.cat;
@@ -651,6 +654,7 @@ function Become() {
                 value={form.desc}
                 onChange={(e) => set("desc", e.target.value)}
               />
+              <ContactHint text={form.desc} />
             </div>
             {planner && (
               <div className="join26-hint">

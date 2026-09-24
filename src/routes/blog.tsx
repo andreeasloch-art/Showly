@@ -31,6 +31,7 @@ import {
   toggleLike,
   type Post,
 } from "@/showly/community";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/blog")({
   head: () => seoHead("/blog", "/blog"),
@@ -435,6 +436,7 @@ function Composer({
   localeKey: "de" | "en" | "es";
   onClose: () => void;
 }) {
+  const okText = useContactCheck();
   const { session, toast } = useShowly();
   const [name, setName] = useState(() => session?.name || savedName());
   const [text, setText] = useState("");
@@ -461,6 +463,7 @@ function Composer({
   function publish() {
     if (!name.trim()) return setErr(T.needName);
     if (text.trim().length < 10) return setErr(T.needText);
+    if (!okText(name, text)) return;
     addPost({
       author: name.trim(),
       text: text.trim(),
@@ -510,6 +513,7 @@ function Composer({
             placeholder={T.textPh}
             onChange={(e) => setText(e.target.value)}
           />
+          <ContactHint text={text} />
           <MediaPicker value={media} onChange={setMedia} lang={localeKey} />
           <ArtistTagPicker
             value={tagged}
@@ -555,6 +559,7 @@ function PostCard({
   T: Copy;
   localeKey: string;
 }) {
+  const okText = useContactCheck();
   const { L, catLabel } = useShowly();
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
@@ -582,6 +587,7 @@ function PostCard({
   function comment() {
     const author = me.trim() || "Gast";
     if (draft.trim().length < 2) return;
+    if (!okText(draft)) return;
     addComment(post.id, author, draft.trim());
     setDraft("");
     setShowAll(true);

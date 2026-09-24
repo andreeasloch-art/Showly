@@ -11,6 +11,7 @@ import { ImagePick } from "@/components/showly/ImagePick";
 import { ShopAreas } from "@/components/showly/ShopAreas";
 import { saveDecoItem } from "@/showly/sweets";
 import type { MediaRef } from "@/showly/media";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 type Area = "kostueme" | "deko";
 
@@ -480,6 +481,7 @@ function DecoOffer({
   onClose: () => void;
   onDone: (id: number) => void;
 }) {
+  const okText = useContactCheck();
   const { t, toast } = useShowly();
   const F = C.form;
   const [vendor, setVendor] = useState("");
@@ -506,6 +508,7 @@ function DecoOffer({
     const b = price(buy);
     const r = price(rent);
     if (!vendor.trim() || !name.trim() || (!b && !r)) return toast(F.need);
+    if (!okText(name, desc)) return;
     const item = saveDecoItem({
       vendor: vendor.trim().slice(0, 80),
       name: name.trim().slice(0, 100),
@@ -594,6 +597,7 @@ function DecoOffer({
           <label className="pe-field">
             <span className="pe-label">{F.desc}</span>
             <textarea value={desc} maxLength={600} placeholder={F.descPh} onChange={(e) => setDesc(e.target.value)} />
+            <ContactHint text={name + "\n" + desc} />
           </label>
           <p className="pe-note">
             <Icon name="lock" /> {F.note}

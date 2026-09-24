@@ -7,6 +7,7 @@ import { figName, figureList, figuresOf, realName } from "@/showly/figures";
 import { MediaError, deleteMedia, preloadMedia, putMedia, type MediaRef } from "@/showly/media";
 import { updateArtistProfile } from "@/showly/persist";
 import { isInstant } from "@/showly/booking";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 import { RADIUS_OPTIONS, radiusOf, travelOption } from "@/showly/travel";
 import { ArtistCard } from "@/components/showly/ArtistCard";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
@@ -335,6 +336,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
   const { lang, fmt, fmtDate, toast, catLabel } = useShowly();
   const C: Copy = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
+  const okText = useContactCheck();
   const [draft, setDraft] = useState<Draft>(() => initialDraft(a, lang));
   const [saved, setSaved] = useState<Draft>(draft);
   const [figInput, setFigInput] = useState("");
@@ -448,6 +450,9 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
 
   function save() {
     if (!patch.name) return toast(C.errName);
+    /* Kontaktdaten gehören in den Bereich "Kontakt", nicht in öffentliche Texte */
+    if (!okText(patch.name, patch.desc, patch.exp, ...patch.tags, ...patch.includes, ...patch.specs, ...patch.figures))
+      return;
     if (patch.price < 10 || patch.price > 2000) return toast(C.errPrice);
     if (patch.contact.website && !/^https:\/\/[^\s]+\.[^\s]+$/.test(patch.contact.website))
       return toast(C.errUrl);
@@ -689,6 +694,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
               value={draft.desc}
               onChange={(e) => set("desc", e.target.value)}
             />
+            <ContactHint text={[draft.name, draft.desc, draft.exp, draft.tags, draft.includes, draft.specs].join("\n")} />
             <span className="pe-hint">
               {C.descHint} <b>{draft.desc.length}/400</b>
             </span>

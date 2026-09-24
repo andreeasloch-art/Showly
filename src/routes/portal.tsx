@@ -33,6 +33,7 @@ import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { IdentityCheck } from "@/components/showly/IdentityCheck";
 import { updateArtistProfile, findAccount } from "@/showly/persist";
 import stageImg from "@/assets/spotlight-stage.jpg";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/portal")({
   head: () => seoHead("/portal", "/portal"),
@@ -305,6 +306,7 @@ function nextDays(n: number) {
 }
 
 function Portal() {
+  const okText = useContactCheck();
   const {
     lang,
     L,
@@ -465,6 +467,7 @@ function Portal() {
 
 
   function saveProfile() {
+    if (!okText(prof.name, prof.desc, ...(prof.figures || []))) return;
     const patch = {
       name: prof.name,
       desc: prof.desc,
@@ -857,6 +860,7 @@ function Portal() {
               value={prof.desc}
               onChange={(e) => setProf({ ...prof, desc: e.target.value })}
             />
+            <ContactHint text={prof.name + "\n" + prof.desc} />
           </label>
           <div>
             <h2 className="portal-h2">{T.acts}</h2>

@@ -20,6 +20,7 @@ import {
   type SweetRequest,
   type Unit,
 } from "@/showly/sweets";
+import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const SWEETS_COPY = {
   de: {
@@ -349,6 +350,7 @@ function addDays(n: number) {
 }
 
 export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) {
+  const okText = useContactCheck();
   const { L, fmt, toast, session, addCartRequest, setCartOpen } = useShowly();
   const C = useSweetsCopy();
   const R = C.req;
@@ -373,6 +375,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   /* In den Warenkorb: Name und E-Mail kommen dann an der Kasse dazu */
   function toCart() {
     if (!date) return toast(R.needDate);
+    if (!okText(wishes)) return;
     if (b && date < addDays(b.leadDays)) return toast(R.tooSoon(b.leadDays));
     addCartRequest({
       sweetId: s.id,
@@ -390,6 +393,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
 
   function send() {
     if (!date || !name.trim() || !email.trim()) return toast(R.need);
+    if (!okText(wishes)) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast(R.mail);
     if (b && date < addDays(b.leadDays)) return toast(R.tooSoon(b.leadDays));
     addRequest({
@@ -453,6 +457,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
           <label className="pe-field">
             <span className="pe-label">{R.wishes}</span>
             <textarea value={wishes} maxLength={800} placeholder={R.wishesPh} onChange={(e) => setWishes(e.target.value)} />
+            <ContactHint text={wishes} />
           </label>
           <div className="req-sum">
             <span>

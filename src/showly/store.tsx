@@ -20,7 +20,7 @@ import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { deleteMyAccount } from "@/utils/account.functions";
 import { addRequest, hydrateSweets } from "./sweets";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
-import { VOUCHER_EUR, isInstant, isLateCancel, requestExpired, voucherCode, voucherValidUntil } from "./booking";
+import { PENALTY_RATE, VOUCHER_EUR, isInstant, isLateCancel, requestExpired, voucherCode, voucherValidUntil } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
 
 
@@ -157,7 +157,7 @@ export interface Penalty {
   id: number;
   bookingId: number;
   artistId: number;
-  /** Höhe: die Gage des Künstlers */
+  /** Höhe: 50 % der Gage bei später Absage, 100 % bei Nichterscheinen */
   amount: number;
   reason: "late" | "noshow";
   /** due: wird in Rechnung gestellt · proof: Notfall-Nachweis wird geprüft ·
@@ -817,12 +817,13 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   const penalize = useCallback((b: Booking, reason: Penalty["reason"], emergency: boolean) => {
     const a = findArtist(b.artistId);
     const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
+    const amount = Math.round(net * PENALTY_RATE[reason]);
     setPenalties((x) => [
       {
         id: Date.now(),
         bookingId: b.id,
         artistId: b.artistId,
-        amount: net,
+        amount,
         reason,
         status: emergency ? "proof" : "due",
         dateISO: new Date().toISOString(),

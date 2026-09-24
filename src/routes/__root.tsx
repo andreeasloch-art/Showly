@@ -14,6 +14,10 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ShowlyProvider } from "@/showly/store";
 import { Header } from "@/components/showly/Header";
 import { CartDrawer } from "@/components/showly/CartDrawer";
+import { Splash } from "@/components/showly/Splash";
+
+// Startbild erst zeigen, wenn das Foto im Projekt liegt.
+const SPLASH_READY = false;
 import { Toast, TabBar } from "@/components/showly/Chrome";
 import { SeoLang } from "@/components/showly/SeoLang";
 import { RevealWatcher } from "@/showly/reveal";
@@ -155,6 +159,8 @@ function RootComponent() {
         <CartDrawer />
         <TabBar />
         <Toast />
+        {/* Startbild: wird eingeschaltet, sobald public/splash-acts.webp da ist */}
+        {SPLASH_READY && <Splash />}
       </ShowlyProvider>
     </QueryClientProvider>
   );

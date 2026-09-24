@@ -6291,3 +6291,20 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .payout-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
 .sweet-direct{position:absolute;right:10px;bottom:10px;z-index:2;padding:5px 9px;border-radius:999px;background:#1f9d6e;color:#fff;font:600 11.5px/1 "Outfit",system-ui,sans-serif}
 .my-req-st.booked{background:#e6f6ee;color:#1b8a5e}
+
+/* Bunte Bällchen im Kopfbereich der Startseite, farbenfroh wie Kaugummi-
+   kugeln. Über dem Hintergrundfilm, unter Text und Suche. */
+.hero-balls{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;
+  -webkit-mask-image:radial-gradient(ellipse 27% 36% at 25% 50%,rgba(0,0,0,.18) 55%,#000 100%);
+          mask-image:radial-gradient(ellipse 27% 36% at 25% 50%,rgba(0,0,0,.18) 55%,#000 100%)}
+.hero-ball{position:absolute;border-radius:50%;opacity:.9;
+  background:radial-gradient(circle at 32% 28%,#fff 0 9%,color-mix(in srgb,var(--c) 70%,#fff) 22%,var(--c) 52%,color-mix(in srgb,var(--c) 70%,#000) 100%);
+  box-shadow:0 3px 6px color-mix(in srgb,var(--c) 35%,transparent);
+  animation:hero-ball-float 7s ease-in-out infinite alternate}
+.hero-ball.far{opacity:.55;filter:blur(.8px);box-shadow:none}
+@keyframes hero-ball-float{from{transform:translate3d(0,-6px,0)}to{transform:translate3d(3px,8px,0)}}
+@media (max-width:640px){
+  .hero-balls{-webkit-mask-image:linear-gradient(90deg,#000 0,#000 6%,rgba(0,0,0,.3) 20%,rgba(0,0,0,.3) 80%,#000 94%);
+                      mask-image:linear-gradient(90deg,#000 0,#000 6%,rgba(0,0,0,.3) 20%,rgba(0,0,0,.3) 80%,#000 94%)}
+}
+@media (prefers-reduced-motion:reduce){.hero-ball{animation:none}}

@@ -6291,3 +6291,12 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .payout-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
 .sweet-direct{position:absolute;right:10px;bottom:10px;z-index:2;padding:5px 9px;border-radius:999px;background:#1f9d6e;color:#fff;font:600 11.5px/1 "Outfit",system-ui,sans-serif}
 .my-req-st.booked{background:#e6f6ee;color:#1b8a5e}
+
+/* Überschrift der Startseite als Block: Das gezeichnete Wort in der zweiten
+   Zeile ist genau so breit wie die erste Zeile und steht links wie rechts
+   bündig mit ihr. Das B bzw. R der ersten Zeile hat links 0,07 em Luft
+   (Outfit), das gezeichnete Wort keine; um diesen Wert rückt es ein.
+   width:0 plus min-width:100 % sorgt dafür, dass das Bild die Breite der
+   Überschrift übernimmt, statt sie mit seiner Pixelbreite aufzublähen. */
+.home-h1.h1-lockup{width:fit-content;max-width:100%}
+.h1-lockup .grad-art{display:block;width:0;min-width:calc(100% - .07em);margin-left:.07em;height:auto!important;margin-top:.1em!important}

@@ -183,7 +183,7 @@ function Home() {
               {C.pill(facts.acts)}
             </div>
 
-            <h1 className="home-h1">
+            <h1 className="home-h1 h1-lockup">
               <span className="rise" style={{ ["--d" as string]: "60ms" }}>
                 {t("hero.h1a")}
               </span>

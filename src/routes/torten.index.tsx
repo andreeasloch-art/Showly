@@ -5,6 +5,7 @@ import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { ImageWall } from "@/components/showly/ImageWall";
+import { ShopAreas } from "@/components/showly/ShopAreas";
 import {
   BakerCard,
   MyRequests,
@@ -91,7 +92,8 @@ function Sweets() {
         <div className="shop26-hero-card">
           <div className="shop26-hero-inner">
             <div className="shop26-copy">
-              <div className="home-pill on-color rise" style={{ ["--d" as string]: "0ms" }}>
+              <ShopAreas active="torten" />
+              <div className="home-pill on-color rise" style={{ ["--d" as string]: "40ms" }}>
                 <Icon name="gift" /> {C.eyebrow}
               </div>
               <h1 className="rise" style={{ ["--d" as string]: "70ms" }}>

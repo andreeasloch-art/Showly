@@ -33,7 +33,7 @@ export function TabBar() {
   return (
     <div className="tabbar" role="navigation" aria-label="Hauptnavigation">
       {items.map((i) => (
-        <Link key={i.to} to={i.to} className={"tab" + (path === i.to ? " active on" : "")}>
+        <Link key={i.to} to={i.to} className={"tab" + (path === i.to || (i.to === "/shop" && path.startsWith("/torten")) ? " active on" : "")}>
           <Icon name={i.icon} />
           <span>{i.label}</span>
         </Link>

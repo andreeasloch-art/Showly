@@ -8,6 +8,7 @@ import { Footer } from "@/components/showly/Footer";
 import { ShopSearch } from "@/components/showly/ShopSearch";
 import { ImageWall } from "@/components/showly/ImageWall";
 import { ImagePick } from "@/components/showly/ImagePick";
+import { ShopAreas } from "@/components/showly/ShopAreas";
 import { saveDecoItem } from "@/showly/sweets";
 import type { MediaRef } from "@/showly/media";
 
@@ -278,14 +279,7 @@ function Shop() {
         <div className="shop26-hero-card">
           <div className="shop26-hero-inner">
             <div className="shop26-copy">
-              <div className="shop-area rise" role="tablist" style={{ ["--d" as string]: "0ms" }}>
-                <button role="tab" aria-selected={!deko} className={!deko ? "on" : ""} onClick={() => go("kostueme")}>
-                  <Icon name="mask" /> {C.areaCostumes}
-                </button>
-                <button role="tab" aria-selected={deko} className={deko ? "on" : ""} onClick={() => go("deko")}>
-                  <Icon name="party" /> {C.areaDeco}
-                </button>
-              </div>
+              <ShopAreas active={area} />
               <div className="home-pill on-color rise" style={{ ["--d" as string]: "40ms" }}>
                 <Icon name={deko ? "party" : "bag"} /> {deko ? C.decoEyebrow : t("shop.eyebrow")}
               </div>

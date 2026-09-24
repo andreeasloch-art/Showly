@@ -20,7 +20,7 @@ import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { deleteMyAccount } from "@/utils/account.functions";
 import { addRequest, hydrateSweets } from "./sweets";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
-import { isInstant, requestExpired } from "./booking";
+import { VOUCHER_EUR, isInstant, isLateCancel, requestExpired, voucherCode, voucherValidUntil } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
 
 
@@ -119,7 +119,9 @@ export interface Booking {
   amount: number;
   /* requested: wartet auf Zusage des Künstlers · declined: abgelehnt oder
      verfallen, Termin wieder frei, Zahlung wird nicht abgebucht */
-  status: "confirmed" | "pending" | "completed" | "requested" | "declined" | "cancelled";
+  status: "confirmed" | "pending" | "completed" | "requested" | "declined" | "cancelled" | "noshow";
+  /** Wer abgesagt hat, für die Anzeige beim Kunden */
+  cancelledBy?: "customer" | "artist";
   /** Zeitpunkt der Anfrage, für die Antwortfrist */
   requestedAt?: string;
   /** Zahlung bereits autorisiert (online), wird bei Zusage abgebucht */
@@ -149,6 +151,27 @@ export interface Payout {
   fee: number;
   net: number;
   status: "pending" | "paid";
+}
+/** Vertragsstrafe eines Künstlers (AGB § 9): späte Absage oder nicht erschienen */
+export interface Penalty {
+  id: number;
+  bookingId: number;
+  artistId: number;
+  /** Höhe: die Gage des Künstlers */
+  amount: number;
+  reason: "late" | "noshow";
+  /** due: wird in Rechnung gestellt · proof: Notfall-Nachweis wird geprüft ·
+      waived: Nachweis anerkannt, keine Strafe */
+  status: "due" | "proof" | "waived";
+  dateISO: string;
+}
+/** Gutschein für Kunden nach später Absage oder Nichterscheinen */
+export interface Voucher {
+  code: string;
+  amount: number;
+  bookingId: number;
+  dateISO: string;
+  validUntil: string;
 }
 export interface Session {
   name: string;
@@ -206,8 +229,14 @@ interface Ctx {
   /** Künstler nimmt eine Anfrage an (true) oder lehnt sie ab (false) */
   respondBooking: (id: number, accept: boolean) => void;
   /** Künstler sagt eine bestätigte Buchung ab: Termin frei, Kunde bekommt alles zurück */
-  cancelByArtist: (id: number) => void;
-  /** Kunde storniert. true, wenn es weniger als 48 Stunden vor Beginn war */
+  cancelByArtist: (id: number, emergency?: boolean) => "free" | "penalty" | "proof";
+  /** Kunde meldet: Künstler ist nicht erschienen */
+  reportNoShow: (id: number) => void;
+  /** Künstler reicht einen Notfall-Nachweis zu einer Vertragsstrafe ein */
+  claimEmergency: (penaltyId: number) => void;
+  penalties: Penalty[];
+  vouchers: Voucher[];
+  /** Kunde storniert. true, wenn es weniger als 24 Stunden vor Beginn war */
   cancelByCustomer: (id: number) => boolean;
   orders: Order[];
 
@@ -272,6 +301,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     },
   ]);
   const [session, setSession] = useState<Session | null>(null);
+  const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [vouchers, setVouchers] = useState<Voucher[]>([]);
   const [avail, setAvail] = useState<Avail>(() => seedAvail());
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const counters = useRef({ booking: 105, order: 9002, payout: 5001 });
@@ -302,6 +333,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       favorites?: number[];
       session?: Session | null;
       avail?: Avail;
+      penalties?: Penalty[];
+      vouchers?: Voucher[];
       counters?: { booking: number; order: number; payout: number };
     } | null>("state", null);
     if (saved) {
@@ -314,6 +347,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       if (saved.favorites) setFavorites(saved.favorites);
       if (saved.session !== undefined) setSession(saved.session);
       if (saved.avail) setAvail(saved.avail);
+      if (Array.isArray(saved.penalties)) setPenalties(saved.penalties);
+      if (Array.isArray(saved.vouchers)) setVouchers(saved.vouchers);
       if (saved.counters) counters.current = saved.counters;
     }
     setHydrated(true);
@@ -331,9 +366,11 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       favorites,
       session,
       avail,
+      penalties,
+      vouchers,
       counters: counters.current,
     });
-  }, [hydrated, bookings, orders, payouts, cart, cartBookings, cartRequests, favorites, session, avail]);
+  }, [hydrated, bookings, orders, payouts, cart, cartBookings, cartRequests, favorites, session, avail, penalties, vouchers]);
 
   const t = useCallback(
     (k: string, vars?: Record<string, string | number>) => {
@@ -776,28 +813,82 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [bookings, shiftSlot, L],
   );
 
+  /* Vertragsstrafe in Höhe der Gage und Gutschein für den Kunden */
+  const penalize = useCallback((b: Booking, reason: Penalty["reason"], emergency: boolean) => {
+    const a = findArtist(b.artistId);
+    const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
+    setPenalties((x) => [
+      {
+        id: Date.now(),
+        bookingId: b.id,
+        artistId: b.artistId,
+        amount: net,
+        reason,
+        status: emergency ? "proof" : "due",
+        dateISO: new Date().toISOString(),
+      },
+      ...x,
+    ]);
+    if (!emergency)
+      setVouchers((x) => [
+        {
+          code: voucherCode(),
+          amount: VOUCHER_EUR,
+          bookingId: b.id,
+          dateISO: new Date().toISOString(),
+          validUntil: voucherValidUntil(),
+        },
+        ...x,
+      ]);
+  }, []);
+
+  /* Künstler sagt ab (AGB § 9). Bis 24 Stunden vorher ohne Grund und ohne
+     Folgen. Danach Vertragsstrafe, außer bei einem belegten Notfall; dann
+     wird der Nachweis geprüft. Der Kunde bekommt in jedem Fall alles zurück. */
   const cancelByArtist = useCallback(
-    (id: number) => {
+    (id: number, emergency = false): "free" | "penalty" | "proof" => {
       const b = bookings.find((x) => x.id === id);
-      if (!b) return;
-      setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "declined" } : x)));
+      if (!b) return "free";
+      const late = (b.status === "confirmed" || b.status === "pending") && isLateCancel(b);
+      setBookings((list) =>
+        list.map((x) => (x.id === id ? { ...x, status: "declined", cancelledBy: "artist" } : x)),
+      );
       shiftSlot(b.artistId, b.dateISO, b.slot, false);
       setPayouts((x) =>
         x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
       );
+      if (!late) return "free";
+      penalize(b, "late", emergency);
+      return emergency ? "proof" : "penalty";
     },
-    [bookings, shiftSlot],
+    [bookings, shiftSlot, penalize],
   );
 
-  /* Stornierung durch den Kunden (AGB § 8): bis 48 Stunden vor Beginn
+  const reportNoShow = useCallback(
+    (id: number) => {
+      const b = bookings.find((x) => x.id === id);
+      if (!b || b.status === "noshow") return;
+      setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "noshow" } : x)));
+      setPayouts((x) =>
+        x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
+      );
+      penalize(b, "noshow", false);
+    },
+    [bookings, penalize],
+  );
+
+  const claimEmergency = useCallback((penaltyId: number) => {
+    setPenalties((x) => x.map((p) => (p.id === penaltyId && p.status === "due" ? { ...p, status: "proof" } : p)));
+  }, []);
+
+  /* Stornierung durch den Kunden (AGB § 8): bis 24 Stunden vor Beginn
      kostenlos, danach bleibt die Gage für den Künstler vorgemerkt. Eine
      unbeantwortete Anfrage lässt sich immer kostenlos zurückziehen. */
   const cancelByCustomer = useCallback(
     (id: number) => {
       const b = bookings.find((x) => x.id === id);
       if (!b) return false;
-      const start = new Date(`${b.dateISO}T${b.slot || "00:00"}:00`).getTime();
-      const late = b.status !== "requested" && start - Date.now() < 48 * 3600 * 1000;
+      const late = b.status !== "requested" && isLateCancel(b);
       setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
       shiftSlot(b.artistId, b.dateISO, b.slot, false);
       if (!late)
@@ -934,6 +1025,10 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     respondBooking,
     cancelByArtist,
     cancelByCustomer,
+    reportNoShow,
+    claimEmergency,
+    penalties,
+    vouchers,
     payouts,
     addPayout,
     orders,

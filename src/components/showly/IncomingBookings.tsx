@@ -12,7 +12,7 @@ import { useShowly, type Booking } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { figName } from "@/showly/figures";
 import { bookingPrice, minHoursOf } from "@/showly/pricing";
-import { isInstant, respondBy } from "@/showly/booking";
+import { isInstant, isLateCancel, respondBy } from "@/showly/booking";
 
 const COPY = {
   de: {
@@ -29,6 +29,16 @@ const COPY = {
     sureCancel: "Wirklich absagen? Der Kunde bekommt den vollen Betrag zurück.",
     yesCancel: "Ja, absagen",
     cancelled: "Buchung abgesagt. Der Kunde bekommt den vollen Betrag zurück.",
+    sureLate: (p: string) => `Weniger als 24 Stunden vor Beginn: Ohne Notfall fällt eine Vertragsstrafe in Höhe deiner Gage an (${p}), und der Kunde bekommt einen Gutschein. Bei einem Notfall (z. B. Unfall, akute Krankheit) schick uns den Nachweis, dann entfällt die Strafe.`,
+    yesEmergency: "Notfall, Nachweis folgt",
+    yesNoEmergency: "Ohne Notfall absagen",
+    doneProof: "Abgesagt. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de, wir prüfen ihn.",
+    donePenalty: (p: string) => `Abgesagt. Die Vertragsstrafe von ${p} wird dir in Rechnung gestellt.`,
+    penDue: (p: string) => `Vertragsstrafe ${p}: wird in Rechnung gestellt`,
+    penProof: "Notfall-Nachweis wird geprüft (support@showly.de)",
+    penWaived: "Nachweis anerkannt, keine Vertragsstrafe",
+    claim: "Notfall belegen",
+    claimed: "Danke. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de.",
     yes: "Ja, ablehnen",
     no: "Zurück",
     until: (d: string) => `Antwort bis ${d}`,
@@ -46,6 +56,8 @@ const COPY = {
       completed: "Erledigt",
       declined: "Abgelehnt",
       cancelled: "Vom Kunden storniert",
+      noshow: "Als nicht erschienen gemeldet",
+      byMe: "Von dir abgesagt",
     },
   },
   en: {
@@ -62,6 +74,16 @@ const COPY = {
     sureCancel: "Really cancel? The customer gets a full refund.",
     yesCancel: "Yes, cancel",
     cancelled: "Booking cancelled. The customer gets a full refund.",
+    sureLate: (p: string) => `Less than 24 hours before the start: without an emergency, a contractual penalty equal to your fee applies (${p}) and the customer gets a voucher. In an emergency (e.g. accident, sudden illness), send us proof and the penalty is dropped.`,
+    yesEmergency: "Emergency, proof to follow",
+    yesNoEmergency: "Cancel without emergency",
+    doneProof: "Cancelled. Send the proof to support@showly.de within 7 days and we'll review it.",
+    donePenalty: (p: string) => `Cancelled. The contractual penalty of ${p} will be invoiced to you.`,
+    penDue: (p: string) => `Contractual penalty ${p}: will be invoiced`,
+    penProof: "Emergency proof under review (support@showly.de)",
+    penWaived: "Proof accepted, no penalty",
+    claim: "Prove emergency",
+    claimed: "Thanks. Send the proof to support@showly.de within 7 days.",
     yes: "Yes, decline",
     no: "Back",
     until: (d: string) => `Reply by ${d}`,
@@ -79,6 +101,8 @@ const COPY = {
       completed: "Done",
       declined: "Declined",
       cancelled: "Cancelled by customer",
+      noshow: "Reported as no-show",
+      byMe: "Cancelled by you",
     },
   },
   es: {
@@ -95,6 +119,16 @@ const COPY = {
     sureCancel: "¿Seguro que quieres cancelar? El cliente recibe el reembolso completo.",
     yesCancel: "Sí, cancelar",
     cancelled: "Reserva cancelada. El cliente recibe el reembolso completo.",
+    sureLate: (p: string) => `Faltan menos de 24 horas: sin una emergencia se aplica una penalización igual a tu caché (${p}) y el cliente recibe un vale. En caso de emergencia (p. ej. accidente, enfermedad repentina), envíanos el justificante y no habrá penalización.`,
+    yesEmergency: "Emergencia, envío justificante",
+    yesNoEmergency: "Cancelar sin emergencia",
+    doneProof: "Cancelada. Envía el justificante a support@showly.de en 7 días y lo revisaremos.",
+    donePenalty: (p: string) => `Cancelada. Se te facturará la penalización de ${p}.`,
+    penDue: (p: string) => `Penalización ${p}: se facturará`,
+    penProof: "Justificante de emergencia en revisión (support@showly.de)",
+    penWaived: "Justificante aceptado, sin penalización",
+    claim: "Justificar emergencia",
+    claimed: "Gracias. Envía el justificante a support@showly.de en 7 días.",
     yes: "Sí, rechazar",
     no: "Volver",
     until: (d: string) => `Responder antes del ${d}`,
@@ -112,12 +146,14 @@ const COPY = {
       completed: "Hecha",
       declined: "Rechazada",
       cancelled: "Cancelada por el cliente",
+      noshow: "Marcada como no presentado",
+      byMe: "Cancelada por ti",
     },
   },
 } as const;
 
 export function IncomingBookings({ artistId, onEditProfile }: { artistId: number; onEditProfile?: () => void }) {
-  const { lang, fmt, fmtDate, t, bookings, respondBooking, cancelByArtist, toast } = useShowly();
+  const { lang, fmt, fmtDate, t, bookings, respondBooking, cancelByArtist, claimEmergency, penalties, toast } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const [asking, setAsking] = useState<number | null>(null);
@@ -144,6 +180,8 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
   function row(b: Booking) {
     const net = bookingPrice(a!, b.hours || minHoursOf(a!), b.pkg).payout;
     const until = respondBy(b.requestedAt);
+    const pen = penalties.find((p) => p.bookingId === b.id);
+    const late = isLateCancel(b);
     return (
       <article className={"dash26-item inb-item s-" + b.status} key={b.id}>
         <div className="dash26-item-body">
@@ -152,7 +190,9 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
               {fmtDate(b.dateISO)}
               {b.slot ? ` · ${b.slot} ${t("misc.uhr")}` : ""}
             </span>
-            <span className={"dash26-status s-" + b.status}>{C.st[b.status]}</span>
+            <span className={"dash26-status s-" + b.status}>
+              {b.status === "declined" && b.cancelledBy === "artist" ? C.st.byMe : C.st[b.status]}
+            </span>
           </div>
           <div className="dash26-item-meta">
             {b.customer && (
@@ -182,6 +222,23 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
             )}
           </div>
           {b.status === "requested" && until && <p className="inb-until">{C.until(when(until))}</p>}
+          {pen && (
+            <p className={"inb-pen s-" + pen.status}>
+              {pen.status === "due" ? C.penDue(fmt(pen.amount)) : pen.status === "proof" ? C.penProof : C.penWaived}
+              {pen.status === "due" && (
+                <button
+                  type="button"
+                  className="inb-mode-btn"
+                  onClick={() => {
+                    claimEmergency(pen.id);
+                    toast(C.claimed);
+                  }}
+                >
+                  {C.claim}
+                </button>
+              )}
+            </p>
+          )}
         </div>
         <div className="dash26-item-side">
           <b>{fmt(net)}</b>
@@ -191,19 +248,31 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           <div className="inb-actions">
             {asking === b.id ? (
               <>
-                <span className="inb-sure">{C.sureCancel}</span>
+                <span className="inb-sure">{late ? C.sureLate(fmt(net)) : C.sureCancel}</span>
                 <button className="dash26-mini outline" onClick={() => setAsking(null)}>
                   {C.no}
                 </button>
+                {late && (
+                  <button
+                    className="dash26-mini outline"
+                    onClick={() => {
+                      cancelByArtist(b.id, true);
+                      setAsking(null);
+                      toast(C.doneProof);
+                    }}
+                  >
+                    {C.yesEmergency}
+                  </button>
+                )}
                 <button
                   className="dash26-mini inb-decline"
                   onClick={() => {
-                    cancelByArtist(b.id);
+                    const r = cancelByArtist(b.id, false);
                     setAsking(null);
-                    toast(C.cancelled);
+                    toast(r === "penalty" ? C.donePenalty(fmt(net)) : C.cancelled);
                   }}
                 >
-                  {C.yesCancel}
+                  {late ? C.yesNoEmergency : C.yesCancel}
                 </button>
               </>
             ) : (
@@ -259,7 +328,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
     <div className="inb">
       <div className="inb-mode">
         <Icon name={instant ? "check" : "clock"} />
-        <span>{instant ? C.modeInstant : C.modeRequest}</span>
+        <span className="inb-mode-text">{instant ? C.modeInstant : C.modeRequest}</span>
         <button
           className="inb-mode-btn"
           onClick={() =>

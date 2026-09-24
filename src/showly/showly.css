@@ -6129,7 +6129,8 @@ button.cart-addon{cursor:pointer}
 .inb-mode{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;border-radius:14px;background:var(--h-soft);font-size:14px;color:var(--h-ink2)}
 .inb-mode svg{width:17px;height:17px;color:var(--h-violet);flex:none}
 .inb-mode{flex-wrap:nowrap}
-.inb-mode span{flex:1 1 0;min-width:0}
+.inb-mode-text{flex:1 1 0;min-width:0}
+.inb-mode>span:first-child{flex:none;display:flex}
 .inb-mode-btn{border:none;background:none;padding:4px 0;font:600 14px/1 'Outfit',system-ui,sans-serif;color:var(--h-violet);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .inb-h{margin:8px 0 0;font:600 17px/1.2 'Outfit',system-ui,sans-serif;color:var(--h-ink);display:flex;align-items:center;gap:8px}
 .inb-count{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:999px;background:#E0892A;color:#fff;font-size:12.5px}
@@ -6221,3 +6222,18 @@ body:has(.modal-overlay) .tabbar{display:none!important}
 .blk li button{border:none;background:none;color:var(--h-violet,#6B3BE8);font:600 14px/1 'Outfit',system-ui,sans-serif;cursor:pointer}
 .btn-google.btn-apple{background:#000;color:#fff;border-color:#000;margin-bottom:10px}
 .btn-google.btn-apple:hover:not(:disabled){background:#1a1a1a;border-color:#1a1a1a}
+
+/* Vertragsstrafe beim Künstler, Gutscheine beim Kunden */
+.dash26-status.s-noshow{background:#FCE4E8;color:#A12A3F}
+.inb-pen{margin:4px 0 0;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;font-size:13px;font-weight:600}
+.inb-pen.s-due{color:#A12A3F}
+.inb-pen.s-proof{color:#8A4A0F}
+.inb-pen.s-waived{color:#1B6F4C}
+.vouch{margin-bottom:16px;padding:16px;border-radius:20px;background:linear-gradient(135deg,#F4F0FF,#FFF1F6);border:1px solid #E6DCFB}
+.vouch h3{margin:0 0 10px;display:flex;align-items:center;gap:8px;font:600 16px/1.2 'Outfit',system-ui,sans-serif}
+.vouch h3 svg{width:18px;height:18px;color:var(--h-violet,#6B3BE8)}
+.vouch-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:10px 12px;border-radius:14px;background:#fff}
+.vouch-item+.vouch-item{margin-top:8px}
+.vouch-item b{font:700 18px/1 'Outfit',system-ui,sans-serif}
+.vouch-item code{font:600 14px/1 ui-monospace,Menlo,monospace;letter-spacing:.04em;padding:6px 8px;border-radius:8px;background:#F6F4FB;user-select:all}
+.vouch-item small{flex:1 1 100%;font-size:12.5px;line-height:1.45;color:var(--h-muted,#6B6480)}

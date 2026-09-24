@@ -12,6 +12,7 @@ import { MyRequests } from "@/components/showly/Sweets";
 import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
+import { isLateCancel } from "@/showly/booking";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
 
@@ -28,11 +29,21 @@ const COPY = {
   de: {
     sweetReq: "Torten-Anfragen",
     incoming: "Buchungen",
+    stNoShow: "Nicht erschienen, erstattet",
+    stByArtist: "Vom Künstler abgesagt, erstattet",
+    noShow: "Künstler nicht erschienen?",
+    noShowSure: "Wir erstatten dir den vollen Betrag und schenken dir einen Gutschein über 50 €. Bitte melde nur, was wirklich passiert ist; falsche Meldungen können zur Sperrung führen.",
+    noShowYes: "Ja, nicht erschienen",
+    noShowDone: "Danke für die Meldung. Du bekommst alles zurück, dein Gutschein steht oben.",
+    vouchH: "Deine Gutscheine",
+    vouchP: (d: string) => `Gültig bis ${d}. Zum Einlösen schick den Code mit deiner nächsten Buchung an support@showly.de, wir ziehen ihn vom Betrag ab.`,
+    copy: "Kopieren",
+    copied: "Code kopiert",
     stCancelled: "Storniert",
     cancel: "Stornieren",
     withdraw: "Anfrage zurückziehen",
     cancelFree: "Kostenlos stornieren? Du bekommst den vollen Betrag zurück.",
-    cancelLate: "Weniger als 48 Stunden vor Beginn: Die Gage bleibt fällig (AGB § 8). Trotzdem stornieren?",
+    cancelLate: "Weniger als 24 Stunden vor Beginn: Die Gage bleibt fällig (AGB § 8). Trotzdem stornieren?",
     cancelReq: "Anfrage zurückziehen? Es wird nichts abgebucht.",
     cancelYes: "Ja, stornieren",
     cancelNo: "Zurück",
@@ -58,11 +69,21 @@ const COPY = {
   en: {
     sweetReq: "Cake requests",
     incoming: "Bookings",
+    stNoShow: "No-show, refunded",
+    stByArtist: "Cancelled by the artist, refunded",
+    noShow: "Artist didn't show up?",
+    noShowSure: "We'll refund the full amount and give you a €50 voucher. Please only report what really happened; false reports can lead to a ban.",
+    noShowYes: "Yes, no-show",
+    noShowDone: "Thanks for letting us know. You get a full refund; your voucher is shown above.",
+    vouchH: "Your vouchers",
+    vouchP: (d: string) => `Valid until ${d}. To redeem, send the code with your next booking to support@showly.de and we'll deduct it.`,
+    copy: "Copy",
+    copied: "Code copied",
     stCancelled: "Cancelled",
     cancel: "Cancel",
     withdraw: "Withdraw request",
     cancelFree: "Cancel for free? You get a full refund.",
-    cancelLate: "Less than 48 hours before the start: the fee remains due (T&C § 8). Cancel anyway?",
+    cancelLate: "Less than 24 hours before the start: the fee remains due (T&C § 8). Cancel anyway?",
     cancelReq: "Withdraw the request? Nothing will be charged.",
     cancelYes: "Yes, cancel",
     cancelNo: "Back",
@@ -88,11 +109,21 @@ const COPY = {
   es: {
     sweetReq: "Solicitudes de tartas",
     incoming: "Reservas",
+    stNoShow: "No se presentó, reembolsada",
+    stByArtist: "Cancelada por el artista, reembolsada",
+    noShow: "¿El artista no se presentó?",
+    noShowSure: "Te devolvemos el importe completo y te regalamos un vale de 50 €. Denuncia solo lo que ocurrió de verdad; las denuncias falsas pueden llevar al bloqueo.",
+    noShowYes: "Sí, no se presentó",
+    noShowDone: "Gracias por avisar. Recibes el reembolso completo; tu vale aparece arriba.",
+    vouchH: "Tus vales",
+    vouchP: (d: string) => `Válido hasta el ${d}. Para canjearlo, envía el código con tu próxima reserva a support@showly.de y lo descontamos.`,
+    copy: "Copiar",
+    copied: "Código copiado",
     stCancelled: "Cancelada",
     cancel: "Cancelar",
     withdraw: "Retirar solicitud",
     cancelFree: "¿Cancelar gratis? Recibes el importe completo.",
-    cancelLate: "Faltan menos de 48 horas: el caché sigue siendo debido (CG § 8). ¿Cancelar igualmente?",
+    cancelLate: "Faltan menos de 24 horas: el caché sigue siendo debido (CG § 8). ¿Cancelar igualmente?",
     cancelReq: "¿Retirar la solicitud? No se cobrará nada.",
     cancelYes: "Sí, cancelar",
     cancelNo: "Volver",
@@ -187,11 +218,14 @@ function Dashboard() {
     toast,
     catLabel,
     cancelByCustomer,
+    reportNoShow,
+    vouchers,
   } = useShowly();
   const [cancelAsk, setCancelAsk] = useState<number | null>(null);
   const todayISO = new Date().toISOString().slice(0, 10);
-  const isLate = (b: { dateISO: string; slot?: string }) =>
-    new Date(`${b.dateISO}T${b.slot || "00:00"}:00`).getTime() - Date.now() < 48 * 3600 * 1000;
+  /* Nichterscheinen lässt sich bis 14 Tage nach dem Termin melden */
+  const noShowFrom = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+  const isLate = (b: { dateISO: string; slot?: string }) => isLateCancel(b);
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const cal = useCalendar();
@@ -244,7 +278,9 @@ function Dashboard() {
         ? t("dash.pending")
         : st === "requested"
           ? C.stRequested
-          : st === "declined"
+          : st === "noshow"
+            ? C.stNoShow
+            : st === "declined"
             ? C.stDeclined
             : st === "cancelled"
               ? C.stCancelled
@@ -364,6 +400,32 @@ function Dashboard() {
 
         {active === "bookings" && (
           <>
+            {vouchers.length > 0 && (
+              <div className="vouch">
+                <h3>
+                  <Icon name="gift" /> {C.vouchH}
+                </h3>
+                {vouchers.map((v) => (
+                  <div className="vouch-item" key={v.code}>
+                    <b>{fmt(v.amount)}</b>
+                    <code>{v.code}</code>
+                    <button
+                      type="button"
+                      className="inb-mode-btn"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(v.code).then(
+                          () => toast(C.copied),
+                          () => {},
+                        );
+                      }}
+                    >
+                      {C.copy}
+                    </button>
+                    <small>{C.vouchP(fmtDate(v.validUntil))}</small>
+                  </div>
+                ))}
+              </div>
+            )}
             <div className="dash26-stats">
               <div className="dash26-stat">
                 <span className="dash26-stat-ic violet">
@@ -417,7 +479,9 @@ function Dashboard() {
                             {L(a.name)}
                           </button>
                           <span className={"dash26-status s-" + b.status}>
-                            {statusLabel(b.status)}
+                            {b.status === "declined" && b.cancelledBy === "artist"
+                              ? C.stByArtist
+                              : statusLabel(b.status)}
                           </span>
                         </div>
                         <div className="dash26-item-meta">
@@ -474,6 +538,37 @@ function Dashboard() {
                                 onClick={() => setCancelAsk(b.id)}
                               >
                                 <Icon name="close" /> {b.status === "requested" ? C.withdraw : C.cancel}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      {(b.status === "confirmed" || b.status === "pending") &&
+                        b.dateISO < todayISO &&
+                        b.dateISO >= noShowFrom && (
+                          <div className="inb-actions">
+                            {cancelAsk === b.id ? (
+                              <>
+                                <span className="inb-sure">{C.noShowSure}</span>
+                                <button className="dash26-mini outline" onClick={() => setCancelAsk(null)}>
+                                  {C.cancelNo}
+                                </button>
+                                <button
+                                  className="dash26-mini inb-decline"
+                                  onClick={() => {
+                                    reportNoShow(b.id);
+                                    setCancelAsk(null);
+                                    toast(C.noShowDone);
+                                  }}
+                                >
+                                  {C.noShowYes}
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                className="dash26-mini outline inb-decline-ghost"
+                                onClick={() => setCancelAsk(b.id)}
+                              >
+                                {C.noShow}
                               </button>
                             )}
                           </div>

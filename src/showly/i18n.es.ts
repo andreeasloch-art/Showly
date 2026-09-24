@@ -348,7 +348,7 @@ export const ES: Record<string, string> = {
   "detail.similarP": "Más acts en la categoría {cat}.",
   "book.perEvent": "/ evento",
   "book.base": "Precio base {p} + comisión de servicio",
-  "book.freeCancel": "Cancelación gratuita hasta 48 h antes",
+  "book.freeCancel": "Cancelación gratuita hasta 24 h antes",
   "book.date": "Fecha",
   "book.guests": "Invitados",
   "book.guestsPh": "Número",
@@ -396,7 +396,7 @@ export const ES: Record<string, string> = {
   "mod.feeFor": "Caché de {name}",
   "mod.cancelPolicy": "Condiciones de cancelación:",
   "mod.cancelText":
-    "Cancelación gratuita hasta 48 h antes del evento. Después, el 50 % del importe total en concepto de gastos.",
+    "Cancelación gratuita hasta 24 h antes del evento. Después, el caché sigue siendo debido.",
   "mod.back": "← Atrás",
   "mod.payNow": "Reservar y pagar ahora",
   "mod.confirmedT": "¡Reserva confirmada!",

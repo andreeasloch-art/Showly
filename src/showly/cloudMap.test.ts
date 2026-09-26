@@ -29,6 +29,8 @@ const row: BookingRow = {
   cancelled_at: null,
   checked_in_at: null,
   checked_in_by: null,
+  refunded_cents: 0,
+  refunded_at: null,
   created_at: "2026-09-26T10:00:00Z",
 };
 

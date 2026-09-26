@@ -1,7 +1,8 @@
 /* Typen zur Datenbank.
  *
  * Von Hand geschrieben, passend zu supabase/migrations/0001_showly_grundlage.sql,
- * 0002_anfragen_konto_meldungen.sql und 0003_buchungsablauf_geld.sql.
+ * 0002_anfragen_konto_meldungen.sql, 0003_buchungsablauf_geld.sql und
+ * 0004_chat_admin_anbieter_support.sql.
  * Sobald das Supabase-Projekt steht, lässt sich diese Datei erzeugen mit:
  *   npx supabase gen types typescript --project-id <kennung> > src/lib/database.types.ts
  * Dann bleibt sie automatisch im Takt mit dem Schema. */
@@ -91,6 +92,8 @@ export type ArtistRow = {
   response_time: LText | Record<string, never>;
   response_rate: string | null;
   instant_book: boolean;
+  blocked: boolean;
+  blocked_reason: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +128,8 @@ export type BookingRow = {
   cancelled_at: string | null;
   checked_in_at: string | null;
   checked_in_by: "artist" | "customer" | null;
+  refunded_cents: number;
+  refunded_at: string | null;
   created_at: string;
 }
 
@@ -200,6 +205,67 @@ export type ShopOrderRow = {
   status: "pending" | "paid" | "shipped" | "returned" | "cancelled";
   ship_to: string | null;
   stripe_session_id: string | null;
+  provider_owners: string[];
+  created_at: string;
+}
+
+export type ProviderRow = {
+  id: number;
+  owner: string;
+  kind: "baker" | "deco";
+  data: Record<string, unknown>;
+  published: boolean;
+  blocked: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type ProviderOfferRow = {
+  id: number;
+  provider_id: number;
+  kind: "sweet" | "deco";
+  data: Record<string, unknown>;
+  price_cents: number;
+  rent_cents: number;
+  direct: boolean;
+  published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MessageRow = {
+  id: number;
+  booking_id: number | null;
+  sweet_request_id: number | null;
+  sender: string | null;
+  sender_role: "customer" | "provider" | "admin";
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+export type SupportTopic = "booking" | "payment" | "account" | "provider" | "report" | "other";
+
+export type SupportTicketRow = {
+  id: number;
+  profile: string | null;
+  email: string;
+  name: string | null;
+  topic: SupportTopic;
+  body: string;
+  status: "open" | "answered" | "closed";
+  answer: string | null;
+  answered_at: string | null;
+  created_at: string;
+}
+
+export type ClientErrorRow = {
+  id: number;
+  profile: string | null;
+  message: string;
+  stack: string | null;
+  url: string | null;
+  user_agent: string | null;
   created_at: string;
 }
 
@@ -281,11 +347,29 @@ export type Database = {
       shop_orders: Table<ShopOrderRow>;
       /** Check-in-Code, nur für den Kunden lesbar */
       booking_codes: Table<{ booking_id: number; code: string }>;
+      admin_emails: Table<{ email: string }>;
+      providers: Table<ProviderRow>;
+      provider_offers: Table<ProviderOfferRow>;
+      messages: Table<MessageRow>;
+      support_tickets: Table<SupportTicketRow>;
+      client_errors: Table<ClientErrorRow>;
+      rate_limits: Table<{ bucket: string; window_start: string; hits: number }>;
     };
     Views: {
-      artists_public: Table<Omit<ArtistRow, "owner" | "published" | "created_at" | "updated_at">>;
+      artists_public: Table<
+        Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "created_at" | "updated_at">
+      >;
+      providers_public: Table<Pick<ProviderRow, "id" | "kind" | "data" | "created_at">>;
+      provider_offers_public: Table<
+        Pick<ProviderOfferRow, "id" | "provider_id" | "kind" | "data" | "price_cents" | "rent_cents" | "direct">
+      >;
     };
-    Functions: Record<string, never>;
+    Functions: {
+      hit_rate_limit: {
+        Args: { p_bucket: string; p_max: number; p_seconds: number };
+        Returns: boolean;
+      };
+    };
     CompositeTypes: Record<string, never>;
     Enums: {
       user_role: UserRole;

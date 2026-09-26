@@ -114,7 +114,8 @@ export const refreshIdentityCheck = createServerFn({ method: "POST" }).handler(
 
       /* Nur hier wird das Siegel gesetzt. Der Browser kann das nicht. */
       if (status === "verified") {
-        await db.from("artists").update({ verified: true }).eq("owner", user.id);
+        /* Mit bestandener Prüfung wird das Profil auch sichtbar und buchbar */
+        await db.from("artists").update({ verified: true, published: true }).eq("owner", user.id);
       }
 
       return reason ? { status, reason } : { status };

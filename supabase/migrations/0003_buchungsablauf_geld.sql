@@ -172,7 +172,7 @@ create table if not exists public.shop_orders (
   items             jsonb not null check (jsonb_typeof(items) = 'array'),
   total_cents       integer not null check (total_cents >= 0),
   status            text not null default 'paid'
-                    check (status in ('paid', 'shipped', 'returned', 'cancelled')),
+                    check (status in ('pending', 'paid', 'shipped', 'returned', 'cancelled')),
   ship_to           text,
   stripe_session_id text unique,
   created_at        timestamptz not null default now()
@@ -231,6 +231,21 @@ create or replace view public.artists_public
   with (security_invoker = on) as
   select id, cat, name, loc, descr, tags, langs, includes, specs,
          price_cents, color, image_path, verified, superhost,
-         rating, review_count, events_count, response_time, response_rate
+         rating, review_count, events_count, response_time, response_rate,
+         instant_book
   from public.artists
   where published;
+
+-- Prüfsiegel UND Veröffentlichung setzt nur der Server nach bestandener
+-- Ausweisprüfung. Vorher konnte der Besitzer "published" selbst umschalten.
+drop policy if exists artists_update_own on public.artists;
+create policy artists_update_own on public.artists
+  for update using (owner = auth.uid())
+  with check (
+    owner = auth.uid()
+    and verified  = (select a.verified  from public.artists a where a.id = artists.id)
+    and published = (select a.published from public.artists a where a.id = artists.id)
+  );
+
+-- Anlegen nur noch über den Server (registerArtist), damit die Rolle stimmt
+drop policy if exists artists_insert_own on public.artists;

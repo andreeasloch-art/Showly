@@ -198,7 +198,7 @@ export type ShopOrderRow = {
   customer: string | null;
   items: { shopId: number; mode: "rent" | "buy"; qty: number; price_cents: number }[];
   total_cents: number;
-  status: "paid" | "shipped" | "returned" | "cancelled";
+  status: "pending" | "paid" | "shipped" | "returned" | "cancelled";
   ship_to: string | null;
   stripe_session_id: string | null;
   created_at: string;

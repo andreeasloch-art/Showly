@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { TOO_MANY, allow, clientIp } from "@/lib/guard.server";
+import { esc } from "@/lib/mail.server";
 
 type MailResult = { sent: boolean; skipped?: boolean; error?: string };
 
@@ -18,10 +20,14 @@ export const sendPurchaseConfirmation = createServerFn({ method: "POST" })
     const key = process.env["RESEND_API_KEY"];
     const from = process.env["SHOWLY_MAIL_FROM"] || "Showly <onboarding@resend.dev>";
     if (!key) return { sent: false, skipped: true };
+    /* Ohne Grenze ließe sich diese Funktion zum Versand beliebiger Mails
+       nutzen. Texte werden maskiert, damit kein fremdes HTML hineinkommt. */
+    if (!(await allow("support", "mail:" + clientIp()))) return { sent: false, error: TOO_MANY };
     try {
-      const html = `<h2>${data.subject}</h2><ul>${data.lines
-        .map((l) => `<li>${l}</li>`)
-        .join("")}</ul><p><strong>Total: ${data.total}</strong></p>`;
+      const html = `<h2>${esc(String(data.subject).slice(0, 200))}</h2><ul>${data.lines
+        .slice(0, 30)
+        .map((l) => `<li>${esc(String(l).slice(0, 300))}</li>`)
+        .join("")}</ul><p><strong>Total: ${esc(String(data.total).slice(0, 40))}</strong></p>`;
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {

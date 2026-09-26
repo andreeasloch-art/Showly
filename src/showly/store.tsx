@@ -235,6 +235,8 @@ export interface Session {
   providerId?: number;
   /** Angemeldet über die Datenbank (Supabase) statt nur im Browser */
   backend?: boolean;
+  /** Verwaltung (Rolle "admin" in der Datenbank); der Server prüft selbst */
+  admin?: boolean;
 }
 export type DeleteOutcome = "ok" | "open" | "failed";
 /* providerId -> { 'YYYY-MM-DD': slots } */
@@ -1246,6 +1248,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         role,
         ...(own && own[0] ? { providerId: own[0].id } : {}),
         backend: true,
+        ...(prof?.role === "admin" ? { admin: true } : {}),
       });
       void refreshCloud();
     };

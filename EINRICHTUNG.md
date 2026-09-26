@@ -15,12 +15,13 @@ Solange die Schlüssel fehlen, läuft Showly wie bisher im örtlichen
 2. Im Projekt auf **SQL Editor** gehen, den Inhalt von
    `supabase/migrations/0001_showly_grundlage.sql` einfügen und ausführen.
    Danach genauso `supabase/migrations/0002_anfragen_konto_meldungen.sql`
-   und `supabase/migrations/0003_buchungsablauf_geld.sql`. Damit stehen alle
+   , `supabase/migrations/0003_buchungsablauf_geld.sql` und
+   `supabase/migrations/0004_chat_admin_anbieter_support.sql`. Damit stehen alle
    Tabellen und die Zugriffsregeln: Buchungen mit Anfrage, Absage und
    Check-in, Vertragsstrafen, Gutscheine, Auszahlungen, Torten-Anfragen,
    Shop-Bestellungen, das Löschen von Konten und Meldungen.
 
-   **Lovable Cloud:** Im Lovable-Projekt „Showly“ sind alle drei Teile
+   **Lovable Cloud:** Im Lovable-Projekt „Showly“ sind alle vier Teile
    bereits eingespielt (Stand 26.09.2026). Dort ist nichts mehr zu tun.
 3. Unter **Project Settings → API** drei Werte abholen und in die Datei `.env`
    eintragen, Vorlage ist `.env.example`:
@@ -127,6 +128,50 @@ nur die Kontokennung (Tabelle `payout_accounts`).
 
 ---
 
+## 9. Verwaltung (Admin-Bereich unter /admin)
+
+Wer Admin ist, steht in der Tabelle `admin_emails`. Wer sich mit einer dieser
+Adressen anmeldet, bekommt beim ersten Anmelden die Rolle „admin“. Einen
+weiteren Admin fügst du im SQL Editor hinzu:
+
+    insert into public.admin_emails (email) values ('name@beispiel.de');
+    update public.profiles set role = 'admin' where lower(email) = 'name@beispiel.de';
+
+Im Admin-Bereich: Meldungen entscheiden, Notfall-Nachweise und Anhörungen
+entscheiden, Künstler und Torten-/Deko-Anbieter freischalten oder sperren,
+Erstattungen über Stripe auslösen, Hilfe-Anfragen beantworten, Fehlerprotokoll
+ansehen und eine Datensicherung herunterladen. Jede Aktion prüft die Rolle auf
+dem Server.
+
+## 10. E-Mails (Antworten, Entscheidungen, Erstattungen)
+
+Showly verschickt Mails über **Resend** (resend.com). Ohne Schlüssel wird
+nichts verschickt, der Rest läuft weiter.
+
+- `RESEND_API_KEY`: Schlüssel von Resend
+- `SHOWLY_MAIL_FROM`: Absender, z. B. `Showly <hilfe@deine-domain.de>`
+  (die Domain muss bei Resend bestätigt sein)
+
+## 11. Datensicherung
+
+- **Automatisch:** Im Supabase-Dashboard unter **Database → Backups** die
+  tägliche Sicherung prüfen. Sie ist ab dem Pro-Tarif enthalten;
+  Point-in-Time-Recovery (Wiederherstellen auf die Minute) ist ein Zusatz.
+  Bei Lovable Cloud hängt das vom Lovable-Tarif ab.
+- **Von Hand:** Im Admin-Bereich unter „Datensicherung“ lädt ein Klick alle
+  Tabellen als JSON-Datei herunter. Sinnvoll z. B. einmal pro Woche; die Datei
+  enthält personenbezogene Daten und gehört verschlüsselt abgelegt.
+
+## 12. Schutz vor Missbrauch
+
+Die Serverfunktionen zählen je Person (ohne Anmeldung je Internetadresse)
+mit, wie oft eine Aktion ausgelöst wird, und lehnen darüber hinaus ab
+(`src/lib/guard.server.ts`): Warenkorb 10 in 10 Minuten, Nachrichten 30 in
+10 Minuten, Registrierung 3 am Tag, Hilfe-Anfragen 5 pro Stunde, Meldungen
+20 am Tag. Die Grenzen lassen sich dort anpassen.
+
+---
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:
@@ -136,13 +181,19 @@ nur die Kontokennung (Tabelle `payout_accounts`).
 - Vertragsstrafen mit Anhörung, 50-€-Gutscheine, geplante Auszahlungen
 - Torten-Anfragen und Direktbuchungen, Shop-Bestellungen
 - Künstlerprofile, die sich neu registrieren (sichtbar nach Ausweisprüfung)
+- Torten- und Deko-Anbieter mit eigenem Konto (sichtbar nach Freischaltung
+  im Admin-Bereich), ihre Angebote und ihr Posteingang
+- Nachrichten zwischen Kunde und Anbieter (Kontaktdaten-Filter auf dem Server)
+- Hilfe-Anfragen und Fehlerprotokoll
 
 **Noch im Browser:**
 
 - Bewertungen und Beiträge im Event-Blog
 - die Beispielprofile aus `data.js` (sie bleiben als Beispiele; Buchungen
   darauf werden gespeichert, haben aber keinen Künstler als Empfänger)
-- Torten- und Deko-Anbieter mit eigenem Konto
+- Fotos von Anbietern und Angeboten (brauchen einen Dateispeicher,
+  z. B. Supabase Storage); Angebote aus der Datenbank zeigen Standardbilder
 - Kalender-Sperren, die ein Künstler selbst setzt
-- Erstattungen bei Stornierung: werden in der Datenbank vermerkt, die
-  Rückzahlung bei Stripe muss noch von Hand oder per Auftrag erfolgen
+- Erstattungen löst der Admin-Bereich per Klick über Stripe aus; automatisch
+  bei jeder Stornierung passiert das noch nicht
+- Überweisungen an Künstler und Anbieter (Stripe-Transfers nach Plan)

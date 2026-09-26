@@ -22,6 +22,7 @@ import {
   isDirectSweet,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { Chat } from "@/components/showly/Chat";
 
 export const SWEETS_COPY = {
   de: {
@@ -53,6 +54,7 @@ export const SWEETS_COPY = {
     fixedP:
       "Fester Preis. Bezahlt wird an der Kasse, zusammen mit allem anderen im Warenkorb.",
     inCartDirect: "Liegt im Warenkorb. Bezahlt wird an der Kasse.",
+    msgs: "Nachrichten",
     lead: (d: number) => `${d} Tage Vorlauf`,
     delivery: (km: number) => (km > 0 ? `Lieferung bis ${km} km` : "Nur Abholung"),
     newP: "Neu",
@@ -126,6 +128,7 @@ export const SWEETS_COPY = {
     fixedP:
       "Fixed price. You pay at checkout together with everything else in your cart.",
     inCartDirect: "Added to your cart. You pay at checkout.",
+    msgs: "Messages",
     lead: (d: number) => `${d} days notice`,
     delivery: (km: number) => (km > 0 ? `Delivery up to ${km} km` : "Pickup only"),
     newP: "New",
@@ -199,6 +202,7 @@ export const SWEETS_COPY = {
     fixedP:
       "Precio fijo. Pagas en la caja junto con todo lo demás del carrito.",
     inCartDirect: "Está en el carrito. Pagas en la caja.",
+    msgs: "Mensajes",
     lead: (d: number) => `${d} días de antelación`,
     delivery: (km: number) => (km > 0 ? `Entrega hasta ${km} km` : "Solo recogida"),
     newP: "Nuevo",
@@ -567,6 +571,8 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
   const { L, fmt, lang } = useShowly();
   const C = useSweetsCopy();
   const [list, setList] = useState<SweetRequest[]>([]);
+  /* Nachrichten an den Anbieter */
+  const [chatFor, setChatFor] = useState<SweetRequest | null>(null);
   useEffect(() => {
     const load = () => setList(listRequests().filter((r) => bakerId === undefined || r.bakerId === bakerId));
     load();
@@ -596,10 +602,26 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
                 </em>
               </span>
               <span className={"my-req-st " + r.status}>{C.status[r.status]}</span>
+              {r.status !== "declined" && (
+                <button type="button" className="dash26-mini outline chat26-open" onClick={() => setChatFor(r)}>
+                  <Icon name="comment" /> {C.msgs}
+                </button>
+              )}
             </li>
           );
         })}
       </ul>
+      {chatFor && (
+        <Chat
+          sweetId={chatFor.id}
+          as="customer"
+          heading={`${(() => {
+            const b = bakerOf(chatFor.bakerId);
+            return b ? String(L(b.name)) : "";
+          })()} · ${new Date(chatFor.dateISO + "T12:00:00").toLocaleDateString(locale)}`}
+          onClose={() => setChatFor(null)}
+        />
+      )}
     </section>
   );
 }

@@ -13,6 +13,7 @@ import { Icon } from "@/showly/ui";
 import { figName } from "@/showly/figures";
 import { bookingPrice, minHoursOf } from "@/showly/pricing";
 import { PENALTY_RATE, checkinOpen, isLateCancel, respondBy } from "@/showly/booking";
+import { Chat, unreadFor, useUnread } from "./Chat";
 
 const COPY = {
   de: {
@@ -41,6 +42,7 @@ const COPY = {
     claimed: "Danke. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de.",
     penHearing: (d: string) => `Der Kunde meldet: nicht erschienen. Du kannst dich bis ${d} äußern oder einen Notfall belegen, danach wird die Vertragsstrafe fällig.`,
     wasThere: "Ich war da",
+    msgs: "Nachrichten",
     disputed: "Danke. Schick uns kurz, was passiert ist (z. B. Fotos vom Auftritt), an support@showly.de. Wir prüfen das.",
     checkinH: "Check-in vor Ort",
     checkinP: "Frag den Kunden nach seinem 4-stelligen Code und gib ihn hier ein. Das belegt, dass du da warst.",
@@ -99,6 +101,7 @@ const COPY = {
     claimed: "Thanks. Send the proof to support@showly.de within 7 days.",
     penHearing: (d: string) => `The customer reports: no-show. You can respond or prove an emergency until ${d}; after that, the contractual penalty becomes due.`,
     wasThere: "I was there",
+    msgs: "Messages",
     disputed: "Thanks. Briefly send us what happened (e.g. photos of the gig) at support@showly.de. We'll review it.",
     checkinH: "Check-in on site",
     checkinP: "Ask the customer for their 4-digit code and enter it here. It proves you were there.",
@@ -157,6 +160,7 @@ const COPY = {
     claimed: "Gracias. Envía el justificante a support@showly.de en 7 días.",
     penHearing: (d: string) => `El cliente indica: no se presentó. Puedes responder o justificar una emergencia hasta el ${d}; después, la penalización será exigible.`,
     wasThere: "Estuve allí",
+    msgs: "Mensajes",
     disputed: "Gracias. Envíanos lo que pasó (p. ej. fotos de la actuación) a support@showly.de. Lo revisaremos.",
     checkinH: "Check-in en el lugar",
     checkinP: "Pide al cliente su código de 4 cifras e introdúcelo aquí. Demuestra que estuviste allí.",
@@ -194,6 +198,9 @@ const COPY = {
 export function IncomingBookings({ artistId, onEditProfile }: { artistId: number; onEditProfile?: () => void }) {
   const { lang, fmt, fmtDate, t, bookings, respondBooking, cancelByArtist, claimEmergency, penalties, checkIn, standing, instantFor, toast } = useShowly();
   const [codes, setCodes] = useState<Record<number, string>>({});
+  /* Nachrichten mit dem Kunden */
+  const [chatFor, setChatFor] = useState<number | null>(null);
+  const unread = useUnread();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const [asking, setAsking] = useState<number | null>(null);
@@ -233,6 +240,12 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
             <span className={"dash26-status s-" + b.status}>
               {b.status === "declined" && b.cancelledBy === "artist" ? C.st.byMe : C.st[b.status]}
             </span>
+            {b.status !== "declined" && b.status !== "cancelled" && (
+              <button type="button" className="dash26-mini outline chat26-open" onClick={() => setChatFor(b.id)}>
+                <Icon name="comment" /> {C.msgs}
+                {unreadFor(unread, b.id) > 0 && <span className="chat26-badge">{unreadFor(unread, b.id)}</span>}
+              </button>
+            )}
           </div>
           <div className="dash26-item-meta">
             {b.customer && (
@@ -468,6 +481,18 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           <div className="dash26-list">{past.map(row)}</div>
         </>
       )}
+      {chatFor !== null &&
+        (() => {
+          const cb = mine.find((x) => x.id === chatFor);
+          return (
+            <Chat
+              bookingId={chatFor}
+              as="provider"
+              heading={`${cb?.customer ?? ""}${cb ? " · " + fmtDate(cb.dateISO) : ""}`}
+              onClose={() => setChatFor(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

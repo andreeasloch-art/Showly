@@ -16,6 +16,7 @@ import { checkinCodeOf, isLateCancel, presenceQuestion, startOf } from "@/showly
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
 import { PayoutPanel } from "@/components/showly/PayoutPanel";
+import { Chat, unreadFor, useUnread } from "@/components/showly/Chat";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -41,6 +42,7 @@ const COPY = {
     copy: "Kopieren",
     copied: "Code kopiert",
     codeLine: (c: string) => `Check-in-Code: ${c}. Nenne ihn dem Künstler vor Ort.`,
+    msgs: "Nachrichten",
     presenceQ: (n: string) => `Ist ${n} da?`,
     presenceP: "Der Künstler hat noch nicht eingecheckt.",
     presenceYes: "Ja, ist da",
@@ -87,6 +89,7 @@ const COPY = {
     copy: "Copy",
     copied: "Code copied",
     codeLine: (c: string) => `Check-in code: ${c}. Give it to the artist on site.`,
+    msgs: "Messages",
     presenceQ: (n: string) => `Is ${n} there?`,
     presenceP: "The artist hasn't checked in yet.",
     presenceYes: "Yes, they're here",
@@ -133,6 +136,7 @@ const COPY = {
     copy: "Copiar",
     copied: "Código copiado",
     codeLine: (c: string) => `Código de check-in: ${c}. Dáselo al artista en el lugar.`,
+    msgs: "Mensajes",
     presenceQ: (n: string) => `¿Está ${n} allí?`,
     presenceP: "El artista aún no ha hecho check-in.",
     presenceYes: "Sí, está aquí",
@@ -242,6 +246,9 @@ function Dashboard() {
     confirmPresence,
   } = useShowly();
   const [cancelAsk, setCancelAsk] = useState<number | null>(null);
+  /* Nachrichten zu einer Buchung */
+  const [chatFor, setChatFor] = useState<number | null>(null);
+  const unread = useUnread();
   const todayISO = new Date().toISOString().slice(0, 10);
   /* Nichterscheinen lässt sich bis 14 Tage nach dem Termin melden */
   const noShowFrom = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
@@ -530,6 +537,12 @@ function Dashboard() {
                         <button className="dash26-mini" onClick={go}>
                           {t("dash.again")} <Icon name="arrow" />
                         </button>
+                        {b.status !== "declined" && b.status !== "cancelled" && (
+                          <button className="dash26-mini outline chat26-open" onClick={() => setChatFor(b.id)}>
+                            <Icon name="comment" /> {C.msgs}
+                            {unreadFor(unread, b.id) > 0 && <span className="chat26-badge">{unreadFor(unread, b.id)}</span>}
+                          </button>
+                        )}
                       </div>
                       {(b.status === "confirmed" || b.status === "pending" || b.status === "requested") &&
                         b.dateISO >= todayISO &&
@@ -960,6 +973,19 @@ function Dashboard() {
         )}
       </main>
       <Footer />
+      {chatFor !== null &&
+        (() => {
+          const cb = bookings.find((x) => x.id === chatFor);
+          const ca = cb ? ARTISTS.find((x) => x.id === cb.artistId) : undefined;
+          return (
+            <Chat
+              bookingId={chatFor}
+              as="customer"
+              heading={`${ca ? String(L(ca.name)) : ""}${cb ? " · " + fmtDate(cb.dateISO) : ""}`}
+              onClose={() => setChatFor(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

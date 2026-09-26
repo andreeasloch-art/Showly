@@ -224,8 +224,8 @@ function AdminPage() {
                     </b>
                     <small>
                       {tab === "artists"
-                        ? `${S(r["cat"])} · ${S(r["loc"])} · ${euro(r["price_cents"])}/Std. · Ausweis ${r["verified"] ? "geprüft" : "nicht geprüft"}`
-                        : `${S(r["kind"]) === "baker" ? "Torten" : "Deko"} · ${S(d["city"])} · ${d["kind"] === "private" ? "privat" : "gewerblich"}${d["foodRegistered"] ? " · Lebensmittelamt bestätigt" : ""}`}
+                        ? `${S(r["cat"])} · ${S(r["loc"])} · ${euro(r["price_cents"])}/Std. · ${r["business"] ? "gewerblich" : "privat"} · Ausweis ${r["verified"] ? "geprüft" : "nicht geprüft"}`
+                        : `${S(r["kind"]) === "baker" ? "Torten" : "Deko"} · ${S(d["city"])} · ${(S(r["kind"]) === "baker" ? d["kind"] === "private" : !d["business"]) ? "privat" : "gewerblich"}${d["foodRegistered"] ? " · Lebensmittelamt bestätigt" : ""}`}
                       {" · "}
                       {r["blocked"] ? "gesperrt" : r["published"] ? "sichtbar" : "wartet"}
                     </small>

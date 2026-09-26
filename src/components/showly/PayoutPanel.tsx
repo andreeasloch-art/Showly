@@ -8,6 +8,7 @@
  * Im Echtbetrieb erfasst Stripe Connect Konto und Identität im eigenen,
  * gesicherten Fenster; Showly speichert dann keine IBAN. Bis dahin liegen
  * die Angaben nur in diesem Browser. */
+import { TaxNotice } from "@/components/showly/ProviderNotices";
 import { useEffect, useState } from "react";
 import { useShowly, type Payout } from "@/showly/store";
 import { connectOnboarding, connectStatus } from "@/utils/cloud.functions";
@@ -298,6 +299,7 @@ export function PayoutPanel({ artistId }: { artistId: number }) {
   return (
     <div className="payout">
       {cloud ? <ConnectBox onState={setConnectReady} /> : <BankForm ownerKey={key} />}
+      <TaxNotice />
       <div className="dash26-panel">
         <div className="dash26-panel-head">
           <h3>{C.listH}</h3>

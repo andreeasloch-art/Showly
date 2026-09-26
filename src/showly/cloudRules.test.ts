@@ -36,6 +36,17 @@ describe("Absage durch den Künstler (§ 9)", () => {
     const d = decide({ kind: "cancelArtist", emergency: true }, "artist", base, START - 5 * H);
     expect(d).toMatchObject({ result: "proof", voucher: false, newPenalty: { status: "proof" } });
   });
+  it("Privatanbieter: Eintrag fürs Stufenmodell, aber keine Geldstrafe; Kunde bekommt Gutschein", () => {
+    const priv = { ...base, business: false };
+    expect(decide({ kind: "cancelArtist", emergency: false }, "artist", priv, START - 5 * H)).toMatchObject({
+      result: "penalty",
+      voucher: true,
+      newPenalty: { reason: "late", status: "due", amount_cents: 0 },
+    });
+    expect(decide({ kind: "reportNoShow" }, "customer", priv, START + 2 * H)).toMatchObject({
+      newPenalty: { reason: "noshow", status: "hearing", amount_cents: 0 },
+    });
+  });
   it("Kunde darf nicht als Künstler absagen", () => {
     expect(decide({ kind: "cancelArtist", emergency: false }, "customer", base, START - 30 * H)).toHaveProperty("error");
   });

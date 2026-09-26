@@ -1,4 +1,6 @@
 import { seoHead } from "@/showly/seo";
+import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
+import { isBusiness } from "@/showly/providerStatus";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ARTISTS, SHOP_ITEMS, type Artist } from "@/showly/data";
@@ -230,6 +232,7 @@ function Detail() {
                 ))}
               </div>
             )}
+            <ProviderStatusNote business={isBusiness(a)} />
           </header>
 
           <div className="stats-grid">

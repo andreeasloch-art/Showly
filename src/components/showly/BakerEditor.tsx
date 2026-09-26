@@ -2,6 +2,7 @@
    Kontakt und die eigenen Angebote. Aufbau wie der Profil-Editor der
    Künstler. Art des Anbieters (privat oder Konditorei), Bewertungen und
    Prüfsiegel ändert der Anbieter nicht selbst. */
+import { TaxNotice } from "@/components/showly/ProviderNotices";
 import { useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
@@ -302,6 +303,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
         </section>
 
         {cloud ? <ConnectBox onState={noop} /> : <BankForm ownerKey={`baker:${b.id}`} />}
+        <TaxNotice />
 
         <section className="pe-card">
           <div className="pe-card-head">

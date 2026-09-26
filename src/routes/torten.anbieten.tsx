@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
@@ -63,7 +64,7 @@ const COPY = {
     submit: "Profil anlegen",
     need: "Bitte Name, Stadt und mindestens eine Spezialität angeben.",
     needOffer: "Bitte für das erste Angebot Name und Preis angeben.",
-    needLegal: "Bitte die Anmeldung und die Nutzungsbedingungen bestätigen.",
+    needLegal: "Bitte die Anmeldung, die Nutzungsbedingungen und den Steuerhinweis bestätigen.",
     loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt. Sichtbar wird es, sobald wir es freigeschaltet haben.",
     review: "Profil angelegt. Wir prüfen es und schalten es in der Regel innerhalb von 2 Werktagen frei.",
     done: "Dein Profil ist angelegt. Hier kannst du es weiter bearbeiten.",
@@ -104,7 +105,7 @@ const COPY = {
     submit: "Create profile",
     need: "Please add a name, city and at least one speciality.",
     needOffer: "Please add a name and price for your first offer.",
-    needLegal: "Please confirm the registration and the terms.",
+    needLegal: "Please confirm the registration, the terms and the tax notice.",
     loginNext: "Almost done: sign in now and your profile will be created. It goes live once we have approved it.",
     review: "Profile created. We review it and usually approve it within 2 business days.",
     done: "Your profile is ready. You can keep editing it here.",
@@ -145,7 +146,7 @@ const COPY = {
     submit: "Crear perfil",
     need: "Indica nombre, ciudad y al menos una especialidad.",
     needOffer: "Indica nombre y precio de tu primera oferta.",
-    needLegal: "Confirma el registro y las condiciones.",
+    needLegal: "Confirma el registro, las condiciones y el aviso fiscal.",
     loginNext: "Casi listo: inicia sesión y se creará tu perfil. Será visible cuando lo aprobemos.",
     review: "Perfil creado. Lo revisamos y normalmente lo aprobamos en 2 días laborables.",
     done: "Tu perfil está listo. Aquí puedes seguir editándolo.",
@@ -174,6 +175,7 @@ function Onboard() {
   const [offer, setOffer] = useState<OfferDraft>(emptyOffer("birthday"));
   const [legal, setLegal] = useState(false);
   const [terms, setTerms] = useState(false);
+  const [taxOk, setTaxOk] = useState(false);
   const isPrivate = kind === "private";
   const int = (v: string, max: number) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
 
@@ -190,7 +192,7 @@ function Onboard() {
     if (!name.trim() || !city.trim() || !specs.length) return toast(C.need);
     const price = parsePrice(offer.price);
     if (!offer.name.trim() || !price) return toast(C.needOffer);
-    if (!legal || !terms) return toast(C.needLegal);
+    if (!legal || !terms || !taxOk) return toast(C.needLegal);
     if (!okText(tagline, about, offer.name, offer.desc)) return;
     /* Mit Datenbank: Profil und erstes Angebot auf dem Server, sichtbar nach
        Freischaltung durch die Verwaltung */
@@ -208,6 +210,7 @@ function Onboard() {
           radiusKm: radius,
           coverImg: 1,
           foodRegistered: true,
+          taxAckAt: new Date().toISOString(),
         },
         offer: {
           name: offer.name.trim().slice(0, 100),
@@ -245,6 +248,7 @@ function Onboard() {
       coverImg: 1,
       photos,
       foodRegistered: true,
+      taxAckAt: new Date().toISOString(),
     });
     saveSweet({
       bakerId: b.id,
@@ -408,6 +412,8 @@ function Onboard() {
                 .
               </span>
             </label>
+            <TaxNotice compact />
+            <TaxAck checked={taxOk} onChange={setTaxOk} />
             <p className="pe-note">
               <Icon name="lock" /> {C.note}
             </p>

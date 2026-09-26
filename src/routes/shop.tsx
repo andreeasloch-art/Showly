@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { SHOP_ITEMS, SHOP_TABS, type ShopItem } from "@/showly/data";
@@ -17,8 +18,11 @@ import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 type Area = "kostueme" | "deko";
 
 export const Route = createFileRoute("/shop")({
-  validateSearch: (search: Record<string, unknown>): { bereich?: Area } =>
-    search["bereich"] === "deko" ? { bereich: "deko" } : {},
+  /* ?anbieten=1 öffnet das Formular für Deko-Anbieter (Link aus "Mitmachen") */
+  validateSearch: (search: Record<string, unknown>): { bereich?: Area; anbieten?: 1 } => ({
+    ...(search["bereich"] === "deko" ? { bereich: "deko" as const } : {}),
+    ...(String(search["anbieten"]) === "1" ? { anbieten: 1 as const } : {}),
+  }),
   head: () => seoHead("/shop", "/shop"),
   component: Shop,
 });
@@ -99,6 +103,7 @@ const COPY = {
       rentHint: "Leer lassen, wenn du nur verkaufst.",
       photo: "Foto",
       need: "Bitte Name, Artikel und einen Preis angeben.",
+      needStatus: "Bitte wähle privat oder gewerblich und bestätige den Steuerhinweis.",
       done: "Dein Artikel steht jetzt im Deko-Shop.",
       note: "Dein Artikel wird vorerst nur in diesem Browser gespeichert.",
     },
@@ -149,6 +154,7 @@ const COPY = {
       rentHint: "Leave empty if you only sell.",
       photo: "Photo",
       need: "Please add a name, the item and a price.",
+      needStatus: "Please choose private or commercial and confirm the tax notice.",
       done: "Your item is now in the decor shop.",
       note: "For now your item is only saved in this browser.",
     },
@@ -199,6 +205,7 @@ const COPY = {
       rentHint: "Déjalo vacío si solo vendes.",
       photo: "Foto",
       need: "Indica nombre, artículo y un precio.",
+      needStatus: "Elige particular o profesional y confirma el aviso fiscal.",
       done: "Tu artículo ya está en la tienda de decoración.",
       note: "Por ahora tu artículo solo se guarda en este navegador.",
     },
@@ -210,13 +217,13 @@ function Shop() {
   const { t, L, fmt, lang } = useShowly();
   const C: Copy = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
-  const { bereich } = Route.useSearch();
+  const { bereich, anbieten } = Route.useSearch();
   const area: Area = bereich === "deko" ? "deko" : "kostueme";
   const deko = area === "deko";
   const [shopCat, setShopCat] = useState("all");
   const [occ, setOcc] = useState("all");
   const [query, setQuery] = useState("");
-  const [offering, setOffering] = useState(false);
+  const [offering, setOffering] = useState(!!anbieten);
 
   /* Beim Wechsel des Bereichs die Filter lösen */
   useEffect(() => {
@@ -493,6 +500,8 @@ function DecoOffer({
   const [buy, setBuy] = useState("");
   const [rent, setRent] = useState("");
   const [photo, setPhoto] = useState<MediaRef | undefined>();
+  const [business, setBusiness] = useState<boolean | null>(null);
+  const [taxOk, setTaxOk] = useState(false);
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -509,11 +518,13 @@ function DecoOffer({
     const b = price(buy);
     const r = price(rent);
     if (!vendor.trim() || !name.trim() || (!b && !r)) return toast(F.need);
+    if (business === null || !taxOk) return toast(F.needStatus);
     if (!okText(name, desc)) return;
     /* Mit Datenbank: Angebot auf dem Server, sichtbar nach Freischaltung */
     if (session?.backend) {
       void saveDecoCloud({
         vendor: vendor.trim().slice(0, 80),
+        business,
         name: name.trim().slice(0, 100),
         desc: desc.trim().slice(0, 600),
         cat,
@@ -618,6 +629,9 @@ function DecoOffer({
             <textarea value={desc} maxLength={600} placeholder={F.descPh} onChange={(e) => setDesc(e.target.value)} />
             <ContactHint text={name + "\n" + desc} />
           </label>
+          <StatusChoice value={business} onChange={setBusiness} />
+          <TaxNotice compact />
+          <TaxAck checked={taxOk} onChange={setTaxOk} />
           <p className="pe-note">
             <Icon name="lock" /> {F.note}
           </p>

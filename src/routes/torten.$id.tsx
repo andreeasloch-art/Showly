@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
@@ -226,6 +227,7 @@ function BakerProfile() {
                       <Icon name="cart" /> {S.delivery(b.radiusKm)}
                     </span>
                   </div>
+                  <ProviderStatusNote business={b.kind !== "private"} />
                 </header>
 
                 <section className="bk-sec">

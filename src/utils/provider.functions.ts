@@ -32,7 +32,11 @@ export type ProviderKind = "baker" | "deco";
 
 /** Nur die bekannten Felder, gekürzt. Kontaktangaben werden nicht gespeichert. */
 function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
-  if (kind === "deco") return { vendor: s(d["vendor"], 80), city: s(d["city"], 60) };
+  /* Steuerhinweis bestätigt (AGB § 18 Abs. 5); bei Deko zusätzlich privat
+     oder gewerblich, Bäcker geben das über "kind" an */
+  const taxAckAt = s(d["taxAckAt"], 40);
+  if (kind === "deco")
+    return { vendor: s(d["vendor"], 80), city: s(d["city"], 60), business: d["business"] === true, taxAckAt };
   const cats = ["wedding", "birthday", "motif", "cupcakes", "macarons", "candybar", "cakepops", "donuts", "cookies", "vegan", "other"];
   return {
     kind: d["kind"] === "private" ? "private" : "business",
@@ -49,6 +53,7 @@ function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
     coverImg: n(d["coverImg"], 1, 14, 1),
     foodRegistered: d["foodRegistered"] === true,
     since: n(d["since"], 2000, 2100, new Date().getFullYear()),
+    taxAckAt,
   };
 }
 
@@ -75,10 +80,13 @@ export const saveProvider = createServerFn({ method: "POST" })
     const now = new Date().toISOString();
     const { data: prev } = await admin
       .from("providers")
-      .select("id")
+      .select("id, data")
       .eq("owner", ctx.user.id)
       .eq("kind", data.kind)
       .maybeSingle();
+    /* Bestätigung bleibt beim Bearbeiten erhalten; neu anlegen nur mit */
+    if (!d["taxAckAt"]) d["taxAckAt"] = (prev?.data as Record<string, unknown> | undefined)?.["taxAckAt"] || "";
+    if (!d["taxAckAt"]) return { error: "Bitte bestätige den Hinweis zu Steuern" };
     if (prev) {
       await admin.from("providers").update({ data: d, updated_at: now }).eq("id", prev.id);
       return { id: prev.id };

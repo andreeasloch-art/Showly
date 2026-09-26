@@ -81,6 +81,8 @@ export interface Baker {
   contact?: { email?: string; phone?: string; website?: string; instagram?: string };
   /** Pflichtbestätigung bei Privatpersonen: Lebensmittelbetrieb registriert */
   foodRegistered?: boolean;
+  /** Steuerhinweis bestätigt (AGB § 18 Abs. 5) */
+  taxAckAt?: string;
   own?: boolean;
 }
 

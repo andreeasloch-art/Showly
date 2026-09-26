@@ -149,7 +149,7 @@ async function listRows(section: AdminSection): Promise<unknown[]> {
           await a
             .from("artists")
             .select(
-              "id, owner, cat, name, loc, price_cents, verified, published, blocked, blocked_reason, created_at",
+              "id, owner, cat, name, loc, price_cents, verified, published, blocked, blocked_reason, business, created_at",
             )
             .order("created_at", { ascending: false })
             .limit(500)

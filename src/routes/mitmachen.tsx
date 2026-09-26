@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { ARTISTS, CATS } from "@/showly/data";
@@ -88,7 +89,7 @@ function Become() {
   const { t, lang, fmt, num, toast, setSession, catLabel, L, session, queueArtistSignup } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
-  const [role, setRole] = useState<"artist" | "planner">("artist");
+  const [role, setRole] = useState<"artist" | "planner" | "sweets">("artist");
   const [fee, setFee] = useState(80);
   const [form, setForm] = useState({
     first: "",
@@ -106,38 +107,55 @@ function Become() {
     desc: "",
   });
   const [figs, setFigs] = useState<string[]>([]);
-  /* Pflichtangaben für die Regeln zu Absage und Nichterscheinen (AGB §§ 9,
-     18): Vertragsstrafen in AGB sind nur gegenüber Unternehmern zulässig,
-     und die Klausel soll nicht im Kleingedruckten verschwinden. */
-  const [business, setBusiness] = useState(false);
+  /* Pflichtangaben (AGB §§ 9, 18): privat oder gewerblich, Regeln zu Absage
+     und Nichterscheinen, Steuerhinweis. Vertragsstrafen in AGB sind nur
+     gegenüber Unternehmern zulässig; Privatanbieter bekommen deshalb nur das
+     Stufenmodell (Einschränkung, Sperre) ohne Geldstrafe. */
+  const [business, setBusiness] = useState<boolean | null>(null);
   const [rulesOk, setRulesOk] = useState(false);
+  const [taxOk, setTaxOk] = useState(false);
   const RG =
     {
       de: {
-        business:
-          "Ich trete gewerblich oder selbständig auf (nicht nur als Hobby).",
         rules:
           "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen, danach 50 % der Gage als Vertragsstrafe, bei Nichterscheinen 100 %, außer bei einem belegten Notfall (AGB § 9).",
+        rulesPriv:
+          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen. Spätere Absagen und Nichterscheinen ohne belegten Notfall führen zu Verwarnung, Einschränkung und Sperre des Profils (AGB § 9).",
         rulesLink: "AGB lesen",
-        need: "Bitte bestätige die beiden Punkte unten.",
+        need: "Bitte wähle privat oder gewerblich und bestätige die Punkte unten.",
+        sweets: "Torten, Deko & Süßes",
+        sweetsH: "Du bietest Torten, Süßes oder Deko an?",
+        sweetsP: "Dafür gibt es eine eigene Anmeldung mit Angeboten, Fotos und Preisen. Privat oder als Betrieb.",
+        sweetsCake: "Torten & Süßes anbieten",
+        sweetsDeco: "Deko anbieten",
         loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt.",
       },
       en: {
-        business:
-          "I perform on a commercial or self-employed basis (not just as a hobby).",
         rules:
           "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences, after that a penalty of 50% of the fee, 100% for a no-show, unless there is a proven emergency (T&C § 9).",
+        rulesPriv:
+          "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences. Later cancellations and no-shows without a proven emergency lead to a warning, restrictions and suspension of the profile (T&C § 9).",
         rulesLink: "Read T&C",
-        need: "Please confirm the two points below.",
+        need: "Please choose private or commercial and confirm the points below.",
+        sweets: "Cakes, decor & sweets",
+        sweetsH: "You offer cakes, sweets or decor?",
+        sweetsP: "There is a separate sign-up with offers, photos and prices. Private or as a business.",
+        sweetsCake: "Offer cakes & sweets",
+        sweetsDeco: "Offer decor",
         loginNext: "Almost done: sign in now and your profile will be created.",
       },
       es: {
-        business:
-          "Actúo de forma profesional o como autónomo (no solo como afición).",
         rules:
           "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias; después, penalización del 50 % del caché y del 100 % si no me presento, salvo emergencia justificada (CG § 9).",
+        rulesPriv:
+          "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias. Las cancelaciones posteriores y las ausencias sin emergencia justificada llevan a aviso, restricción y bloqueo del perfil (CG § 9).",
         rulesLink: "Leer CG",
-        need: "Confirma los dos puntos de abajo.",
+        need: "Elige particular o profesional y confirma los puntos de abajo.",
+        sweets: "Tartas, deco y dulces",
+        sweetsH: "¿Ofreces tartas, dulces o decoración?",
+        sweetsP: "Hay un registro propio con ofertas, fotos y precios. Como particular o empresa.",
+        sweetsCake: "Ofrecer tartas y dulces",
+        sweetsDeco: "Ofrecer decoración",
         loginNext: "Casi listo: inicia sesión y se creará tu perfil.",
       },
     }[(lang as "de" | "en" | "es") ?? "de"] ?? null;
@@ -159,8 +177,9 @@ function Become() {
     setForm((f) => ({ ...f, [k]: v }));
   }
 
-  function pickRole(r: "artist" | "planner") {
+  function pickRole(r: "artist" | "planner" | "sweets") {
     setRole(r);
+    if (r === "sweets") return;
     setFigs([]);
     set("cat", r === "planner" ? "eventplanner" : "fairy");
   }
@@ -175,7 +194,7 @@ function Become() {
     const real = `${form.first} ${form.last}`.trim();
     if (!real || !form.loc.trim()) return toast(t("toast.regNeed"));
     if (!okText(form.desc)) return;
-    if (!business || !rulesOk) return toast(RG!.need);
+    if (business === null || !rulesOk || !taxOk) return toast(RG!.need);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       return toast(t("sec.badEmail"));
     if (pw.score < 2) return toast(t("sec.weakPw"));
@@ -229,8 +248,9 @@ function Become() {
         : { de: ["Auftritt", "Kostüm", "Musik"], en: ["Performance", "Costume", "Music"] },
       specs: [catLabel(cat)],
       rev: [],
-      business: true,
+      business,
       rulesAcceptedAt: new Date().toISOString(),
+      taxAckAt: new Date().toISOString(),
       ...(planner ? { kind: "planner", packages: defaultPackages() } : {}),
     };
     /* Mit Datenbank: Konto über die echte Anmeldung, Profil legt der Server
@@ -248,8 +268,9 @@ function Become() {
         figures: [...figs, ...custom],
         radiusKm: prof.radiusKm,
         birthDate: form.birth,
-        business: true,
+        business,
         rulesAcceptedAt: prof.rulesAcceptedAt,
+        taxAck: true,
       });
       if (!session?.backend) {
         toast(RG!.loginNext);
@@ -546,7 +567,31 @@ function Become() {
                 <Icon name="eventplanner" />
                 <span>{t("reg.plannerOpt")}</span>
               </button>
+              <button
+                className={"join26-seg-btn" + (role === "sweets" ? " on" : "")}
+                aria-pressed={role === "sweets"}
+                onClick={() => pickRole("sweets")}
+              >
+                <Icon name="gift" />
+                <span>{RG!.sweets}</span>
+              </button>
             </div>
+            {role === "sweets" ? (
+              <div className="join26-sweets">
+                <h3>{RG!.sweetsH}</h3>
+                <p>{RG!.sweetsP}</p>
+                <Link to="/torten/anbieten" className="home-btn primary wide">
+                  {RG!.sweetsCake}
+                  <Icon name="arrow" />
+                </Link>
+                <Link to="/shop" search={{ bereich: "deko", anbieten: 1 }} className="home-btn ghost wide">
+                  {RG!.sweetsDeco}
+                  <Icon name="arrow" />
+                </Link>
+                <TaxNotice compact />
+              </div>
+            ) : (
+            <>
             <div className="form-grid">
               <div className="input-group">
                 <label htmlFor="reg-first">{t("reg.first")}</label>
@@ -728,15 +773,7 @@ function Become() {
                 <Icon name="gift" /> {t("reg.pkgHint")}
               </div>
             )}
-            <label className="reg-check">
-              <input
-                id="reg-business"
-                type="checkbox"
-                checked={business}
-                onChange={(e) => setBusiness(e.target.checked)}
-              />
-              <span>{RG!.business}</span>
-            </label>
+            <StatusChoice value={business} onChange={setBusiness} />
             <label className="reg-check">
               <input
                 id="reg-rules"
@@ -745,7 +782,7 @@ function Become() {
                 onChange={(e) => setRulesOk(e.target.checked)}
               />
               <span>
-                {RG!.rules}{" "}
+                {business === false ? RG!.rulesPriv : RG!.rules}{" "}
                 <Link
                   to="/rechtliches/$doc"
                   params={{ doc: "terms" }}
@@ -755,11 +792,15 @@ function Become() {
                 </Link>
               </span>
             </label>
+            <TaxNotice compact />
+            <TaxAck checked={taxOk} onChange={setTaxOk} />
             <button className="home-btn primary wide" onClick={submit}>
               {planner ? t("reg.btnP") : t("reg.btn")}
               <Icon name="arrow" />
             </button>
             <div className="join26-terms">{t("reg.terms")}</div>
+            </>
+            )}
           </div>
         </div>
       </section>

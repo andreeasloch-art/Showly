@@ -162,6 +162,7 @@ export async function saveBakerCloud(b: Partial<Baker>): Promise<Result<{ id: nu
         coverImg: b.coverImg,
         foodRegistered: b.foodRegistered,
         since: b.since,
+        taxAckAt: b.taxAckAt,
       },
     },
   });
@@ -192,6 +193,7 @@ export async function removeSweetCloud(id: number) {
 
 export async function saveDecoCloud(d: {
   vendor: string;
+  business: boolean;
   cat: string;
   occ: string[];
   name: string;
@@ -199,7 +201,9 @@ export async function saveDecoCloud(d: {
   buy: number;
   rent: number;
 }): Promise<Result<{ id: number }>> {
-  const p = await saveProvider({ data: { kind: "deco", data: { vendor: d.vendor } } });
+  const p = await saveProvider({
+    data: { kind: "deco", data: { vendor: d.vendor, business: d.business, taxAckAt: new Date().toISOString() } },
+  });
   if ("error" in p) return p;
   return saveOffer({
     data: {

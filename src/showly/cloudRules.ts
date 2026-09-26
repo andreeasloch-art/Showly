@@ -84,6 +84,9 @@ export interface BookingFacts {
   checkin_code?: string | null;
   checked_in_at: string | null;
   requested_at?: string | null;
+  /** Anbieter gewerblich? Bei Privatanbietern keine Vertragsstrafe
+   *  (§ 309 Nr. 6 BGB), nur das Stufenmodell. Fehlt die Angabe: gewerblich. */
+  business?: boolean;
 }
 
 export interface PenaltyFacts {
@@ -116,6 +119,7 @@ export type Refusal = { error: string };
 const OPEN = new Set(["confirmed", "pending"]);
 
 function penaltyCents(b: BookingFacts, reason: "late" | "noshow") {
+  if (b.business === false) return 0;
   return Math.round(b.payout_cents * PENALTY_RATE[reason]);
 }
 

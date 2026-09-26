@@ -5,6 +5,7 @@
  * Künstler im Profil fest (siehe showly/booking.ts). Ablehnen fragt einmal
  * nach, direkt im Eintrag: Browser-Dialoge wie confirm() sind in der App-
  * Hülle und in Vorschauen oft gesperrt. */
+import { isBusiness } from "@/showly/providerStatus";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ARTISTS } from "@/showly/data";
@@ -38,6 +39,10 @@ const COPY = {
     penDue: (p: string) => `Vertragsstrafe ${p}: wird in Rechnung gestellt`,
     penProof: "Deine Stellungnahme oder dein Nachweis wird geprüft (support@showly.de)",
     penWaived: "Nachweis anerkannt, keine Vertragsstrafe",
+    sureLatePriv: "Weniger als 24 Stunden vor Beginn: Ohne Notfall bekommst du eine Verwarnung nach dem Stufenmodell (AGB § 23), und der Kunde bekommt einen Gutschein. Eine Geldstrafe gibt es bei Privatanbietern nicht. Bei einem Notfall schick uns den Nachweis.",
+    donePenaltyPriv: "Abgesagt. Die späte Absage wird als Verwarnung vermerkt (AGB § 23).",
+    penDuePriv: "Späte Absage oder Nichterscheinen: als Verwarnung vermerkt, keine Geldstrafe",
+    penHearingPriv: (d: string) => `Der Kunde meldet: nicht erschienen. Du kannst dich bis ${d} äußern oder einen Notfall belegen, danach wird es als Verwarnung vermerkt.`,
     claim: "Notfall belegen",
     claimed: "Danke. Schick den Nachweis innerhalb von 7 Tagen an support@showly.de.",
     penHearing: (d: string) => `Der Kunde meldet: nicht erschienen. Du kannst dich bis ${d} äußern oder einen Notfall belegen, danach wird die Vertragsstrafe fällig.`,
@@ -97,6 +102,10 @@ const COPY = {
     penDue: (p: string) => `Contractual penalty ${p}: will be invoiced`,
     penProof: "Your response or proof is under review (support@showly.de)",
     penWaived: "Proof accepted, no penalty",
+    sureLatePriv: "Less than 24 hours before the start: without an emergency you get a warning under the strike model (T&C § 23), and the customer gets a voucher. Private providers pay no monetary penalty. In an emergency, send us proof.",
+    donePenaltyPriv: "Cancelled. The late cancellation is recorded as a warning (T&C § 23).",
+    penDuePriv: "Late cancellation or no-show: recorded as a warning, no monetary penalty",
+    penHearingPriv: (d: string) => `The customer reports: no-show. You can respond or prove an emergency until ${d}; after that, it is recorded as a warning.`,
     claim: "Prove emergency",
     claimed: "Thanks. Send the proof to support@showly.de within 7 days.",
     penHearing: (d: string) => `The customer reports: no-show. You can respond or prove an emergency until ${d}; after that, the contractual penalty becomes due.`,
@@ -156,6 +165,10 @@ const COPY = {
     penDue: (p: string) => `Penalización ${p}: se facturará`,
     penProof: "Tu respuesta o justificante está en revisión (support@showly.de)",
     penWaived: "Justificante aceptado, sin penalización",
+    sureLatePriv: "Menos de 24 horas antes del inicio: sin emergencia recibes un aviso según el sistema por niveles (CG § 23) y el cliente recibe un vale. Los particulares no pagan penalización económica. En caso de emergencia, envíanos el justificante.",
+    donePenaltyPriv: "Cancelado. La cancelación tardía se registra como aviso (CG § 23).",
+    penDuePriv: "Cancelación tardía o ausencia: registrada como aviso, sin penalización económica",
+    penHearingPriv: (d: string) => `El cliente informa: no se presentó. Puedes responder o justificar una emergencia hasta el ${d}; después se registrará como aviso.`,
     claim: "Justificar emergencia",
     claimed: "Gracias. Envía el justificante a support@showly.de en 7 días.",
     penHearing: (d: string) => `El cliente indica: no se presentó. Puedes responder o justificar una emergencia hasta el ${d}; después, la penalización será exigible.`,
@@ -229,6 +242,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
     const until = respondBy(b.requestedAt);
     const pen = penalties.find((p) => p.bookingId === b.id);
     const late = isLateCancel(b);
+    const priv = !isBusiness(a);
     return (
       <article className={"dash26-item inb-item s-" + b.status} key={b.id}>
         <div className="dash26-item-body">
@@ -278,9 +292,11 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           {pen && (
             <p className={"inb-pen s-" + pen.status}>
               {pen.status === "hearing"
-                ? C.penHearing(fmtDate(pen.hearingUntil))
+                ? (priv ? C.penHearingPriv : C.penHearing)(fmtDate(pen.hearingUntil))
                 : pen.status === "due"
-                  ? C.penDue(fmt(pen.amount))
+                  ? priv || !pen.amount
+                    ? C.penDuePriv
+                    : C.penDue(fmt(pen.amount))
                   : pen.status === "proof"
                     ? C.penProof
                     : C.penWaived}
@@ -350,7 +366,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           <div className="inb-actions">
             {asking === b.id ? (
               <>
-                <span className="inb-sure">{late ? C.sureLate(fmt(Math.round(net * PENALTY_RATE.late))) : C.sureCancel}</span>
+                <span className="inb-sure">{late ? (priv ? C.sureLatePriv : C.sureLate(fmt(Math.round(net * PENALTY_RATE.late)))) : C.sureCancel}</span>
                 <button className="dash26-mini outline" onClick={() => setAsking(null)}>
                   {C.no}
                 </button>
@@ -371,7 +387,13 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
                   onClick={() => {
                     const r = cancelByArtist(b.id, false);
                     setAsking(null);
-                    toast(r === "penalty" ? C.donePenalty(fmt(Math.round(net * PENALTY_RATE.late))) : C.cancelled);
+                    toast(
+                      r === "penalty"
+                        ? priv
+                          ? C.donePenaltyPriv
+                          : C.donePenalty(fmt(Math.round(net * PENALTY_RATE.late)))
+                        : C.cancelled,
+                    );
                   }}
                 >
                   {late ? C.yesNoEmergency : C.yesCancel}

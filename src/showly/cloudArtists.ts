@@ -9,7 +9,7 @@ import type { ArtistRow } from "@/lib/database.types";
 import { ARTISTS, CATS, type Artist } from "./data";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 
-type PublicRow = Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "created_at" | "updated_at">;
+type PublicRow = Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "tax_ack_at" | "created_at" | "updated_at">;
 
 const list = (v: unknown): { de: string[]; en: string[] } => {
   const o = (v || {}) as { de?: string[]; en?: string[] };
@@ -50,6 +50,7 @@ export function artistFromRow(r: PublicRow): Artist {
     figures: specs.de,
     rev: [],
     instantBook: r.instant_book !== false,
+    business: r.business !== false,
     fromDb: true,
   };
 }

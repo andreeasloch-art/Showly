@@ -2,7 +2,8 @@
  *
  * Von Hand geschrieben, passend zu supabase/migrations/0001_showly_grundlage.sql,
  * 0002_anfragen_konto_meldungen.sql, 0003_buchungsablauf_geld.sql und
- * 0004_chat_admin_anbieter_support.sql.
+ * 0004_chat_admin_anbieter_support.sql und
+ * 0005_privat_gewerblich_steuer.sql.
  * Sobald das Supabase-Projekt steht, lässt sich diese Datei erzeugen mit:
  *   npx supabase gen types typescript --project-id <kennung> > src/lib/database.types.ts
  * Dann bleibt sie automatisch im Takt mit dem Schema. */
@@ -92,6 +93,9 @@ export type ArtistRow = {
   response_time: LText | Record<string, never>;
   response_rate: string | null;
   instant_book: boolean;
+  /** gewerblich (true) oder privat; bei privat keine Vertragsstrafe */
+  business: boolean;
+  tax_ack_at: string | null;
   blocked: boolean;
   blocked_reason: string | null;
   created_at: string;
@@ -357,7 +361,7 @@ export type Database = {
     };
     Views: {
       artists_public: Table<
-        Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "created_at" | "updated_at">
+        Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "tax_ack_at" | "created_at" | "updated_at">
       >;
       providers_public: Table<Pick<ProviderRow, "id" | "kind" | "data" | "created_at">>;
       provider_offers_public: Table<

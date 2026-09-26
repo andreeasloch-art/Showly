@@ -1,5 +1,6 @@
 /* Globaler Zustand der Showly-App: Sprache, Favoriten, Warenkorb,
    Buchungen, Bestellungen, Session, Verfügbarkeiten und Toasts. */
+import { isBusiness } from "./providerStatus";
 import {
   createContext,
   useCallback,
@@ -1049,7 +1050,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     if (cloudOn && isDbId(b.id)) return;
     const a = findArtist(b.artistId);
     const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
-    const amount = Math.round(net * PENALTY_RATE[reason]);
+    /* Privatanbieter: keine Geldstrafe, der Eintrag zählt nur für das
+       Stufenmodell (AGB § 9 Abs. 6) */
+    const amount = isBusiness(a) ? Math.round(net * PENALTY_RATE[reason]) : 0;
     setPenalties((x) => [
       {
         id: Date.now(),

@@ -366,15 +366,17 @@ export const bookingAction = createServerFn({ method: "POST" })
     const { data: b } = await admin.from("bookings").select("*").eq("id", data.bookingId).maybeSingle();
     if (!b) return { error: "Buchung nicht gefunden" };
     let role: "customer" | "artist" | null = b.customer === uid ? "customer" : null;
+    let business = true;
     if (b.artist_id) {
-      const { data: a } = await admin.from("artists").select("owner").eq("id", b.artist_id).maybeSingle();
+      const { data: a } = await admin.from("artists").select("owner, business").eq("id", b.artist_id).maybeSingle();
       if (a?.owner === uid) role = "artist";
+      business = a?.business !== false;
     }
     if (!role) return { error: "Keine Berechtigung" };
 
     const { data: pen } = await admin.from("penalties").select("*").eq("booking_id", b.id).maybeSingle();
     const { data: code } = await admin.from("booking_codes").select("code").eq("booking_id", b.id).maybeSingle();
-    const d = decide(data.action, role, { ...b, checkin_code: code?.code ?? null }, Date.now(), pen);
+    const d = decide(data.action, role, { ...b, checkin_code: code?.code ?? null, business }, Date.now(), pen);
     if ("error" in d) return d;
 
     if (d.booking) {
@@ -507,6 +509,7 @@ export interface ArtistSignup {
   birthDate: string;
   business: boolean;
   rulesAcceptedAt: string;
+  taxAck: boolean;
 }
 
 export const registerArtist = createServerFn({ method: "POST" })
@@ -525,11 +528,14 @@ export const registerArtist = createServerFn({ method: "POST" })
       birthDate: DATE.test(d.birthDate) ? d.birthDate : "",
       business: d.business === true,
       rulesAcceptedAt: s(d.rulesAcceptedAt, 40),
+      taxAck: d.taxAck === true,
     };
     if (!/^[a-z0-9_-]{2,40}$/.test(out.cat) || !out.real || !out.loc || !out.birthDate)
       throw new Error("Angaben unvollständig");
-    /* AGB § 18: gewerblich und Regeln zu Absage und Strafe bestätigt */
-    if (!out.business || !out.rulesAcceptedAt) throw new Error("Bestätigungen fehlen");
+    /* AGB § 18: privat oder gewerblich angegeben, Regeln zu Absage und
+       Nichterscheinen sowie Steuerhinweis bestätigt */
+    if (typeof d.business !== "boolean" || !out.rulesAcceptedAt || !out.taxAck)
+      throw new Error("Bestätigungen fehlen");
     return out;
   })
   .handler(async ({ data }): Promise<{ id: number } | { error: string } | { skipped: true }> => {
@@ -564,6 +570,8 @@ export const registerArtist = createServerFn({ method: "POST" })
         price_cents: data.price * 100,
         published: false,
         instant_book: true,
+        business: data.business,
+        tax_ack_at: new Date().toISOString(),
       })
       .select("id")
       .single();

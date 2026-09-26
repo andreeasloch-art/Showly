@@ -19,11 +19,12 @@ import type { SweetRequest } from "./sweets";
 export const DB_ID_BASE = 1_000_000_000;
 
 export const localIdOf = (dbId: number) => DB_ID_BASE + dbId;
-export const dbIdOf = (localId: number) => (localId >= DB_ID_BASE ? localId - DB_ID_BASE : null);
+export const dbIdOf = (localId: number) =>
+  localId >= DB_ID_BASE && localId < 2 * DB_ID_BASE ? localId - DB_ID_BASE : null;
 
 const euro = (cents: number | null | undefined) => Math.round(cents ?? 0) / 100;
 
-export function bookingFromRow(r: BookingRow): Booking {
+export function bookingFromRow(r: BookingRow, code?: string): Booking {
   return {
     id: localIdOf(r.id),
     artistId: r.artist_id ?? r.catalog_artist ?? 0,
@@ -32,7 +33,7 @@ export function bookingFromRow(r: BookingRow): Booking {
     amount: euro(r.amount_cents),
     status: r.status,
     ...(r.cancelled_by ? { cancelledBy: r.cancelled_by } : {}),
-    ...(r.checkin_code ? { checkinCode: r.checkin_code } : {}),
+    ...(code ? { checkinCode: code } : {}),
     ...(r.checked_in_at ? { checkedInAt: r.checked_in_at } : {}),
     ...(r.checked_in_by ? { checkedInBy: r.checked_in_by } : {}),
     ...(r.requested_at ? { requestedAt: r.requested_at } : {}),
@@ -119,5 +120,9 @@ export function orderFromRow(r: ShopOrderRow): Order {
  *  Fassungen, reine Browser-Buchungen bleiben daneben stehen. */
 export function mergeById<T extends { id: number }>(local: T[], fromDb: T[]): T[] {
   const ids = new Set(fromDb.map((x) => x.id));
-  return [...fromDb, ...local.filter((x) => x.id < DB_ID_BASE && !ids.has(x.id))];
+  return [...fromDb, ...local.filter((x) => !isDbId(x.id) && !ids.has(x.id))];
 }
+
+/** Liegt die Kennung im Bereich der Datenbank-Einträge? Lokale Kennungen
+ *  sind kleine Zähler oder Zeitstempel (weit über diesem Bereich). */
+export const isDbId = (id: number) => id >= DB_ID_BASE && id < 2 * DB_ID_BASE;

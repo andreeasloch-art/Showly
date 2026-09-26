@@ -80,7 +80,8 @@ export interface BookingFacts {
   slot: string | null;
   paid: boolean;
   payout_cents: number;
-  checkin_code: string | null;
+  /** aus booking_codes, nur der Server kennt ihn beim Künstler-Check-in */
+  checkin_code?: string | null;
   checked_in_at: string | null;
   requested_at?: string | null;
 }

@@ -245,13 +245,13 @@ export const recordCart = createServerFn({ method: "POST" })
         address: b.address ?? snap.contact.address ?? null,
         guests: b.guests && /^\d+$/.test(b.guests) ? Number(b.guests) : null,
         customer_name: snap.contact.name || null,
-        checkin_code: newCheckinCode(),
         requested_at: status === "requested" ? new Date().toISOString() : null,
         stripe_session_id: data.sessionId ? `${data.sessionId}:${i}` : null,
       } as Partial<BookingRow>;
       const { data: ins, error } = await admin.from("bookings").insert(row).select("id").single();
       if (error || !ins) continue;
       bookingIds.push(ins.id);
+      await admin.from("booking_codes").insert({ booking_id: ins.id, code: newCheckinCode() });
       if (status === "confirmed" && terms.artist_id) {
         const { count } = await admin
           .from("payouts")
@@ -353,7 +353,8 @@ export const bookingAction = createServerFn({ method: "POST" })
     if (!role) return { error: "Keine Berechtigung" };
 
     const { data: pen } = await admin.from("penalties").select("*").eq("booking_id", b.id).maybeSingle();
-    const d = decide(data.action, role, b, Date.now(), pen);
+    const { data: code } = await admin.from("booking_codes").select("code").eq("booking_id", b.id).maybeSingle();
+    const d = decide(data.action, role, { ...b, checkin_code: code?.code ?? null }, Date.now(), pen);
     if ("error" in d) return d;
 
     if (d.booking) {
@@ -440,7 +441,7 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
   }
 
   /* Lesen mit den Rechten der Person: die Zugriffsregeln gelten */
-  const [bookings, penalties, vouchers, payouts, sweets, orders, account] = await Promise.all([
+  const [bookings, penalties, vouchers, payouts, sweets, orders, account, codes] = await Promise.all([
     sb.from("bookings").select("*").order("day", { ascending: false }).limit(500),
     sb.from("penalties").select("*").limit(500),
     sb.from("vouchers").select("*").limit(100),
@@ -448,6 +449,8 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
     sb.from("sweet_requests").select("*").order("created_at", { ascending: false }).limit(200),
     sb.from("shop_orders").select("*").order("created_at", { ascending: false }).limit(200),
     sb.from("payout_accounts").select("payouts_enabled").eq("profile_id", uid).maybeSingle(),
+    /* nur die Codes eigener Buchungen als Kunde (Zugriffsregel) */
+    sb.from("booking_codes").select("booking_id, code").limit(500),
   ]);
   return {
     skipped: false as const,
@@ -460,6 +463,7 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
     sweets: sweets.data || [],
     orders: orders.data || [],
     payoutAccount: account.data ? { enabled: account.data.payouts_enabled } : null,
+    codes: codes.data || [],
   };
 });
 

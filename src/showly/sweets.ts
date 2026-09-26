@@ -460,8 +460,26 @@ export function removeSweet(id: number) {
   );
 }
 
-export function listRequests(): SweetRequest[] {
+/* Anfragen aus der Datenbank (bei Anmeldung über Supabase). Sie stehen vor
+   den Anfragen, die nur in diesem Browser liegen. */
+let cloudRequests: SweetRequest[] = [];
+
+export function setCloudRequests(list: SweetRequest[]) {
+  cloudRequests = list;
+}
+
+function localRequests(): SweetRequest[] {
   return loadJSON<SweetRequest[]>(K_REQ, []);
+}
+
+export function listRequests(): SweetRequest[] {
+  return [...cloudRequests, ...localRequests()];
+}
+
+/** Lokale Einträge entfernen, sobald die Datenbank sie übernommen hat */
+export function dropLocalRequests(ids: string[]) {
+  const drop = new Set(ids);
+  saveJSON(K_REQ, localRequests().filter((r) => !drop.has(r.id)));
 }
 
 export function addRequest(r: Omit<SweetRequest, "id" | "createdISO" | "status">): SweetRequest {
@@ -471,14 +489,14 @@ export function addRequest(r: Omit<SweetRequest, "id" | "createdISO" | "status">
     createdISO: new Date().toISOString(),
     status: r.direct ? "booked" : "sent",
   };
-  saveJSON(K_REQ, [full, ...listRequests()]);
+  saveJSON(K_REQ, [full, ...localRequests()]);
   return full;
 }
 
 export function setRequestStatus(id: string, status: SweetRequest["status"]) {
   saveJSON(
     K_REQ,
-    listRequests().map((r) => (r.id === id ? { ...r, status } : r)),
+    localRequests().map((r) => (r.id === id ? { ...r, status } : r)),
   );
 }
 

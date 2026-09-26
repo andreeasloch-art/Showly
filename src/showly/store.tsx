@@ -18,7 +18,22 @@ import { detectCountry, langForCountry } from "./country";
 import { deleteLocalAccount, hydrateArtists, loadJSON, saveJSON } from "./persist";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { deleteMyAccount } from "@/utils/account.functions";
-import { addRequest, hydrateSweets } from "./sweets";
+import { addRequest, dropLocalRequests, hydrateSweets, setCloudRequests } from "./sweets";
+import { bookingAction, loadMine, recordCart, registerArtist, type ArtistSignup } from "@/utils/cloud.functions";
+import type { CloudAction } from "./cloudRules";
+import {
+  bookingFromRow,
+  dbIdOf,
+  isDbId,
+  mergeById,
+  orderFromRow,
+  payoutFromRow,
+  penaltyFromRow,
+  sweetFromRow,
+  voucherFromRow,
+} from "./cloudMap";
+import { hydrateDbArtists } from "./cloudArtists";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
 import {
   HEARING_DAYS,
@@ -258,7 +273,7 @@ interface Ctx {
   addCartRequest: (r: Omit<CartRequestLine, "key">) => void;
   removeCartRequest: (key: string) => void;
   /** Warenkorb abschließen: Buchungen, Bestellung und Anfragen anlegen */
-  completeCart: (snap: CartSnapshot, paid: boolean) => void;
+  completeCart: (snap: CartSnapshot, paid: boolean, sessionId?: string) => void;
 
   bookings: Booking[];
   addBooking: (b: Omit<Booking, "id">) => void;
@@ -273,7 +288,7 @@ interface Ctx {
   /** Künstler reicht einen Notfall-Nachweis zu einer Vertragsstrafe ein */
   claimEmergency: (penaltyId: number) => void;
   /** Künstler checkt mit dem Code des Kunden ein. false: Code falsch */
-  checkIn: (bookingId: number, code: string) => boolean;
+  checkIn: (bookingId: number, code: string) => Promise<boolean>;
   /** Kunde bestätigt: Der Künstler ist da */
   confirmPresence: (bookingId: number) => void;
   /** Stufenmodell: Einschränkungen eines Künstlers */
@@ -307,6 +322,10 @@ interface Ctx {
   toastMsg: string | null;
   /** Gespeicherter Zustand ist geladen (nur im Browser) */
   hydrated: boolean;
+  /** Daten aus der Datenbank neu laden (bei Anmeldung über Supabase) */
+  refreshCloud: () => Promise<void>;
+  /** Künstler-Registrierung, die nach der Anmeldung an den Server geht */
+  queueArtistSignup: (s: ArtistSignup) => void;
 }
 
 const ShowlyCtx = createContext<Ctx | null>(null);
@@ -691,6 +710,72 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     toast(t("toast.ordered"));
   }, [cart, cartPrice, t, toast]);
 
+  /* ------------------------------------------------------------------
+   * Datenbank (bei Anmeldung über Supabase)
+   *
+   * Die App zeigt jede Aktion sofort an. Danach geht sie an den Server, der
+   * nach den AGB-Regeln entscheidet und in die Datenbank schreibt; beim
+   * nächsten Laden gilt dessen Stand. Ohne Anmeldung über die Datenbank
+   * bleibt alles wie bisher im Browser.
+   * ------------------------------------------------------------------ */
+  const cloudOn = !!session?.backend && isBackendConfigured();
+  const refreshing = useRef(false);
+
+  const refreshCloud = useCallback(async () => {
+    if (!isBackendConfigured() || refreshing.current) return;
+    refreshing.current = true;
+    try {
+      const r = await loadMine();
+      if (r.skipped) return;
+      await hydrateDbArtists(r.uid).catch(() => 0);
+      const codes = new Map(r.codes.map((c) => [c.booking_id, c.code]));
+      const artistOf = new Map(r.bookings.map((b) => [b.id, b.artist_id ?? b.catalog_artist ?? 0]));
+      const dayOf = new Map(r.bookings.map((b) => [b.id, b.day]));
+      const nameOf = new Map(r.artists.map((a) => [a.id, String((a.name as { de?: string })?.de ?? "")]));
+      setBookings((l) => mergeById(l, r.bookings.map((b) => bookingFromRow(b, codes.get(b.id)))));
+      setPenalties((l) => mergeById(l, r.penalties.map((p) => penaltyFromRow(p, (id) => artistOf.get(id) ?? 0))));
+      setVouchers((l) => [
+        ...r.vouchers.map(voucherFromRow),
+        ...l.filter((v) => !isDbId(v.bookingId) && !r.vouchers.some((x) => x.code === v.code)),
+      ]);
+      setPayouts((l) =>
+        mergeById(
+          l,
+          r.payouts.map((p) =>
+            payoutFromRow(p, (id) => dayOf.get(id) ?? "", nameOf.get(p.artist_id ?? 0) ?? ""),
+          ),
+        ),
+      );
+      setOrders((l) => mergeById(l, r.orders.map(orderFromRow)));
+      setCloudRequests(r.sweets.map((x) => sweetFromRow(x)));
+    } catch {
+      /* Server nicht erreichbar: lokaler Stand bleibt stehen */
+    } finally {
+      refreshing.current = false;
+    }
+  }, []);
+
+  /** Aktion an einer Buchung aus der Datenbank an den Server schicken */
+  const cloudAct = useCallback(
+    async (localId: number, action: CloudAction): Promise<{ ok: boolean; result?: string }> => {
+      const dbId = dbIdOf(localId);
+      if (!cloudOn || dbId === null) return { ok: true };
+      try {
+        const r = await bookingAction({ data: { bookingId: dbId, action } });
+        if ("error" in r) {
+          toast(r.error);
+          return { ok: false };
+        }
+        return { ok: true, ...("result" in r ? { result: r.result } : {}) };
+      } catch {
+        return { ok: false };
+      } finally {
+        void refreshCloud();
+      }
+    },
+    [cloudOn, refreshCloud, toast],
+  );
+
   const addBooking = useCallback(
     (b: Omit<Booking, "id">) => {
       const id = counters.current.booking++;
@@ -712,12 +797,18 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const completeCart = useCallback(
-    (snap: CartSnapshot, paid: boolean) => {
+    (snap: CartSnapshot, paid: boolean, sessionId?: string) => {
+      /* Was hier im Browser angelegt wird, ersetzt nach dem Speichern der
+         Stand aus der Datenbank */
+      const madeBookings = new Set<number>();
+      const madeOrders = new Set<number>();
+      const madeRequests: string[] = [];
       for (const b of snap.bookings) {
         const a = findArtist(b.artistId);
         if (!a) continue;
         const p = bookingPrice(a, b.hours, b.pkg);
         const id = counters.current.booking++;
+        madeBookings.add(id);
         /* Künstler mit Anfrage-Modus (oder nach einem Verstoß eingeschränkt):
            erst nach Zusage verbindlich */
         const instant = isInstant(a) && standingOf(a.id, penalties).instantAllowed;
@@ -746,7 +837,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot];
           return { ...av, [b.artistId]: forArtist };
         });
-        if (paid && instant) {
+        /* Mit Datenbank plant der Server die Auszahlung */
+        if (paid && instant && !cloudOn) {
           setPayouts((x) => [makePayout(x, a, b.dateISO, p.total, p.payout), ...x]);
         }
       }
@@ -755,9 +847,11 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           const i = findItem(c.shopId);
           return { ...c, price: i ? shopUnit(i, c.mode) * c.qty : 0 };
         });
+        const orderId = counters.current.order++;
+        madeOrders.add(orderId);
         setOrders((o) => [
           {
-            id: counters.current.order++,
+            id: orderId,
             dateISO: new Date().toISOString().slice(0, 10),
             items,
             total: items.reduce((s, x) => s + x.price, 0),
@@ -767,7 +861,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         ]);
       }
       for (const r of snap.requests) {
-        addRequest({
+        const made = addRequest({
           sweetId: r.sweetId,
           bakerId: r.bakerId,
           dateISO: r.dateISO,
@@ -779,6 +873,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           estimate: r.estimate,
           ...(r.direct ? { direct: true } : {}),
         });
+        madeRequests.push(made.id);
       }
       const bk = new Set(snap.bookings.map((b) => b.key));
       const rk = new Set(snap.requests.map((r) => r.key));
@@ -787,9 +882,34 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       setCartRequests((l) => l.filter((x) => !rk.has(x.key)));
       setCart((l) => l.filter((x) => !sk.has(x.shopId + ":" + x.mode)));
       setCartOpen(false);
+
+      /* Angemeldet über die Datenbank: dort speichern. Der Server rechnet
+         Preise und Status selbst und prüft die Zahlung bei Stripe. */
+      if (cloudOn) {
+        void recordCart({
+          data: {
+            snapshot: {
+              bookings: snap.bookings,
+              requests: snap.requests,
+              shop: snap.shop,
+              contact: { name: snap.contact.name, address: snap.contact.address },
+            },
+            ...(sessionId ? { sessionId, environment: getStripeEnvironment() } : {}),
+          },
+        })
+          .then((r) => {
+            if ("error" in r) return toast(r.error);
+            if ("skipped" in r) return;
+            setBookings((l) => l.filter((x) => !madeBookings.has(x.id)));
+            setOrders((l) => l.filter((x) => !madeOrders.has(x.id)));
+            dropLocalRequests(madeRequests);
+            return refreshCloud();
+          })
+          .catch(() => undefined);
+      }
     },
     // makePayout steht weiter unten und hängt selbst nur von L ab
-    [L, penalties],
+    [L, penalties, cloudOn, refreshCloud, toast],
   );
 
   /* Slot bei einer Buchung freigeben bzw. belegen */
@@ -850,7 +970,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           list.map((x) => (x.id === id ? { ...x, status: b.paid ? "confirmed" : "pending" } : x)),
         );
         const a = findArtist(b.artistId);
-        if (b.paid && a) {
+        /* Bei Buchungen aus der Datenbank plant der Server die Auszahlung */
+        if (b.paid && a && !(cloudOn && isDbId(id))) {
           const p = bookingPrice(a, b.hours || minHoursOf(a), b.pkg);
           setPayouts((x) => [makePayout(x, a, b.dateISO, b.amount, p.payout), ...x]);
         }
@@ -858,8 +979,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "declined" } : x)));
         shiftSlot(b.artistId, b.dateISO, b.slot, false);
       }
+      void cloudAct(id, { kind: "respond", accept });
     },
-    [bookings, shiftSlot, L],
+    [bookings, shiftSlot, L, cloudOn, cloudAct],
   );
 
   /* Auszahlung vormerken; bei den ersten Buchungen eines Künstlers mit
@@ -888,6 +1010,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   );
 
   const issueVoucher = useCallback((bookingId: number) => {
+    /* Gutscheine zu Buchungen aus der Datenbank stellt der Server aus */
+    if (cloudOn && isDbId(bookingId)) return;
     setVouchers((x) =>
       x.some((v) => v.bookingId === bookingId)
         ? x
@@ -902,10 +1026,12 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
             ...x,
           ],
     );
-  }, []);
+  }, [cloudOn]);
 
   /* Vertragsstrafe anlegen. Gutschein für den Kunden, sobald sie fällig ist */
   const penalize = useCallback((b: Booking, reason: Penalty["reason"], status: Penalty["status"]) => {
+    /* Strafen zu Buchungen aus der Datenbank legt der Server an */
+    if (cloudOn && isDbId(b.id)) return;
     const a = findArtist(b.artistId);
     const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
     const amount = Math.round(net * PENALTY_RATE[reason]);
@@ -926,7 +1052,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       ...x,
     ]);
     if (status === "due") issueVoucher(b.id);
-  }, [issueVoucher]);
+  }, [issueVoucher, cloudOn]);
 
   /* Künstler sagt ab (AGB § 9). Bis 24 Stunden vorher ohne Grund und ohne
      Folgen. Danach Vertragsstrafe, außer bei einem belegten Notfall; dann
@@ -943,11 +1069,12 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       setPayouts((x) =>
         x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
       );
+      void cloudAct(id, { kind: "cancelArtist", emergency });
       if (!late) return "free";
       penalize(b, "late", emergency ? "proof" : "due");
       return emergency ? "proof" : "penalty";
     },
-    [bookings, shiftSlot, penalize],
+    [bookings, shiftSlot, penalize, cloudAct],
   );
 
   const reportNoShow = useCallback(
@@ -960,15 +1087,21 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       );
       /* Erst anhören: 7 Tage für Stellungnahme oder Notfall-Nachweis */
       penalize(b, "noshow", "hearing");
+      void cloudAct(id, { kind: "reportNoShow" });
     },
-    [bookings, penalize],
+    [bookings, penalize, cloudAct],
   );
 
-  const claimEmergency = useCallback((penaltyId: number) => {
-    setPenalties((x) =>
-      x.map((p) => (p.id === penaltyId && (p.status === "due" || p.status === "hearing") ? { ...p, status: "proof" } : p)),
-    );
-  }, []);
+  const claimEmergency = useCallback(
+    (penaltyId: number) => {
+      setPenalties((x) =>
+        x.map((p) => (p.id === penaltyId && (p.status === "due" || p.status === "hearing") ? { ...p, status: "proof" } : p)),
+      );
+      const pen = penalties.find((p) => p.id === penaltyId);
+      if (pen) void cloudAct(pen.bookingId, { kind: "claim" });
+    },
+    [penalties, cloudAct],
+  );
 
   /* Anhörungsfrist abgelaufen ohne Nachweis: Strafe fällig, Gutschein raus */
   useEffect(() => {
@@ -982,9 +1115,15 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   }, [hydrated, penalties, issueVoucher]);
 
   const checkIn = useCallback(
-    (bookingId: number, code: string) => {
+    async (bookingId: number, code: string) => {
       const b = bookings.find((x) => x.id === bookingId);
-      if (!b || code.replace(/\D/g, "") !== checkinCodeOf(b)) return false;
+      if (!b) return false;
+      /* Buchung aus der Datenbank: Den Code kennt nur der Server */
+      if (cloudOn && isDbId(bookingId)) {
+        const r = await cloudAct(bookingId, { kind: "checkin", code: code.replace(/\D/g, "") });
+        return r.ok;
+      }
+      if (code.replace(/\D/g, "") !== checkinCodeOf(b)) return false;
       setBookings((list) =>
         list.map((x) =>
           x.id === bookingId ? { ...x, checkedInAt: new Date().toISOString(), checkedInBy: "artist" } : x,
@@ -992,18 +1131,22 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       );
       return true;
     },
-    [bookings],
+    [bookings, cloudOn, cloudAct],
   );
 
-  const confirmPresence = useCallback((bookingId: number) => {
-    setBookings((list) =>
-      list.map((x) =>
-        x.id === bookingId && !x.checkedInAt
-          ? { ...x, checkedInAt: new Date().toISOString(), checkedInBy: "customer" }
-          : x,
-      ),
-    );
-  }, []);
+  const confirmPresence = useCallback(
+    (bookingId: number) => {
+      setBookings((list) =>
+        list.map((x) =>
+          x.id === bookingId && !x.checkedInAt
+            ? { ...x, checkedInAt: new Date().toISOString(), checkedInBy: "customer" }
+            : x,
+        ),
+      );
+      void cloudAct(bookingId, { kind: "confirmPresence" });
+    },
+    [cloudAct],
+  );
 
   const saveBank = useCallback((key: string, acc: BankAccount | null) => {
     setBankAccounts((x) => {
@@ -1037,9 +1180,10 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         setPayouts((x) =>
           x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
         );
+      void cloudAct(id, { kind: "cancelCustomer" });
       return late;
     },
-    [bookings, shiftSlot],
+    [bookings, shiftSlot, cloudAct],
   );
 
   /* Unbeantwortete Anfragen verfallen nach der Frist */
@@ -1059,6 +1203,14 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     const sb = supabase();
     const apply = async (u: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null) => {
       if (!u) return;
+      /* Registrierung als Künstler abschließen, die vor der Anmeldung
+         begonnen wurde (siehe queueArtistSignup) */
+      const signup = loadJSON<ArtistSignup | null>("pendingArtist", null);
+      if (signup) {
+        const r = await registerArtist({ data: signup }).catch(() => null);
+        if (r && !("error" in r)) saveJSON("pendingArtist", null);
+      }
+      await hydrateDbArtists(u.id).catch(() => 0);
       const { data: prof } = await sb
         .from("profiles")
         .select("role, display_name, email")
@@ -1074,6 +1226,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         ...(own && own[0] ? { providerId: own[0].id } : {}),
         backend: true,
       });
+      void refreshCloud();
     };
     void sb.auth.getUser().then(({ data }) => apply(data.user));
     const { data: sub } = sb.auth.onAuthStateChange((event, s) => {
@@ -1081,7 +1234,47 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       else if (s?.user) void apply(s.user);
     });
     return () => sub.subscription.unsubscribe();
+  }, [hydrated, refreshCloud]);
+
+  /* Veröffentlichte Künstler aus der Datenbank in den Katalog holen */
+  useEffect(() => {
+    if (!hydrated || !isBackendConfigured()) return;
+    void hydrateDbArtists()
+      .then((n) => n && setAvail((a) => ({ ...a })))
+      .catch(() => 0);
   }, [hydrated]);
+
+  /* Beim Zurückkehren in die App den Stand aus der Datenbank holen, etwa
+     wenn der Künstler inzwischen eine Anfrage beantwortet hat */
+  useEffect(() => {
+    if (!cloudOn) return;
+    const onFocus = () => void refreshCloud();
+    window.addEventListener("focus", onFocus);
+    const iv = window.setInterval(onFocus, 60000);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      window.clearInterval(iv);
+    };
+  }, [cloudOn, refreshCloud]);
+
+  const queueArtistSignup = useCallback(
+    (signup: ArtistSignup) => {
+      saveJSON("pendingArtist", signup);
+      /* Schon angemeldet: sofort anlegen und die Rolle übernehmen */
+      if (cloudOn)
+        void registerArtist({ data: signup })
+          .then(async (r) => {
+            if ("error" in r) return toast(r.error);
+            if ("skipped" in r) return;
+            saveJSON("pendingArtist", null);
+            await hydrateDbArtists(undefined).catch(() => 0);
+            setSession((cur) => (cur ? { ...cur, role: signup.planner ? "planner" : "artist", providerId: r.id } : cur));
+            void refreshCloud();
+          })
+          .catch(() => undefined);
+    },
+    [cloudOn, refreshCloud, toast],
+  );
 
   const signOut = useCallback(async () => {
     if (session?.backend && isBackendConfigured()) await supabase().auth.signOut();
@@ -1190,6 +1383,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     toggleBlock,
     toast,
     toastMsg,
+    refreshCloud,
+    queueArtistSignup,
   };
 
   return <ShowlyCtx.Provider value={value}>{children}</ShowlyCtx.Provider>;

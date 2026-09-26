@@ -151,7 +151,7 @@ function CheckoutReturn() {
         setMsg(T.order);
       } else if (pending?.kind === "cart") {
         const snap = pending.snapshot;
-        completeCart(snap, true);
+        completeCart(snap, true, sessionId);
         if (snap.bookings[0]) setBookedArtist(snap.bookings[0].artistId);
         mail(
           T.order,

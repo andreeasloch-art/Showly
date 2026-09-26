@@ -9,6 +9,7 @@ import { Footer } from "@/components/showly/Footer";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS, travelOption } from "@/showly/travel";
 import { saveArtistProfile, saveAccount } from "@/showly/persist";
+import { isBackendConfigured } from "@/lib/supabase";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/mitmachen")({
@@ -84,7 +85,7 @@ const COPY = {
 
 function Become() {
   const okText = useContactCheck();
-  const { t, lang, fmt, num, toast, setSession, catLabel, L } = useShowly();
+  const { t, lang, fmt, num, toast, setSession, catLabel, L, session, queueArtistSignup } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const [role, setRole] = useState<"artist" | "planner">("artist");
@@ -119,6 +120,7 @@ function Become() {
           "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen, danach 50 % der Gage als Vertragsstrafe, bei Nichterscheinen 100 %, außer bei einem belegten Notfall (AGB § 9).",
         rulesLink: "AGB lesen",
         need: "Bitte bestätige die beiden Punkte unten.",
+        loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt.",
       },
       en: {
         business:
@@ -127,6 +129,7 @@ function Become() {
           "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences, after that a penalty of 50% of the fee, 100% for a no-show, unless there is a proven emergency (T&C § 9).",
         rulesLink: "Read T&C",
         need: "Please confirm the two points below.",
+        loginNext: "Almost done: sign in now and your profile will be created.",
       },
       es: {
         business:
@@ -135,6 +138,7 @@ function Become() {
           "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias; después, penalización del 50 % del caché y del 100 % si no me presento, salvo emergencia justificada (CG § 9).",
         rulesLink: "Leer CG",
         need: "Confirma los dos puntos de abajo.",
+        loginNext: "Casi listo: inicia sesión y se creará tu perfil.",
       },
     }[(lang as "de" | "en" | "es") ?? "de"] ?? null;
   const planner = role === "planner";
@@ -229,6 +233,33 @@ function Become() {
       rulesAcceptedAt: new Date().toISOString(),
       ...(planner ? { kind: "planner", packages: defaultPackages() } : {}),
     };
+    /* Mit Datenbank: Konto über die echte Anmeldung, Profil legt der Server
+       an. Kein Passwort im Browser. Sichtbar wird das Profil nach der
+       Ausweisprüfung. */
+    if (isBackendConfigured()) {
+      queueArtistSignup({
+        cat,
+        stage: form.stage,
+        real,
+        loc: form.loc,
+        price: prof.price,
+        desc: String(prof.desc),
+        planner,
+        figures: [...figs, ...custom],
+        radiusKm: prof.radiusKm,
+        birthDate: form.birth,
+        business: true,
+        rulesAcceptedAt: prof.rulesAcceptedAt,
+      });
+      if (!session?.backend) {
+        toast(RG!.loginNext);
+        setTimeout(() => navigate({ to: "/anmelden" }), 800);
+        return;
+      }
+      toast(t("toast.registered"));
+      setTimeout(() => navigate({ to: "/dashboard" }), 800);
+      return;
+    }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ARTISTS.push(prof as any);
     saveArtistProfile(prof);

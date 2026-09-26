@@ -42,16 +42,12 @@ alter table public.bookings
   add column if not exists paid            boolean not null default false,
   add column if not exists cancelled_by    text check (cancelled_by in ('customer', 'artist')),
   add column if not exists cancelled_at    timestamptz,
-  -- Nachweis, dass der Künstler da war (AGB § 7 Abs. 6)
-  add column if not exists checkin_code    text,
+  -- Nachweis, dass der Künstler da war (AGB § 7 Abs. 6); der Code selbst
+  -- liegt in booking_codes (siehe unten)
   add column if not exists checked_in_at   timestamptz,
   add column if not exists checked_in_by   text check (checked_in_by in ('artist', 'customer'));
 
 create index if not exists bookings_catalog_artist_idx on public.bookings (catalog_artist);
-
-comment on column public.bookings.checkin_code is
-  'Vierstelliger Code, den der Kunde nennt und der Künstler vor Ort einträgt. '
-  'Nur Kunde und gebuchter Künstler sehen die Buchung (Zugriffsregel).';
 
 -- ---------------------------------------------------------------------------
 -- 3. Vertragsstrafen (AGB § 9) mit Anhörung und Stufenmodell (§ 23)
@@ -249,3 +245,26 @@ create policy artists_update_own on public.artists
 
 -- Anlegen nur noch über den Server (registerArtist), damit die Rolle stimmt
 drop policy if exists artists_insert_own on public.artists;
+
+-- ============================================================================
+-- Check-in-Code getrennt von der Buchung
+--
+-- Der Künstler darf seine Buchungen lesen. Stünde der Code in der Buchung,
+-- könnte er ihn dort ablesen, und der Check-in wäre kein Nachweis mehr.
+-- Deshalb liegt er hier und ist nur für den Kunden sichtbar. Geprüft wird
+-- er vom Server.
+-- ============================================================================
+create table if not exists public.booking_codes (
+  booking_id  bigint primary key references public.bookings(id) on delete cascade,
+  code        text not null check (code ~ '^\d{4}$')
+);
+
+alter table public.booking_codes enable row level security;
+
+drop policy if exists booking_codes_select_customer on public.booking_codes;
+create policy booking_codes_select_customer on public.booking_codes
+  for select using (
+    exists (select 1 from public.bookings b where b.id = booking_id and b.customer = auth.uid())
+  );
+
+alter table public.bookings drop column if exists checkin_code;

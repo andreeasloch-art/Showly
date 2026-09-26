@@ -320,7 +320,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
                     type="button"
                     className="dash26-mini inb-accept"
                     disabled={(codes[b.id] || "").length !== 4}
-                    onClick={() => toast(checkIn(b.id, codes[b.id] || "") ? C.checkinOk : C.checkinBad)}
+                    onClick={async () => toast((await checkIn(b.id, codes[b.id] || "")) ? C.checkinOk : C.checkinBad)}
                   >
                     {C.checkinBtn}
                   </button>

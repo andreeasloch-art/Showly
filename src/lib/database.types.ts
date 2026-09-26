@@ -123,7 +123,6 @@ export type BookingRow = {
   paid: boolean;
   cancelled_by: "customer" | "artist" | null;
   cancelled_at: string | null;
-  checkin_code: string | null;
   checked_in_at: string | null;
   checked_in_by: "artist" | "customer" | null;
   created_at: string;
@@ -280,6 +279,8 @@ export type Database = {
       payout_accounts: Table<PayoutAccountRow>;
       sweet_requests: Table<SweetRequestRow>;
       shop_orders: Table<ShopOrderRow>;
+      /** Check-in-Code, nur für den Kunden lesbar */
+      booking_codes: Table<{ booking_id: number; code: string }>;
     };
     Views: {
       artists_public: Table<Omit<ArtistRow, "owner" | "published" | "created_at" | "updated_at">>;

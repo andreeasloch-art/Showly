@@ -180,6 +180,12 @@ export const recordCart = createServerFn({ method: "POST" })
     if (!(await allow("cart", uid))) return { error: TOO_MANY };
     const admin = adminClient();
     const snap = data.snapshot;
+    const { loadCatalog } = await import("@/lib/catalog.server");
+    const cat = await loadCatalog(admin, {
+      artists: snap.bookings.map((b) => b.artistId),
+      sweets: snap.requests.map((r) => r.sweetId),
+      items: snap.shop.map((l) => l.shopId),
+    });
     const { newCheckinCode } = await import("@/showly/booking");
     const { findItem, shopUnit, sweetPrice } = await import("@/showly/pricing");
     const { plannedPayout } = await import("@/showly/cloudRules");
@@ -218,6 +224,7 @@ export const recordCart = createServerFn({ method: "POST" })
         () => "",
         { rent: "", buy: "", fee: "" },
         snap.requests.filter((r) => r.direct).map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
+        cat.extra,
       );
       const expected = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
       if (unknown.length || expected !== amount) return { error: "Betrag passt nicht zum Warenkorb" };
@@ -270,9 +277,16 @@ export const recordCart = createServerFn({ method: "POST" })
         await admin.from("availability").upsert({ artist_id: terms.artist_id, day: b.dateISO, slot: b.slot, blocked: true });
     }
 
+    /* Besitzer echter Torten-Anbieter, damit sie die Anfrage sehen */
+    const bakerRefs = [...new Set(snap.requests.map((r) => r.bakerId).filter((x) => x >= 100000))];
+    const bakerOwner = new Map<number, string>();
+    if (bakerRefs.length) {
+      const { data: provs } = await admin.from("providers").select("id, owner").in("id", bakerRefs).eq("kind", "baker");
+      for (const p of provs || []) bakerOwner.set(p.id, p.owner);
+    }
     const sweetIds: number[] = [];
     for (const r of snap.requests) {
-      const fixed = r.direct ? sweetPrice(r.sweetId, r.qty) : null;
+      const fixed = r.direct ? sweetPrice(r.sweetId, r.qty, cat.extra) : null;
       /* Direkt buchen geht nur mit Katalogpreis und nur bezahlt */
       const direct = fixed !== null && paid;
       const { data: ins } = await admin
@@ -280,6 +294,7 @@ export const recordCart = createServerFn({ method: "POST" })
         .insert({
           customer: uid,
           baker_ref: r.bakerId,
+          baker_owner: bakerOwner.get(r.bakerId) ?? null,
           sweet_ref: r.sweetId,
           day: r.dateISO,
           qty: r.qty,
@@ -299,10 +314,11 @@ export const recordCart = createServerFn({ method: "POST" })
     let orderId: number | null = null;
     const items = snap.shop
       .map((l) => {
-        const it = findItem(l.shopId);
+        const it = findItem(l.shopId, cat.extra);
         return it && !it.own ? { ...l, price_cents: Math.round(shopUnit(it, l.mode) * l.qty * 100) } : null;
       })
       .filter((x): x is NonNullable<typeof x> => !!x);
+    const providerOwners = [...new Set(items.map((x) => cat.offerOwner.get(x.shopId)).filter((x): x is string => !!x))];
     if (items.length) {
       const { data: ins } = await admin
         .from("shop_orders")
@@ -313,6 +329,7 @@ export const recordCart = createServerFn({ method: "POST" })
           status: paid ? "paid" : "pending",
           ship_to: snap.contact.address ?? null,
           stripe_session_id: data.sessionId ?? null,
+          provider_owners: providerOwners,
         })
         .select("id")
         .single();

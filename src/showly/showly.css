@@ -6349,3 +6349,13 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .chat26-open svg{width:14px;height:14px}
 .chat26-badge{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#E5484D;color:#fff;font-size:11px;font-weight:700;display:inline-grid;place-items:center}
 .my-req li{flex-wrap:wrap;gap:8px}
+
+/* Posteingang für Torten- und Deko-Anbieter (ProviderInbox.tsx) */
+.prov-inbox{margin-bottom:18px}
+.prov-review{margin:0 0 12px;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4A0F;font-size:13.5px}
+.prov-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.prov-list li{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--h-line,#ECE8F4);border-radius:14px;background:#fff}
+.prov-list li>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 220px}
+.prov-list small{font-size:13px;color:var(--h-muted,#6B6480);overflow-wrap:anywhere}
+.prov-side{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.prov-price{width:130px;height:36px;padding:0 10px;border:1.5px solid var(--h-line,#E3DEEF);border-radius:10px;font:inherit;font-size:14px}

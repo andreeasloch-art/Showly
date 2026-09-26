@@ -10,6 +10,7 @@ import { ImageWall } from "@/components/showly/ImageWall";
 import { ImagePick } from "@/components/showly/ImagePick";
 import { ShopAreas } from "@/components/showly/ShopAreas";
 import { saveDecoItem } from "@/showly/sweets";
+import { saveDecoCloud } from "@/showly/cloudProviders";
 import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
@@ -482,7 +483,7 @@ function DecoOffer({
   onDone: (id: number) => void;
 }) {
   const okText = useContactCheck();
-  const { t, toast } = useShowly();
+  const { t, toast, session, refreshCloud } = useShowly();
   const F = C.form;
   const [vendor, setVendor] = useState("");
   const [name, setName] = useState("");
@@ -509,6 +510,24 @@ function DecoOffer({
     const r = price(rent);
     if (!vendor.trim() || !name.trim() || (!b && !r)) return toast(F.need);
     if (!okText(name, desc)) return;
+    /* Mit Datenbank: Angebot auf dem Server, sichtbar nach Freischaltung */
+    if (session?.backend) {
+      void saveDecoCloud({
+        vendor: vendor.trim().slice(0, 80),
+        name: name.trim().slice(0, 100),
+        desc: desc.trim().slice(0, 600),
+        cat,
+        occ,
+        buy: b || r * 5,
+        rent: r,
+      }).then(async (res) => {
+        if ("error" in res) return toast(res.error);
+        await refreshCloud();
+        toast(F.done);
+        onDone(res.id);
+      });
+      return;
+    }
     const item = saveDecoItem({
       vendor: vendor.trim().slice(0, 80),
       name: name.trim().slice(0, 100),

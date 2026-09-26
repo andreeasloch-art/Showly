@@ -33,6 +33,8 @@ import {
   voucherFromRow,
 } from "./cloudMap";
 import { hydrateDbArtists } from "./cloudArtists";
+import { hydrateDbProviders, saveBakerCloud, saveSweetCloud } from "./cloudProviders";
+import type { Baker, Sweet } from "./sweets";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
 import {
@@ -326,7 +328,16 @@ interface Ctx {
   refreshCloud: () => Promise<void>;
   /** Künstler-Registrierung, die nach der Anmeldung an den Server geht */
   queueArtistSignup: (s: ArtistSignup) => void;
+  /** Eigene Anbieterprofile in der Datenbank (Torten, Deko) */
+  myProviders: { baker?: number; deco?: number };
+  /** Torten-Anbieter registrieren; ohne Anmeldung nach dem Login */
+  queueBakerSignup: (b: BakerSignup) => Promise<number | null>;
 }
+
+export type BakerSignup = {
+  baker: Omit<Baker, "id" | "rating" | "reviews" | "verified" | "own">;
+  offer: Omit<Sweet, "id" | "own" | "bakerId">;
+};
 
 const ShowlyCtx = createContext<Ctx | null>(null);
 
@@ -720,6 +731,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
    * ------------------------------------------------------------------ */
   const cloudOn = !!session?.backend && isBackendConfigured();
   const refreshing = useRef(false);
+  const [myProviders, setMyProviders] = useState<{ baker?: number; deco?: number }>({});
 
   const refreshCloud = useCallback(async () => {
     if (!isBackendConfigured() || refreshing.current) return;
@@ -728,6 +740,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       const r = await loadMine();
       if (r.skipped) return;
       await hydrateDbArtists(r.uid).catch(() => 0);
+      setMyProviders(await hydrateDbProviders(r.uid).catch(() => ({})));
       const codes = new Map(r.codes.map((c) => [c.booking_id, c.code]));
       const artistOf = new Map(r.bookings.map((b) => [b.id, b.artist_id ?? b.catalog_artist ?? 0]));
       const dayOf = new Map(r.bookings.map((b) => [b.id, b.day]));
@@ -1210,6 +1223,14 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         const r = await registerArtist({ data: signup }).catch(() => null);
         if (r && !("error" in r)) saveJSON("pendingArtist", null);
       }
+      const pendingBaker = loadJSON<BakerSignup | null>("pendingBaker", null);
+      if (pendingBaker) {
+        const r = await saveBakerCloud(pendingBaker.baker).catch(() => null);
+        if (r && "id" in r) {
+          await saveSweetCloud(pendingBaker.offer).catch(() => null);
+          saveJSON("pendingBaker", null);
+        }
+      }
       await hydrateDbArtists(u.id).catch(() => 0);
       const { data: prof } = await sb
         .from("profiles")
@@ -1242,6 +1263,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     void hydrateDbArtists()
       .then((n) => n && setAvail((a) => ({ ...a })))
       .catch(() => 0);
+    void hydrateDbProviders()
+      .then(() => setAvail((a) => ({ ...a })))
+      .catch(() => undefined);
   }, [hydrated]);
 
   /* Beim Zurückkehren in die App den Stand aus der Datenbank holen, etwa
@@ -1256,6 +1280,25 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       window.clearInterval(iv);
     };
   }, [cloudOn, refreshCloud]);
+
+  const queueBakerSignup = useCallback(
+    async (signup: BakerSignup): Promise<number | null> => {
+      if (!cloudOn) {
+        saveJSON("pendingBaker", signup);
+        return null;
+      }
+      const r = await saveBakerCloud(signup.baker);
+      if ("error" in r) {
+        toast(r.error);
+        return null;
+      }
+      const o = await saveSweetCloud(signup.offer);
+      if ("error" in o) toast(o.error);
+      await refreshCloud();
+      return r.id;
+    },
+    [cloudOn, refreshCloud, toast],
+  );
 
   const queueArtistSignup = useCallback(
     (signup: ArtistSignup) => {
@@ -1385,6 +1428,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     toastMsg,
     refreshCloud,
     queueArtistSignup,
+    myProviders,
+    queueBakerSignup,
   };
 
   return <ShowlyCtx.Provider value={value}>{children}</ShowlyCtx.Provider>;

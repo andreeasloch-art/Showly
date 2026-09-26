@@ -21,7 +21,10 @@ import {
   isDirectSweet,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
-import { BankForm } from "@/components/showly/PayoutPanel";
+import { BankForm, ConnectBox } from "@/components/showly/PayoutPanel";
+
+const noop = () => undefined;
+import { isCloudId, removeSweetCloud, saveBakerCloud, saveSweetCloud } from "@/showly/cloudProviders";
 
 const MAX_PHOTOS = 8;
 
@@ -187,8 +190,10 @@ interface Draft {
 }
 
 export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
+  /* Profil aus der Datenbank: Änderungen gehen an den Server */
+  const cloud = isCloudId(b.id);
   const okText = useContactCheck();
-  const { L, lang, toast } = useShowly();
+  const { L, lang, toast, refreshCloud } = useShowly();
   const X = (TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de) as T;
   const store = useImageStore();
   const input = useRef<HTMLInputElement>(null);
@@ -232,6 +237,30 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
   function save() {
     if (!draft.name.trim()) return toast(X.needName);
     if (!okText(draft.name, draft.tagline, draft.about)) return;
+    if (cloud) {
+      void saveBakerCloud({
+        ...b,
+        name: draft.name.trim().slice(0, 80),
+        tagline: draft.tagline.trim().slice(0, 120),
+        about: draft.about.trim().slice(0, 1500),
+        city: draft.city.trim().slice(0, 60),
+        radiusKm: draft.radiusKm,
+        leadDays: Math.max(1, draft.leadDays),
+        specialties: draft.specialties.length ? draft.specialties : b.specialties,
+        diets: draft.diets
+          .split(",")
+          .map((x) => x.trim())
+          .filter(Boolean)
+          .slice(0, 8),
+      }).then(async (r) => {
+        if ("error" in r) return toast(r.error);
+        await refreshCloud();
+        setSaved(draft);
+        toast(X.saved);
+        onSaved();
+      });
+      return;
+    }
     updateBaker(b.id, {
       name: draft.name.trim().slice(0, 80),
       tagline: draft.tagline.trim().slice(0, 120),
@@ -272,7 +301,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
           </div>
         </section>
 
-        <BankForm ownerKey={`baker:${b.id}`} />
+        {cloud ? <ConnectBox onState={noop} /> : <BankForm ownerKey={`baker:${b.id}`} />}
 
         <section className="pe-card">
           <div className="pe-card-head">
@@ -632,7 +661,8 @@ export function OfferFields({
 
 function OffersEditor({ b, X }: { b: Baker; X: T }) {
   const okText = useContactCheck();
-  const { L, toast } = useShowly();
+  const { L, toast, refreshCloud } = useShowly();
+  const cloud = isCloudId(b.id);
   const [, bump] = useState(0);
   const [open, setOpen] = useState<OfferDraft | null>(null);
   const list = sweetsOf(b.id);
@@ -659,6 +689,26 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
     if (!okText(open.name, open.desc)) return;
     const prev = open.id ? list.find((s) => s.id === open.id) : undefined;
     if (prev?.photo && prev.photo.id !== open.photo?.id) void deleteMedia(prev.photo.id);
+    if (cloud) {
+      void saveSweetCloud({
+        id: open.id,
+        name: open.name.trim().slice(0, 100),
+        desc: open.desc.trim().slice(0, 600),
+        cat: open.cat,
+        price,
+        unit: open.unit,
+        minQty: open.unit === "set" ? 1 : open.minQty,
+        img: open.img,
+        direct: open.direct ?? isDirectSweet({ cat: open.cat }),
+      }).then(async (r) => {
+        if ("error" in r) return toast(r.error);
+        await refreshCloud();
+        toast(X.offerSaved);
+        setOpen(null);
+        bump((n) => n + 1);
+      });
+      return;
+    }
     saveSweet({
       id: open.id,
       bakerId: b.id,
@@ -679,6 +729,10 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
 
   function del(s: Sweet) {
     if (s.photo) void deleteMedia(s.photo.id);
+    if (cloud) {
+      void removeSweetCloud(s.id).then(() => bump((n) => n + 1));
+      return;
+    }
     removeSweet(s.id);
     bump((n) => n + 1);
   }

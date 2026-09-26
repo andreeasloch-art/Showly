@@ -161,12 +161,28 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         : lang === "es"
           ? { rent: "alquiler", buy: "compra", fee: "Tarifa de servicio" }
           : { rent: "Miete", buy: "Kauf", fee: "Servicegebühr" };
+    /* Echte Künstler und Anbieter-Angebote stehen in der Datenbank */
+    let extra: import("@/showly/pricing").Extra | undefined;
+    try {
+      const { adminClient } = await import("@/lib/supabase.server");
+      const { loadCatalog } = await import("@/lib/catalog.server");
+      extra = (
+        await loadCatalog(adminClient(), {
+          artists: data.bookings.map((b) => b.artistId),
+          sweets: (data.sweets ?? []).map((x) => x.sweetId),
+          items: data.shop.map((l) => l.shopId),
+        })
+      ).extra;
+    } catch {
+      extra = undefined; // ohne Datenbank nur der mitgelieferte Katalog
+    }
     const { lines, unknown } = priceLines(
       data.shop,
       data.bookings,
       name,
       labels,
       data.sweets ?? [],
+      extra,
     );
     if (unknown.length) {
       return {

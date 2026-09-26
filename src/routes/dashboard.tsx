@@ -17,6 +17,7 @@ import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
 import { PayoutPanel } from "@/components/showly/PayoutPanel";
 import { Chat, unreadFor, useUnread } from "@/components/showly/Chat";
+import { ProviderInbox } from "@/components/showly/ProviderInbox";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -240,6 +241,7 @@ function Dashboard() {
     hydrated,
     toast,
     catLabel,
+    myProviders,
     cancelByCustomer,
     reportNoShow,
     vouchers,
@@ -713,6 +715,7 @@ function Dashboard() {
             />
           ))}
 
+        {active === "requests" && session?.backend && (myProviders.baker || myProviders.deco) && <ProviderInbox />}
         {active === "requests" &&
           (sweetReqCount ? (
             <MyRequests />

@@ -5,7 +5,16 @@
  * Kennungen entgegen (Künstler, Stunden, Artikel, Menge), nie Beträge.
  * So kann niemand im Browser einen Preis auf 1 Euro ändern. */
 import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
-import { SWEETS, estimate, isDirectSweet } from "./sweets";
+import { SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
+
+/** Zusätzliche Einträge aus der Datenbank (echte Künstler, Torten und Deko
+ *  von Anbietern). Der Server lädt sie vor dem Rechnen und reicht sie hier
+ *  herein; der Browser braucht das nicht. */
+export interface Extra {
+  artist?: (id: number) => Artist | undefined;
+  sweet?: (id: number) => Sweet | undefined;
+  item?: (id: number) => ShopItem | undefined;
+}
 
 /** Servicegebühr auf Buchungen */
 export const FEE_RATE = 0.2;
@@ -69,17 +78,17 @@ export function shopUnit(i: ShopItem, mode: Mode) {
   return mode === "rent" && i.rent > 0 ? i.rent : i.buy;
 }
 
-export function findArtist(id: number) {
-  return ARTISTS.find((a) => a.id === id);
+export function findArtist(id: number, extra?: Extra) {
+  return extra?.artist?.(id) ?? ARTISTS.find((a) => a.id === id);
 }
-export function findItem(id: number) {
-  return SHOP_ITEMS.find((i) => i.id === id);
+export function findItem(id: number, extra?: Extra) {
+  return extra?.item?.(id) ?? SHOP_ITEMS.find((i) => i.id === id);
 }
 
 /** Summen für den ganzen Warenkorb */
 /** Preis eines direkt buchbaren Süßwaren-Pakets, nur aus dem Katalog */
-export function sweetPrice(sweetId: number, qty: number): number | null {
-  const s = SWEETS.find((x) => x.id === sweetId);
+export function sweetPrice(sweetId: number, qty: number, extra?: Extra): number | null {
+  const s = extra?.sweet?.(sweetId) ?? SWEETS.find((x) => x.id === sweetId);
   if (!s || s.own || !isDirectSweet(s)) return null;
   return estimate(
     s,
@@ -139,12 +148,13 @@ export function priceLines(
   name: (v: unknown) => string,
   labels: { rent: string; buy: string; fee: string },
   sweets: { sweetId: number; qty: number; dateISO: string }[] = [],
+  extra?: Extra,
 ): { lines: PriceLine[]; unknown: string[] } {
   const lines: PriceLine[] = [];
   const unknown: string[] = [];
   let fee = 0;
   for (const b of bookings) {
-    const a = findArtist(b.artistId);
+    const a = findArtist(b.artistId, extra);
     if (!a) {
       unknown.push(`artist:${b.artistId}`);
       continue;
@@ -158,7 +168,7 @@ export function priceLines(
     fee += p.fee;
   }
   for (const l of shop) {
-    const i = findItem(l.shopId);
+    const i = findItem(l.shopId, extra);
     const qty = Math.min(99, Math.max(1, Math.round(l.qty) || 1));
     if (!i || i.own) {
       unknown.push(`item:${l.shopId}`);
@@ -171,8 +181,8 @@ export function priceLines(
     });
   }
   for (const x of sweets) {
-    const s = SWEETS.find((y) => y.id === x.sweetId);
-    const price = sweetPrice(x.sweetId, x.qty);
+    const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);
+    const price = sweetPrice(x.sweetId, x.qty, extra);
     if (!s || price === null) {
       unknown.push(`sweet:${x.sweetId}`);
       continue;

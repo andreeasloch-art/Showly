@@ -229,7 +229,7 @@ export function BankForm({ ownerKey }: { ownerKey: string }) {
 }
 
 /** Auszahlungskonto über Stripe Connect (bei Anmeldung über die Datenbank) */
-function ConnectBox({ onState }: { onState: (ready: boolean) => void }) {
+export function ConnectBox({ onState }: { onState: (ready: boolean) => void }) {
   const { lang, toast } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const [state, setState] = useState<"none" | "incomplete" | "ready" | null>(null);

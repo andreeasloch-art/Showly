@@ -402,9 +402,16 @@ export function hydrateSweets() {
   ]);
 }
 
-/** Profile, die in diesem Browser angelegt wurden und hier bearbeitet werden dürfen */
+/* Eigene Anbieterprofile aus der Datenbank (bei Anmeldung über Supabase) */
+let cloudOwnBakers: number[] = [];
+export function setCloudOwnBakers(ids: number[]) {
+  cloudOwnBakers = ids;
+}
+
+/** Profile, die diese Person bearbeiten darf: im Browser angelegt oder
+ *  eigene aus der Datenbank */
 export function myBakerIds(): number[] {
-  return loadJSON<number[]>(K_MINE, []);
+  return [...loadJSON<number[]>(K_MINE, []), ...cloudOwnBakers];
 }
 
 export function createBaker(b: Omit<Baker, "id" | "rating" | "reviews" | "verified" | "own">): Baker {
@@ -412,7 +419,7 @@ export function createBaker(b: Omit<Baker, "id" | "rating" | "reviews" | "verifi
   const full: Baker = { ...b, id, rating: 0, reviews: 0, verified: false, own: true };
   BAKERS.push(full);
   saveJSON(K_BAKERS, [...loadJSON<Baker[]>(K_BAKERS, []), full]);
-  saveJSON(K_MINE, [...myBakerIds(), id]);
+  saveJSON(K_MINE, [...loadJSON<number[]>(K_MINE, []), id]);
   return full;
 }
 

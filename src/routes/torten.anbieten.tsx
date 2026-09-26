@@ -20,6 +20,7 @@ import {
 } from "@/showly/sweets";
 import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { isBackendConfigured } from "@/lib/supabase";
 
 export const Route = createFileRoute("/torten/anbieten")({
   head: () => seoHead("/torten/anbieten", "/torten/anbieten"),
@@ -63,6 +64,8 @@ const COPY = {
     need: "Bitte Name, Stadt und mindestens eine Spezialität angeben.",
     needOffer: "Bitte für das erste Angebot Name und Preis angeben.",
     needLegal: "Bitte die Anmeldung und die Nutzungsbedingungen bestätigen.",
+    loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt. Sichtbar wird es, sobald wir es freigeschaltet haben.",
+    review: "Profil angelegt. Wir prüfen es und schalten es in der Regel innerhalb von 2 Werktagen frei.",
     done: "Dein Profil ist angelegt. Hier kannst du es weiter bearbeiten.",
     note: "Dein Profil wird vorerst nur in diesem Browser gespeichert. Die Prüfung durch Showly folgt, bevor es öffentlich erscheint.",
   },
@@ -102,6 +105,8 @@ const COPY = {
     need: "Please add a name, city and at least one speciality.",
     needOffer: "Please add a name and price for your first offer.",
     needLegal: "Please confirm the registration and the terms.",
+    loginNext: "Almost done: sign in now and your profile will be created. It goes live once we have approved it.",
+    review: "Profile created. We review it and usually approve it within 2 business days.",
     done: "Your profile is ready. You can keep editing it here.",
     note: "For now your profile is only saved in this browser. Showly reviews it before it goes public.",
   },
@@ -141,6 +146,8 @@ const COPY = {
     need: "Indica nombre, ciudad y al menos una especialidad.",
     needOffer: "Indica nombre y precio de tu primera oferta.",
     needLegal: "Confirma el registro y las condiciones.",
+    loginNext: "Casi listo: inicia sesión y se creará tu perfil. Será visible cuando lo aprobemos.",
+    review: "Perfil creado. Lo revisamos y normalmente lo aprobamos en 2 días laborables.",
     done: "Tu perfil está listo. Aquí puedes seguir editándolo.",
     note: "Por ahora tu perfil solo se guarda en este navegador. Showly lo revisa antes de publicarlo.",
   },
@@ -148,7 +155,7 @@ const COPY = {
 
 function Onboard() {
   const okText = useContactCheck();
-  const { lang, toast } = useShowly();
+  const { lang, toast, session, queueBakerSignup } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const store = useImageStore();
@@ -185,6 +192,46 @@ function Onboard() {
     if (!offer.name.trim() || !price) return toast(C.needOffer);
     if (!legal || !terms) return toast(C.needLegal);
     if (!okText(tagline, about, offer.name, offer.desc)) return;
+    /* Mit Datenbank: Profil und erstes Angebot auf dem Server, sichtbar nach
+       Freischaltung durch die Verwaltung */
+    if (isBackendConfigured()) {
+      const signup = {
+        baker: {
+          kind,
+          name: name.trim().slice(0, 80),
+          city: city.trim().slice(0, 60),
+          since: new Date().getFullYear(),
+          tagline: tagline.trim().slice(0, 120),
+          about: about.trim().slice(0, 1500),
+          specialties: specs,
+          leadDays: Math.max(1, lead),
+          radiusKm: radius,
+          coverImg: 1,
+          foodRegistered: true,
+        },
+        offer: {
+          name: offer.name.trim().slice(0, 100),
+          desc: offer.desc.trim().slice(0, 600),
+          cat: offer.cat,
+          price,
+          unit: offer.unit,
+          minQty: offer.unit === "set" ? 1 : offer.minQty,
+          direct: offer.direct ?? isDirectSweet({ cat: offer.cat }),
+        },
+      };
+      void queueBakerSignup(signup).then((id) => {
+        if (!session?.backend) {
+          toast(C.loginNext);
+          setTimeout(() => navigate({ to: "/anmelden" }), 800);
+          return;
+        }
+        if (id) {
+          toast(C.review);
+          navigate({ to: "/torten/$id", params: { id: String(id) }, search: { bearbeiten: true } });
+        }
+      });
+      return;
+    }
     const b = createBaker({
       kind,
       name: name.trim().slice(0, 80),

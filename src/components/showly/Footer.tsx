@@ -119,6 +119,7 @@ export function Footer() {
               <li onClick={() => navigate({ to: "/torten" })}>{t("nav.sweets")}</li>
               <li onClick={() => navigate({ to: "/mitmachen" })}>{t("foot.become")}</li>
               {session && <li onClick={() => navigate({ to: "/dashboard" })}>{t("foot.dash")}</li>}
+              {session?.admin && <li onClick={() => navigate({ to: "/admin" })}>Verwaltung</li>}
             </ul>
           </div>
           <div>
@@ -126,6 +127,9 @@ export function Footer() {
             <ul className="footer-links">
               <li>{t("foot.about")}</li>
               <li onClick={() => navigate({ to: "/blog" })}>{t("foot.blog")}</li>
+              <li onClick={() => navigate({ to: "/hilfe" })}>
+                {lang === "en" ? "Help & contact" : lang === "es" ? "Ayuda y contacto" : "Hilfe & Kontakt"}
+              </li>
               <li>{t("foot.jobs")}</li>
               <li>{t("foot.press")}</li>
             </ul>

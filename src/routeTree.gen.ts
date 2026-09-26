@@ -15,6 +15,7 @@ import { Route as AnmeldenRouteImport } from './routes/anmelden'
 import { Route as BlogRouteImport } from './routes/blog'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as HilfeRouteImport } from './routes/hilfe'
 import { Route as KontoRouteImport } from './routes/konto'
 import { Route as MitmachenRouteImport } from './routes/mitmachen'
 import { Route as PortalRouteImport } from './routes/portal'
@@ -57,6 +58,11 @@ const CheckoutRoute = CheckoutRouteImport.update({
 const DashboardRoute = DashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HilfeRoute = HilfeRouteImport.update({
+  id: '/hilfe',
+  path: '/hilfe',
   getParentRoute: () => rootRouteImport,
 } as any)
 const KontoRoute = KontoRouteImport.update({
@@ -132,6 +138,7 @@ export interface FileRoutesByFullPath {
   '/blog': typeof BlogRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
+  '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
   '/portal': typeof PortalRoute
@@ -153,6 +160,7 @@ export interface FileRoutesByTo {
   '/blog': typeof BlogRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
+  '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
   '/portal': typeof PortalRoute
@@ -175,6 +183,7 @@ export interface FileRoutesById {
   '/blog': typeof BlogRoute
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
+  '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
   '/portal': typeof PortalRoute
@@ -198,6 +207,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/checkout'
     | '/dashboard'
+    | '/hilfe'
     | '/konto'
     | '/mitmachen'
     | '/portal'
@@ -219,6 +229,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/checkout'
     | '/dashboard'
+    | '/hilfe'
     | '/konto'
     | '/mitmachen'
     | '/portal'
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/blog'
     | '/checkout'
     | '/dashboard'
+    | '/hilfe'
     | '/konto'
     | '/mitmachen'
     | '/portal'
@@ -262,6 +274,7 @@ export interface RootRouteChildren {
   BlogRoute: typeof BlogRoute
   CheckoutRoute: typeof CheckoutRoute
   DashboardRoute: typeof DashboardRoute
+  HilfeRoute: typeof HilfeRoute
   KontoRoute: typeof KontoRoute
   MitmachenRoute: typeof MitmachenRoute
   PortalRoute: typeof PortalRoute
@@ -319,6 +332,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hilfe': {
+      id: '/hilfe'
+      path: '/hilfe'
+      fullPath: '/hilfe'
+      preLoaderRoute: typeof HilfeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/konto': {
@@ -422,6 +442,7 @@ const rootRouteChildren: RootRouteChildren = {
   BlogRoute: BlogRoute,
   CheckoutRoute: CheckoutRoute,
   DashboardRoute: DashboardRoute,
+  HilfeRoute: HilfeRoute,
   KontoRoute: KontoRoute,
   MitmachenRoute: MitmachenRoute,
   PortalRoute: PortalRoute,

@@ -315,6 +315,7 @@ function Become() {
       "acrobat",
       "comedy",
       "clown",
+      "facepaint",
       "dj",
       "fairy",
     ];

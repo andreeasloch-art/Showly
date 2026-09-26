@@ -653,3 +653,38 @@ def photographer(i, p):
              '<path d="M236 76 v14 M270 96 l-10 9 M202 96 l10 9" stroke="#FFFFFF" '
              'stroke-width="2.4" stroke-linecap="round" opacity=".7"/>')
     return scene(i, p, back, torso(i, x=196, top=130) + arms + camera, flash)
+
+
+# ---------------------------------------------------------------- 29 Kinderschminken
+def facepaint(i, p):
+    back = ('<g opacity=".35">'
+            + "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="{c}"/>'
+                      for x, y, r, c in [(64, 70, 16, "#FF8FC8"), (104, 48, 10, "#FFD166"),
+                                         (330, 62, 14, "#7FE0D4"), (360, 104, 9, "#A78BFA"),
+                                         (40, 128, 8, "#7FE0D4"), (300, 34, 7, "#FF8FC8")])
+            + '</g>')
+    # Kind auf einem Hocker, Gesicht mit Schmetterling bemalt
+    child = (f'<rect x="244" y="196" width="40" height="8" rx="3" fill="#E9D8F2" opacity=".45"/>'
+             f'<path d="M250 204 L246 232 M278 204 L282 232" stroke="#E9D8F2" stroke-width="4" opacity=".4"/>'
+             f'<path d="M264 156 c-12 0 -18 8 -18 20 l0 22 h36 l0 -22 c0 -12 -6 -20 -18 -20Z" fill="url(#fig{i})"/>'
+             f'<circle cx="264" cy="136" r="17" fill="#F6D9C4"/>'
+             '<path d="M264 136 c-4 -8 -14 -10 -15 -2 c-1 6 8 8 15 4Z" fill="#FF5FA8"/>'
+             '<path d="M264 136 c4 -8 14 -10 15 -2 c1 6 -8 8 -15 4Z" fill="#8B5CF6"/>'
+             '<path d="M264 138 c-3 4 -9 8 -10 4 c0 -3 5 -4 10 -4Z" fill="#FFD166"/>'
+             '<path d="M264 138 c3 4 9 8 10 4 c0 -3 -5 -4 -10 -4Z" fill="#4ECDC4"/>'
+             '<path d="M264 128 v12" stroke="#2A1147" stroke-width="1.6" stroke-linecap="round"/>'
+             '<path d="M258 146 q6 4 12 0" stroke="#B4476A" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
+             '<path d="M248 128 c2 -14 30 -14 32 0 c-6 -6 -26 -6 -32 0Z" fill="#6B3A1F"/>')
+    # Schminkerin mit Pinsel und Farbpalette
+    arm = (f'<path d="M190 150 c14 -4 28 -10 40 -14" stroke="url(#fig{i})" stroke-width="10" '
+           f'fill="none" stroke-linecap="round"/>'
+           '<path d="M228 138 l18 -4" stroke="#F3E6D0" stroke-width="3" stroke-linecap="round"/>'
+           '<path d="M245 134 l5 -1" stroke="#FF5FA8" stroke-width="4" stroke-linecap="round"/>')
+    palette = ('<ellipse cx="150" cy="170" rx="24" ry="14" fill="#F3E6D0" opacity=".9"/>'
+               + "".join(f'<circle cx="{x}" cy="{y}" r="4.2" fill="{c}"/>'
+                         for x, y, c in [(136, 166, "#FF5FA8"), (147, 162, "#FFD166"),
+                                         (158, 163, "#4ECDC4"), (166, 171, "#8B5CF6"),
+                                         (140, 176, "#3B82F6")]))
+    glitter = sparks([(222, 100, 3, ".6"), (300, 116, 2.6, ".55"), (238, 86, 2, ".5"),
+                      (312, 150, 2.2, ".45"), (96, 150, 2.4, ".4")], "#FFE9F4")
+    return scene(i, p, back, gown(i, x=176, top=124, w=50) + arm + palette + child, glitter)

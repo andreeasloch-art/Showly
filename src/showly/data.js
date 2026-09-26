@@ -33,7 +33,7 @@ de:{
  "ai.ack":"Verstanden \u2013 Nachricht schreiben","ai.badge":"KI-gest\u00fctzte Erstantwort","ai.first":"Diese Info erscheint vor deiner ersten Nachricht.",
  "msg.h":"Nachricht an {n}","msg.lbl":"Deine Nachricht","msg.ph":"Hallo, ist der 12. Juli bei euch noch frei?","msg.send":"Nachricht senden","msg.sent":"Nachricht gesendet \u2013 Antwort meist in {t} \u23f1",
  "acct.tab":"Konto","legal.imprint":"Impressum","legal.privacy":"Datenschutzerkl\u00e4rung","legal.cookies":"Cookie-Einstellungen","legal.terms":"AGB (Kurzfassung)","legal.h":"Rechtliches & Datenschutz",
- "cat.superhero":"Superhelden","cat.eventplanner":"Eventplaner","cat.weddingplanner":"Hochzeitsplaner","cat.hypnotist":"Hypnotiseure","cat.host":"Moderatoren","cat.photographer":"Fotografen","shop.hero":"Superhelden",
+ "cat.superhero":"Superhelden","cat.eventplanner":"Eventplaner","cat.weddingplanner":"Hochzeitsplaner","cat.hypnotist":"Hypnotiseure","cat.host":"Moderatoren","cat.photographer":"Fotografen","cat.facepaint":"Kinderschminken","shop.hero":"Superhelden",
  "months":"Januar,Februar,M\u00e4rz,April,Mai,Juni,Juli,August,September,Oktober,November,Dezember","dows":"Mo,Di,Mi,Do,Fr,Sa,So",
  "cal.h":"Verf\u00fcgbarkeit & Terminwahl","cal.sub":"Gr\u00fcn = frei, gelb = teilweise belegt, rot = ausgebucht oder gesperrt. W\u00e4hle Tag und Uhrzeit \u2013 der Termin wird direkt in die Buchung \u00fcbernommen.",
  "cal.free":"Frei","cal.part":"Teilweise belegt","cal.full":"Ausgebucht / gesperrt","cal.today":"Heute","cal.mine":"Von dir gesperrt",
@@ -161,7 +161,7 @@ en:{
  "ai.ack":"Understood \u2013 write message","ai.badge":"AI-assisted first reply","ai.first":"This notice appears before your first message.",
  "msg.h":"Message to {n}","msg.lbl":"Your message","msg.ph":"Hi, are you still free on 12 July?","msg.send":"Send message","msg.sent":"Message sent \u2013 usually answered within {t} \u23f1",
  "acct.tab":"Account","legal.imprint":"Imprint","legal.privacy":"Privacy policy","legal.cookies":"Cookie settings","legal.terms":"Terms (short version)","legal.h":"Legal & privacy",
- "cat.superhero":"Superheroes","cat.eventplanner":"Event planners","cat.weddingplanner":"Wedding planners","cat.hypnotist":"Hypnotists","cat.host":"Hosts & MCs","cat.photographer":"Photographers","shop.hero":"Superheroes",
+ "cat.superhero":"Superheroes","cat.eventplanner":"Event planners","cat.weddingplanner":"Wedding planners","cat.hypnotist":"Hypnotists","cat.host":"Hosts & MCs","cat.photographer":"Photographers","cat.facepaint":"Face painting","shop.hero":"Superheroes",
  "months":"January,February,March,April,May,June,July,August,September,October,November,December","dows":"Mon,Tue,Wed,Thu,Fri,Sat,Sun",
  "cal.h":"Availability & date selection","cal.sub":"Green = free, yellow = partly booked, red = fully booked or blocked. Pick a day and a time \u2013 it goes straight into your booking.",
  "cal.free":"Free","cal.part":"Partly booked","cal.full":"Booked / blocked","cal.today":"Today","cal.mine":"Blocked by you",
@@ -269,6 +269,7 @@ export const ICON={
  band:    ic('<circle cx="7" cy="16.5" r="3.2"/><path d="M10.2 16.5V6.4l6-1.6v9.9"/><circle cx="13" cy="14.7" r="3.2"/><path d="M10.2 9.2 16.2 7.6"/>'),
  hypno:   ic('<path d="M12 12.5a.9.9 0 1 1 .9-.9 1.8 1.8 0 1 1-1.8-1.8 2.7 2.7 0 1 1 2.7 2.7 3.6 3.6 0 1 1-3.6-3.6 4.5 4.5 0 1 1 4.5 4.5 5.4 5.4 0 1 1-5.4-5.4"/>'),
  mic:     ic('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21M8.5 21h7"/>'),
+ facepaint: ic('<circle cx="10.5" cy="13" r="7.5"/><path d="M8 11.3h.01M13 11.3h.01"/><path d="M8.3 15.6c1.3 1 3.1 1 4.4 0"/><path d="m5.3 12.6.45.95.95.45-.95.45-.45.95-.45-.95-.95-.45.95-.45Z"/><path d="m16.2 7.8 4.6-4.6"/><path d="m14.6 9.4 1.6-1.6 1 1-1.6 1.6c-.5.5-1.4.5-1.8 0-.3-.3-.3-.7 0-1Z"/>'),
  camera:  ic('<path d="M4 8h3l1.6-2.2h6.8L17 8h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2Z"/><circle cx="12" cy="13.5" r="3.6"/>'),
  image:   ic('<rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="8.6" cy="9.4" r="1.8"/><path d="M3.5 17.5 9 12l4 3.6 3-2.4 4.5 4"/>'),
  play:    ic('<circle cx="12" cy="12" r="9"/><path d="M10.2 8.6 15.6 12l-5.4 3.4Z"/>'),
@@ -352,7 +353,7 @@ ICON.hero=ICON.superhero;
 export const CATS=[
  {id:'all',icon:'all'},{id:'fairy',icon:'fairy'},{id:'magician',icon:'magician'},{id:'mentalist',icon:'mentalist'},{id:'hypnotist',icon:'hypno'},
  {id:'santa',icon:'santa'},{id:'dj',icon:'dj'},{id:'musician',icon:'musician'},{id:'band',icon:'band'},{id:'dancer',icon:'dancer'},
- {id:'clown',icon:'clown'},{id:'acrobat',icon:'acrobat'},{id:'comedy',icon:'comedy'},{id:'walkingact',icon:'walkingact'},
+ {id:'clown',icon:'clown'},{id:'facepaint',icon:'facepaint'},{id:'acrobat',icon:'acrobat'},{id:'comedy',icon:'comedy'},{id:'walkingact',icon:'walkingact'},
  {id:'pantomime',icon:'pantomime'},{id:'street',icon:'street'},{id:'host',icon:'mic'},{id:'photographer',icon:'camera'},
  {id:'superhero',icon:'superhero'},{id:'eventplanner',icon:'eventplanner'},{id:'weddingplanner',icon:'weddingplanner'}
 ];
@@ -602,6 +603,14 @@ export const ARTISTS=[
  langs:{de:['Deutsch','Englisch'],en:['German','English'],es:['Alemán','Inglés']},
  includes:{de:['Bearbeitete Bilder in hoher Auflösung','Online-Galerie zum Teilen','Lieferung in 7 Tagen','Eigene Blitz- und Lichttechnik'],en:['Edited high-resolution photos','Online gallery to share','Delivery within 7 days','Own flash and lighting'],es:['Fotos editadas en alta resolución','Galería online para compartir','Entrega en 7 días','Flash e iluminación propios']},
  specs:{de:['Reportage','Gruppenfotos','Fotobox auf Anfrage'],en:['Reportage','Group photos','Photo booth on request'],es:['Reportaje','Fotos de grupo','Fotomatón bajo petición']},
+ rev:[]},
+{id:29,cat:'facepaint',radiusKm:40,color:'#FCE9F6',price:85,minHours:2,rating:0,reviews:0,verified:false,superhost:false,events:0,responseTime:{de:'2 Std.',en:'2h',es:'2 h'},responseRate:'',shopIds:[],
+ name:{de:'Farbenfee Mia',en:'Colour Fairy Mia',es:'Hada de Colores Mia'},loc:{de:'Hamburg',en:'Hamburg',es:'Hamburgo'},exp:{de:'6 Jahren',en:'6 years',es:'6 años'},
+ desc:{de:'Schmetterlinge, Tiger, Superhelden und Glitzer: bunte Motive in wenigen Minuten pro Kind, mit hautfreundlichen Profi-Farben.',en:'Butterflies, tigers, superheroes and glitter: colourful designs in a few minutes per child, with skin-friendly professional paints.',es:'Mariposas, tigres, superhéroes y purpurina: diseños coloridos en pocos minutos por niño, con pinturas profesionales suaves para la piel.'},
+ tags:{de:['Kindergeburtstag','Sommerfest','Kita-Fest'],en:["Children's birthday",'Summer party','Kindergarten party'],es:['Cumpleaños infantil','Fiesta de verano','Fiesta de guardería']},
+ langs:{de:['Deutsch','Englisch'],en:['German','English'],es:['Alemán','Inglés']},
+ includes:{de:['Hautfreundliche Profi-Schminke auf Wasserbasis','Motivkarte zum Aussuchen','Glitzer-Tattoos','Hygiene: frische Schwämme für jedes Kind'],en:['Skin-friendly water-based professional paints','Design card to choose from','Glitter tattoos','Hygiene: fresh sponges for every child'],es:['Maquillaje profesional al agua, suave para la piel','Catálogo de diseños para elegir','Tatuajes de purpurina','Higiene: esponjas nuevas para cada niño']},
+ specs:{de:['Tiere','Superhelden','Glitzer-Tattoos'],en:['Animals','Superheroes','Glitter tattoos'],es:['Animales','Superhéroes','Tatuajes de purpurina']},
  rev:[]}
 ];
 
@@ -653,7 +662,7 @@ export const SHOP_TABS=[{id:'all',k:'shop.all'},{id:'fairy',k:'shop.fairy'},{id:
 /* Die Buehnenbilder liegen als eigene Dateien unter public/acts.
    Frueher standen sie als Text hier drin und wurden dadurch bei jedem
    Seitenaufruf im JavaScript mitgeliefert, auch auf Seiten ohne Bilder. */
-export const ART_IMG={1:'/acts/1.svg',2:'/acts/2.svg',3:'/acts/3.svg',4:'/acts/4.svg',5:'/acts/5.svg',6:'/acts/6.svg',7:'/acts/7.svg',8:'/acts/8.svg',9:'/acts/9.svg',10:'/acts/10.svg',11:'/acts/11.svg',12:'/acts/12.svg',13:'/acts/13.svg',14:'/acts/14.svg',15:'/acts/15.svg',16:'/acts/16.svg',17:'/acts/17.svg',18:'/acts/18.svg',19:'/acts/19.svg',20:'/acts/20.svg',21:'/acts/21.svg',22:'/acts/22.svg',23:'/acts/23.svg',24:'/acts/24.svg',25:'/acts/25.svg',26:'/acts/26.svg',27:'/acts/27.svg',28:'/acts/28.svg'};
+export const ART_IMG={1:'/acts/1.svg',2:'/acts/2.svg',3:'/acts/3.svg',4:'/acts/4.svg',5:'/acts/5.svg',6:'/acts/6.svg',7:'/acts/7.svg',8:'/acts/8.svg',9:'/acts/9.svg',10:'/acts/10.svg',11:'/acts/11.svg',12:'/acts/12.svg',13:'/acts/13.svg',14:'/acts/14.svg',15:'/acts/15.svg',16:'/acts/16.svg',17:'/acts/17.svg',18:'/acts/18.svg',19:'/acts/19.svg',20:'/acts/20.svg',21:'/acts/21.svg',22:'/acts/22.svg',23:'/acts/23.svg',24:'/acts/24.svg',25:'/acts/25.svg',26:'/acts/26.svg',27:'/acts/27.svg',28:'/acts/28.svg',29:'/acts/29.svg'};
 
 /* Ebenso die Kostuembilder, siehe public/shop. */
 export const SHOP_IMG={1:'/shop/1.svg',2:'/shop/2.svg',3:'/shop/3.svg',4:'/shop/4.svg',5:'/shop/5.svg',6:'/shop/6.svg',7:'/shop/7.svg',8:'/shop/8.svg',9:'/shop/9.svg',10:'/shop/10.svg',11:'/shop/11.svg',12:'/shop/12.svg',13:'/shop/13.svg',14:'/shop/14.svg',15:'/shop/15.svg',16:'/shop/16.svg',17:'/shop/17.svg',18:'/shop/18.svg',19:'/shop/19.svg',20:'/shop/20.svg',21:'/shop/21.svg',22:'/shop/22.svg',23:'/shop/23.svg',24:'/shop/24.svg',25:'/shop/25.svg',26:'/shop/26.svg',27:'/shop/27.svg',28:'/shop/28.svg',29:'/shop/29.svg',30:'/shop/30.svg',31:'/shop/31.svg',32:'/shop/32.svg',33:'/shop/33.svg',34:'/shop/34.svg',35:'/shop/35.svg'};

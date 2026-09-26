@@ -17,6 +17,7 @@ type Occ = "kids" | "birthday" | "wedding" | "company";
 const ARTIST_OCC: Record<string, Occ> = {
   fairy: "kids",
   clown: "kids",
+  facepaint: "kids",
   superhero: "kids",
   magician: "kids",
   pantomime: "kids",
@@ -58,7 +59,7 @@ const SWEET_OCC: Record<SweetCat, Occ> = {
   patisserie: "wedding",
 };
 const OCC_ARTISTS: Record<Occ, string[]> = {
-  kids: ["fairy", "magician", "clown", "superhero"],
+  kids: ["fairy", "magician", "clown", "facepaint"],
   birthday: ["magician", "acrobat", "dj", "fairy"],
   wedding: ["band", "musician", "weddingplanner", "dancer"],
   company: ["dj", "mentalist", "comedy", "walkingact"],

@@ -102,6 +102,7 @@ export const ES: Record<string, string> = {
   "detail.noReviews": "Aún no hay opiniones. Los invitados podrán valorar aquí tras el primer evento.",
   "cat.host": "Presentadores",
   "cat.photographer": "Fotógrafos",
+  "cat.facepaint": "Pintacaras",
   "shop.hero": "Superhéroes",
   "months":
     "enero,febrero,marzo,abril,mayo,junio,julio,agosto,septiembre,octubre,noviembre,diciembre",

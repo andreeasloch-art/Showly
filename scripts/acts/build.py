@@ -39,6 +39,8 @@ PAL = {
  26: P("#0C0628","#241056","#4A1E94","#D8C4FF","#ECE2FF","#2A1462","#0D0629","#1C0E44","#0A0520","#E4D8FF","#060318"),
  27: P("#050C24","#0E2152","#1E4290","#A8CCFF","#D2E4FF","#132A60","#060D28","#15224D","#070C22","#C8DCFF","#040818"),
  28: P("#10131C","#232B3E","#46557A","#F4E6CC","#FFF3DE","#2A3350","#10131E","#262C40","#10131C","#F6EEDC","#0A0C14"),
+ # --- Kinderschminken ---
+ 29: P("#1E0A2E","#46146A","#8A2A9E","#FFC6EC","#FFE3F5","#4E1A6E","#1F0A30","#3A1452","#180826","#FFD9F0","#12061E"),
 }
 
 ART = {
@@ -54,6 +56,7 @@ ART = {
  24: lambda i,p: S.bandstage(i,p,"brass"),
  25: lambda i,p: S.bandstage(i,p,"rock"),
  26: S.hypnotist, 27: S.host, 28: S.photographer,
+ 29: S.facepaint,
 }
 
 def build():

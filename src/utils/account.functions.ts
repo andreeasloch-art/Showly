@@ -11,6 +11,7 @@
  * allein lassen. */
 import { createServerFn } from "@tanstack/react-start";
 import { adminClient, requireUser } from "@/lib/supabase.server";
+import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { ReportTarget } from "@/lib/database.types";
 
 export type DeleteResult = { ok: true } | { error: "open" | "auth" | "failed"; message?: string };
@@ -73,6 +74,7 @@ export const reportContent = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     try {
       const { user, sb } = await requireUser();
+      if (!(await allow("report", user.id))) return { error: TOO_MANY };
       const { error } = await sb.from("reports").insert({
         reporter: user.id,
         target_type: data.target,

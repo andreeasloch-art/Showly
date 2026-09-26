@@ -11,6 +11,7 @@
  * läuft dann wie bisher im Browser weiter. */
 import { createServerFn } from "@tanstack/react-start";
 import { adminClient, requireUser } from "@/lib/supabase.server";
+import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { BookingRow, PenaltyRow } from "@/lib/database.types";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import type { CloudAction } from "@/showly/cloudRules";
@@ -176,6 +177,7 @@ export const recordCart = createServerFn({ method: "POST" })
     const ctx = await userOrNull();
     if (!ctx) return { skipped: true };
     const uid = ctx.user.id;
+    if (!(await allow("cart", uid))) return { error: TOO_MANY };
     const admin = adminClient();
     const snap = data.snapshot;
     const { newCheckinCode } = await import("@/showly/booking");
@@ -339,6 +341,7 @@ export const bookingAction = createServerFn({ method: "POST" })
     const ctx = await userOrNull();
     if (!ctx) return { skipped: true };
     const uid = ctx.user.id;
+    if (!(await allow("action", uid))) return { error: TOO_MANY };
     const admin = adminClient();
     const { decide, plannedPayout } = await import("@/showly/cloudRules");
     const { VOUCHER_EUR, voucherCode, voucherValidUntil } = await import("@/showly/booking");
@@ -515,6 +518,7 @@ export const registerArtist = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ id: number } | { error: string } | { skipped: true }> => {
     const ctx = await userOrNull();
     if (!ctx) return { skipped: true };
+    if (!(await allow("signup", ctx.user.id))) return { error: TOO_MANY };
     const admin = adminClient();
     const { data: existing } = await admin.from("artists").select("id").eq("owner", ctx.user.id).limit(1);
     if (existing && existing[0]) return { id: existing[0].id };
@@ -566,9 +570,12 @@ export const connectOnboarding = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ url: string } | { error: string } | { skipped: true }> => {
     const ctx = await userOrNull();
     if (!ctx) return { skipped: true };
+    if (!(await allow("connect", ctx.user.id))) return { error: TOO_MANY };
     const admin = adminClient();
+    /* Auszahlungskonto für Künstler und für Anbieter (Torten, Deko) */
     const { data: own } = await admin.from("artists").select("id").eq("owner", ctx.user.id).limit(1);
-    if (!own || !own[0]) return { error: "Erst ein Künstlerprofil anlegen" };
+    const { data: prov } = await admin.from("providers").select("id").eq("owner", ctx.user.id).limit(1);
+    if ((!own || !own[0]) && (!prov || !prov[0])) return { error: "Erst ein Anbieterprofil anlegen" };
     try {
       const stripe = createStripeClient(data.environment);
       const { data: acc } = await admin

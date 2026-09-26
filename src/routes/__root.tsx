@@ -15,6 +15,7 @@ import { ShowlyProvider } from "@/showly/store";
 import { Header } from "@/components/showly/Header";
 import { CartDrawer } from "@/components/showly/CartDrawer";
 import { Splash } from "@/components/showly/Splash";
+import { ErrorReporter } from "@/components/showly/ErrorReporter";
 
 import { Toast, TabBar } from "@/components/showly/Chrome";
 import { SeoLang } from "@/components/showly/SeoLang";
@@ -158,6 +159,7 @@ function RootComponent() {
         <TabBar />
         <Toast />
         <Splash />
+        <ErrorReporter />
       </ShowlyProvider>
     </QueryClientProvider>
   );

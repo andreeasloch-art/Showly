@@ -14,9 +14,14 @@ Solange die Schlüssel fehlen, läuft Showly wie bisher im örtlichen
 1. Auf **supabase.com** ein kostenloses Projekt anlegen, Region Frankfurt.
 2. Im Projekt auf **SQL Editor** gehen, den Inhalt von
    `supabase/migrations/0001_showly_grundlage.sql` einfügen und ausführen.
-   Danach genauso `supabase/migrations/0002_anfragen_konto_meldungen.sql`.
-   Damit stehen alle Tabellen und die Zugriffsregeln, auch für Buchungs-
-   anfragen, das Löschen von Konten und für Meldungen.
+   Danach genauso `supabase/migrations/0002_anfragen_konto_meldungen.sql`
+   und `supabase/migrations/0003_buchungsablauf_geld.sql`. Damit stehen alle
+   Tabellen und die Zugriffsregeln: Buchungen mit Anfrage, Absage und
+   Check-in, Vertragsstrafen, Gutscheine, Auszahlungen, Torten-Anfragen,
+   Shop-Bestellungen, das Löschen von Konten und Meldungen.
+
+   **Lovable Cloud:** Im Lovable-Projekt „Showly“ sind alle drei Teile
+   bereits eingespielt (Stand 26.09.2026). Dort ist nichts mehr zu tun.
 3. Unter **Project Settings → API** drei Werte abholen und in die Datei `.env`
    eintragen, Vorlage ist `.env.example`:
    - Project URL → `VITE_SUPABASE_URL`
@@ -107,22 +112,37 @@ offene Buchungen verhindern das Löschen.
 
 ---
 
-## Was danach noch offen ist
+## 8. Auszahlungen an Künstler (Stripe Connect)
 
-Die Grundlage steht, die Umstellung der bestehenden Abläufe nicht. Diese Punkte
-laufen weiterhin im Browserspeicher und gehören als Nächstes in die Datenbank:
+Künstler richten ihr Auszahlungskonto im Dashboard unter „Zahlungen“ ein.
+Bankdaten und Ausweis gibt man dabei direkt bei Stripe ein; Showly speichert
+nur die Kontokennung (Tabelle `payout_accounts`).
 
-- Buchungen und Verfügbarkeit
+1. Im Stripe-Dashboard **Connect** für das Showly-Konto aktivieren
+   (Plattform, Konten vom Typ „Express“, Land Deutschland).
+2. Die Auszahlungen selbst (Überweisung 5 Werktage nach dem Termin, Einbehalt
+   bei den ersten 5 Buchungen) stehen als Plan in der Tabelle `payouts`.
+   Ausgeführt werden sie über Stripe-Transfers; dafür fehlt noch ein
+   täglicher Auftrag, der fällige Einträge überweist.
+
+---
+
+## Was in der Datenbank läuft und was noch nicht
+
+**Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:
+
+- Buchungen mit Anfrage, Zusage, Absage, Stornierung, Check-in und
+  Nichterscheinen; die Regeln der AGB prüft der Server (`src/showly/cloudRules.ts`)
+- Vertragsstrafen mit Anhörung, 50-€-Gutscheine, geplante Auszahlungen
+- Torten-Anfragen und Direktbuchungen, Shop-Bestellungen
+- Künstlerprofile, die sich neu registrieren (sichtbar nach Ausweisprüfung)
+
+**Noch im Browser:**
+
 - Bewertungen und Beiträge im Event-Blog
-- Künstlerprofile aus `data.js`
-- Torten-Anbieter, Deko-Anbieter und ihre Anfragen
-- Warenkorb und Bestellungen (die Kasse fasst Künstler, Artikel und
-  Torten-Anfragen schon zusammen, gespeichert wird aber noch im Browser)
-
-Die Preise rechnet der Server beim Bezahlen bereits selbst nach
-(`createCartCheckout` in `src/utils/payments.functions.ts`, Grundlage
-`src/showly/pricing.ts`). Posten, die nur im Browser angelegt wurden, lehnt er
-ab, bis sie in der Datenbank stehen.
-
-Der Reihe nach sinnvoll ist: erst Buchungen und Bestellungen in die Datenbank,
-weil daran Geld hängt, danach Profile, zuletzt Bewertungen und Beiträge.
+- die Beispielprofile aus `data.js` (sie bleiben als Beispiele; Buchungen
+  darauf werden gespeichert, haben aber keinen Künstler als Empfänger)
+- Torten- und Deko-Anbieter mit eigenem Konto
+- Kalender-Sperren, die ein Künstler selbst setzt
+- Erstattungen bei Stornierung: werden in der Datenbank vermerkt, die
+  Rückzahlung bei Stripe muss noch von Hand oder per Auftrag erfolgen

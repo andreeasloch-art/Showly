@@ -549,3 +549,84 @@ export const registerArtist = createServerFn({ method: "POST" })
     if (error || !ins) return { error: "Profil konnte nicht angelegt werden" };
     return { id: ins.id };
   });
+
+/* ---------------------------------------------------------------------------
+ * Auszahlungskonto über Stripe Connect (AGB § 21 Abs. 3)
+ *
+ * Bankdaten und Identität erfasst Stripe in einem eigenen, gesicherten
+ * Fenster. Showly merkt sich nur die Kontokennung von Stripe. Voraussetzung:
+ * Connect ist im Stripe-Dashboard für das Showly-Konto freigeschaltet.
+ * ------------------------------------------------------------------------ */
+export const connectOnboarding = createServerFn({ method: "POST" })
+  .inputValidator((d: { returnUrl: string; environment: StripeEnv }) => {
+    if (!/^https?:\/\/[^\s]+$/.test(d.returnUrl)) throw new Error("Ungültige Adresse");
+    if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
+    return d;
+  })
+  .handler(async ({ data }): Promise<{ url: string } | { error: string } | { skipped: true }> => {
+    const ctx = await userOrNull();
+    if (!ctx) return { skipped: true };
+    const admin = adminClient();
+    const { data: own } = await admin.from("artists").select("id").eq("owner", ctx.user.id).limit(1);
+    if (!own || !own[0]) return { error: "Erst ein Künstlerprofil anlegen" };
+    try {
+      const stripe = createStripeClient(data.environment);
+      const { data: acc } = await admin
+        .from("payout_accounts")
+        .select("stripe_account_id")
+        .eq("profile_id", ctx.user.id)
+        .maybeSingle();
+      let accountId = acc?.stripe_account_id;
+      if (!accountId) {
+        const created = await stripe.accounts.create({
+          type: "express",
+          country: "DE",
+          ...(ctx.user.email ? { email: ctx.user.email } : {}),
+          capabilities: { transfers: { requested: true } },
+          metadata: { profile_id: ctx.user.id },
+        });
+        accountId = created.id;
+        await admin.from("payout_accounts").insert({ profile_id: ctx.user.id, stripe_account_id: accountId });
+      }
+      const link = await stripe.accountLinks.create({
+        account: accountId,
+        type: "account_onboarding",
+        return_url: data.returnUrl,
+        refresh_url: data.returnUrl,
+      });
+      return { url: link.url };
+    } catch (e) {
+      const { getStripeErrorMessage } = await import("@/lib/stripe.server");
+      return { error: getStripeErrorMessage(e) };
+    }
+  });
+
+export const connectStatus = createServerFn({ method: "POST" })
+  .inputValidator((d: { environment: StripeEnv }) => {
+    if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
+    return d;
+  })
+  .handler(async ({ data }): Promise<{ state: "none" | "incomplete" | "ready" } | { skipped: true } | { error: string }> => {
+    const ctx = await userOrNull();
+    if (!ctx) return { skipped: true };
+    const admin = adminClient();
+    const { data: acc } = await admin
+      .from("payout_accounts")
+      .select("stripe_account_id")
+      .eq("profile_id", ctx.user.id)
+      .maybeSingle();
+    if (!acc) return { state: "none" };
+    try {
+      const stripe = createStripeClient(data.environment);
+      const a = await stripe.accounts.retrieve(acc.stripe_account_id);
+      const ready = !!a.payouts_enabled;
+      await admin
+        .from("payout_accounts")
+        .update({ payouts_enabled: ready, updated_at: new Date().toISOString() })
+        .eq("profile_id", ctx.user.id);
+      return { state: ready ? "ready" : "incomplete" };
+    } catch (e) {
+      const { getStripeErrorMessage } = await import("@/lib/stripe.server");
+      return { error: getStripeErrorMessage(e) };
+    }
+  });

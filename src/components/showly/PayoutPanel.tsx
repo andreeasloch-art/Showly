@@ -8,8 +8,10 @@
  * Im Echtbetrieb erfasst Stripe Connect Konto und Identität im eigenen,
  * gesicherten Fenster; Showly speichert dann keine IBAN. Bis dahin liegen
  * die Angaben nur in diesem Browser. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useShowly, type Payout } from "@/showly/store";
+import { connectOnboarding, connectStatus } from "@/utils/cloud.functions";
+import { getStripeEnvironment } from "@/lib/stripe";
 import { Icon } from "@/showly/ui";
 import {
   isValidIban,
@@ -45,6 +47,12 @@ const COPY = {
       `davon ${a} Sicherheitseinbehalt, Auszahlung am ${d}`,
     reserveInfo:
       "Von deinen ersten 5 Buchungen behalten wir 20 % der Gage 30 Tage als Sicherheit ein und zahlen sie danach aus (AGB § 21).",
+    cxP: "Kontodaten und Ausweis gibst du direkt bei unserem Zahlungsdienst Stripe ein. Showly sieht deine IBAN nicht.",
+    cxStart: "Auszahlungskonto einrichten",
+    cxGoOn: "Einrichtung fortsetzen",
+    cxReady: "Auszahlungskonto ist eingerichtet",
+    cxEdit: "Bei Stripe ansehen oder ändern",
+    cxOpen: "Einrichtung noch nicht abgeschlossen",
   },
   en: {
     bankH: "Payout account",
@@ -71,6 +79,12 @@ const COPY = {
       `incl. ${a} security reserve, paid out on ${d}`,
     reserveInfo:
       "For your first 5 bookings we hold back 20% of the fee for 30 days as security and pay it out afterwards (T&C § 21).",
+    cxP: "You enter your bank details and ID directly with our payment provider Stripe. Showly never sees your IBAN.",
+    cxStart: "Set up payout account",
+    cxGoOn: "Continue setup",
+    cxReady: "Payout account is set up",
+    cxEdit: "View or change at Stripe",
+    cxOpen: "Setup not finished yet",
   },
   es: {
     bankH: "Cuenta de cobro",
@@ -97,6 +111,12 @@ const COPY = {
       `incl. ${a} de retención de seguridad, se paga el ${d}`,
     reserveInfo:
       "De tus primeras 5 reservas retenemos el 20 % del caché durante 30 días como garantía y luego lo pagamos (CG § 21).",
+    cxP: "Introduces tus datos bancarios y tu documento directamente en Stripe, nuestro proveedor de pagos. Showly no ve tu IBAN.",
+    cxStart: "Configurar cuenta de cobro",
+    cxGoOn: "Continuar configuración",
+    cxReady: "La cuenta de cobro está configurada",
+    cxEdit: "Ver o cambiar en Stripe",
+    cxOpen: "Configuración sin terminar",
   },
 } as const;
 
@@ -208,18 +228,76 @@ export function BankForm({ ownerKey }: { ownerKey: string }) {
   );
 }
 
+/** Auszahlungskonto über Stripe Connect (bei Anmeldung über die Datenbank) */
+function ConnectBox({ onState }: { onState: (ready: boolean) => void }) {
+  const { lang, toast } = useShowly();
+  const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
+  const [state, setState] = useState<"none" | "incomplete" | "ready" | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    void connectStatus({ data: { environment: getStripeEnvironment() } })
+      .then((r) => {
+        if ("state" in r) {
+          setState(r.state);
+          onState(r.state === "ready");
+        } else setState("none");
+      })
+      .catch(() => setState("none"));
+  }, [onState]);
+
+  async function go() {
+    setBusy(true);
+    try {
+      const r = await connectOnboarding({
+        data: { returnUrl: window.location.href, environment: getStripeEnvironment() },
+      });
+      if ("url" in r) window.location.href = r.url;
+      else if ("error" in r) toast(r.error);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const ready = state === "ready";
+  return (
+    <section className={"bank" + (ready ? "" : " missing")}>
+      <div className="bank-head">
+        <span className="bank-ic">
+          <Icon name="money" />
+        </span>
+        <div>
+          <h3>{C.bankH}</h3>
+          <p>{ready ? C.bankP : state === "incomplete" ? C.cxOpen : C.missing}</p>
+        </div>
+      </div>
+      <p className="payout-info">{C.cxP}</p>
+      <div className="bank-show">
+        <span>
+          <b>{ready ? C.cxReady : ""}</b>
+        </span>
+        <button type="button" className="home-btn primary" disabled={busy || state === null} onClick={go}>
+          {ready ? C.cxEdit : state === "incomplete" ? C.cxGoOn : C.cxStart}
+        </button>
+      </div>
+    </section>
+  );
+}
+
 export function PayoutPanel({ artistId }: { artistId: number }) {
-  const { lang, fmt, fmtDate, payouts, bankAccounts } = useShowly();
+  const { lang, fmt, fmtDate, payouts, bankAccounts, session } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const key = `artist:${artistId}`;
-  const hasBank = !!bankAccounts[key];
+  const cloud = !!session?.backend;
+  const [connectReady, setConnectReady] = useState(false);
+  const hasBank = cloud ? connectReady : !!bankAccounts[key];
   const mine = payouts.filter((p) => p.artistId === artistId);
   const today = new Date().toISOString().slice(0, 10);
   const due = (p: Payout) => p.payoutOn || payoutDate(p.dateISO);
 
   return (
     <div className="payout">
-      <BankForm ownerKey={key} />
+      {cloud ? <ConnectBox onState={setConnectReady} /> : <BankForm ownerKey={key} />}
       <div className="dash26-panel">
         <div className="dash26-panel-head">
           <h3>{C.listH}</h3>

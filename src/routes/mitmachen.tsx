@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { FEE_RATE } from "@/showly/pricing";
 import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
@@ -26,7 +27,7 @@ const COPY = {
     pill: "Für Künstler · kostenlos starten",
     calc: "Verdienst berechnen",
     t1: "0 € Anmeldung",
-    t2: "100 % deiner Gage",
+    t2: "Nur 20 % Gebühr",
     t3: "Eigene Preise und Termine",
     example: "Beispielansicht",
     newReq: "Neue Buchungsanfrage",
@@ -46,7 +47,7 @@ const COPY = {
     pill: "For artists · start for free",
     calc: "Calculate earnings",
     t1: "€0 to sign up",
-    t2: "100% of your fee",
+    t2: "Only 20% fee",
     t3: "Your own prices and dates",
     example: "Example view",
     newReq: "New booking request",
@@ -66,7 +67,7 @@ const COPY = {
     pill: "Para artistas · empieza gratis",
     calc: "Calcular ingresos",
     t1: "0 € de alta",
-    t2: "100 % de tu caché",
+    t2: "Solo 20 % de comisión",
     t3: "Tus propios precios y fechas",
     example: "Vista de ejemplo",
     newReq: "Nueva solicitud de reserva",
@@ -171,7 +172,10 @@ function Become() {
   );
 
   const pw = pwScore(form.pw);
-  const svc = Math.round(fee * 0.2);
+  /* Was beim Künstler ankommt: Gage abzüglich 20 % Showly-Gebühr, genau wie
+     bei der Auszahlung (pricing.ts, bookingPrice) */
+  const net = Math.round(fee * (1 - FEE_RATE));
+  const svc = fee - net;
 
   function set(k: keyof typeof form, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -519,12 +523,12 @@ function Become() {
             <div className="join26-calc-split">
               <div className="join26-calc-box">
                 <small>{t("earn.clientPays")}</small>
-                <b>{fmt(fee + svc)}</b>
-                <span>{t("earn.note", { p: fmt(fee), f: fmt(svc) })}</span>
+                <b>− {fmt(svc)}</b>
+                <span>{t("earn.note", { p: fmt(fee) })}</span>
               </div>
               <div className="join26-calc-box you">
                 <small>{t("earn.youGet")}</small>
-                <b>{fmt(fee)}</b>
+                <b>{fmt(net)}</b>
                 <span>{t("earn.hundred")}</span>
               </div>
             </div>

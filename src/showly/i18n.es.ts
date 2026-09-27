@@ -455,7 +455,7 @@ export const ES: Record<string, string> = {
   "become.benefitsSub": "Condiciones justas, control total, reservas reales.",
   "become.c1t": "Pago justo",
   "become.c1p":
-    "Te quedas con el 100 % de tu caché. La comisión del 20 % la paga el cliente aparte, de forma totalmente transparente.",
+    "Tú decides tu caché. Showly se queda con el 20 % y el resto es para ti. Sin cuota de alta ni mensual.",
   "become.c2t": "Flexibilidad total",
   "become.c2p":
     "Tú decides cuándo, dónde y cuánto trabajas. Tu calendario, tus precios, tus reglas.",
@@ -475,15 +475,15 @@ export const ES: Record<string, string> = {
   "earn.eyebrow": "Calculadora",
   "earn.h2": "¿Cuánto ganas?",
   "earn.sub":
-    "Desliza tu caché: verás al instante lo que paga el cliente y lo que recibes tú.",
+    "Desliza tu caché: verás al instante lo que te llega de verdad tras la comisión de Showly.",
   "earn.yourFee": "Tu caché por hora",
-  "earn.clientPays": "El cliente paga",
-  "earn.youGet": "Tú recibes",
-  "earn.hundred": "(100 % de tu caché)",
-  "earn.note": "({p} + {f} de comisión)",
+  "earn.clientPays": "Comisión de Showly (20 %)",
+  "earn.youGet": "Tú ganas",
+  "earn.hundred": "(80 % de tu caché, pagado 5 días hábiles después del evento)",
+  "earn.note": "(20 % de {p})",
   "earn.howT": "Así funciona:",
   "earn.howP":
-    "La comisión de servicio del 20 % se suma a tu caché y la paga el cliente. Tú pones el precio, nosotros nos ocupamos del resto.",
+    "Showly se queda con el 20 % de tu caché por la intermediación, el pago seguro y el soporte. El resto te lo pagamos 5 días hábiles después del evento.",
   "reg.h2": "Regístrate gratis",
   "reg.sub": "Tu perfil estará en línea en pocos minutos.",
   "reg.first": "Nombre",

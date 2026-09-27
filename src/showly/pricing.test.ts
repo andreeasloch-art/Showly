@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { cartTotals, priceLines, sweetPrice } from "./pricing";
+import { bookingPrice, cartTotals, priceLines, sweetPrice } from "./pricing";
+import { ARTISTS } from "./data";
 import { SWEETS, isDirectSweet } from "./sweets";
 
 const name = (v: unknown) =>
   typeof v === "string" ? v : String((v as { de?: string })?.de ?? "");
-const labels = { rent: "Miete", buy: "Kauf", fee: "Servicegebühr" };
+const labels = { rent: "Miete", buy: "Kauf" };
 
 describe("Torten & Süßes: Direktbuchung", () => {
   const cupcakes = SWEETS.find((s) => s.cat === "cupcakes")!;
@@ -44,5 +45,20 @@ describe("Torten & Süßes: Direktbuchung", () => {
     );
     expect(t.sweets).toBe(cupcakes.price);
     expect(t.total).toBe(cupcakes.price);
+  });
+});
+
+describe("Künstlerbuchung: Endpreis und Provision", () => {
+  const a = { ...ARTISTS[0]!, price: 150, minHours: 1 };
+  it("Kunde zahlt den Endpreis ohne Aufschlag, Künstler bekommt 80 %", () => {
+    const p = bookingPrice(a, 1);
+    expect(p.total).toBe(150);
+    expect(p.fee).toBe(30);
+    expect(p.payout).toBe(120);
+  });
+  it("an der Kasse gibt es keinen Posten Servicegebühr", () => {
+    const { lines } = priceLines([], [{ artistId: ARTISTS[0]!.id, hours: 2, dateISO: "2026-10-10", slot: "15:00" }], name, labels);
+    expect(lines).toHaveLength(1);
+    expect(lines[0]!.amountInCents * lines[0]!.quantity).toBe(Math.round(ARTISTS[0]!.price * 100) * Math.max(2, Number(ARTISTS[0]!["minHours"]) || 1));
   });
 });

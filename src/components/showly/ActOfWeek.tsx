@@ -180,7 +180,7 @@ export function ActOfWeek() {
                 <span className="aotw-foot">
                   <span className="aotw-price">
                     {hasPackages && <small>{t("pkg.from")} </small>}
-                    <b>{fmt(Math.round(a.price * 1.2))}</b>{" "}
+                    <b>{fmt(a.price)}</b>{" "}
                     <small>{t(hasPackages ? "card.pkgUnit" : "card.hour")}</small>
                   </span>
                   <span className="aotw-go">

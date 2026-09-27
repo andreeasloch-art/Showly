@@ -148,9 +148,10 @@ async function artistTerms(admin: ReturnType<typeof adminClient>, artistId: numb
     artist_id: a.id as number | null,
     catalog_artist: null as number | null,
     hours: h,
-    amount_cents: base + fee,
+    /* Kunde zahlt den Endpreis; Showly behält die Provision ein */
+    amount_cents: base,
     fee_cents: fee,
-    payout_cents: Math.round(base * (1 - FEE_RATE)),
+    payout_cents: base - fee,
     instant: a.instant_book && standing.instantAllowed,
   };
 }
@@ -222,7 +223,7 @@ export const recordCart = createServerFn({ method: "POST" })
         snap.shop,
         snap.bookings,
         () => "",
-        { rent: "", buy: "", fee: "" },
+        { rent: "", buy: "" },
         snap.requests.filter((r) => r.direct).map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
         cat.extra,
       );

@@ -51,17 +51,17 @@ export const SEO: Record<string, Record<Lang, SeoText>> = {
     de: {
       title: "Künstler werden – als Act oder Planer auf Showly starten",
       description:
-        "Kostenlos registrieren, eigenen Kalender führen, 100 % der Gage behalten: So wirst du Showly-Künstler oder Eventplaner.",
+        "Kostenlos registrieren, eigenen Kalender führen, 80 % der Gage bekommen: So wirst du Showly-Künstler oder Eventplaner.",
     },
     en: {
       title: "Become an artist – start as an act or planner on Showly",
       description:
-        "Sign up for free, manage your own calendar and keep 100% of your fee: become a Showly artist or event planner.",
+        "Sign up for free, manage your own calendar and keep 80% of your fee: become a Showly artist or event planner.",
     },
     es: {
       title: "Hazte artista – empieza como act o planificador en Showly",
       description:
-        "Regístrate gratis, gestiona tu calendario y quédate el 100 % de tu caché: conviértete en artista u organizador de Showly.",
+        "Regístrate gratis, gestiona tu calendario y recibe el 80 % de tu caché: conviértete en artista u organizador de Showly.",
     },
   },
   "/dashboard": {

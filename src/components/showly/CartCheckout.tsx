@@ -63,7 +63,6 @@ const TEXT = {
     sumItems: "Artikel",
     sumSweets: "Torten & Süßes",
     fixed: "Festpreis",
-    sumFee: "Servicegebühr",
     sumTotal: "Jetzt zu zahlen",
     sumLater: "Torten-Anfragen (Preis folgt)",
     secure: "Sichere Zahlung über Stripe. Showly sieht keine Kartendaten.",
@@ -124,7 +123,6 @@ const TEXT = {
     sumItems: "Items",
     sumSweets: "Cakes & sweets",
     fixed: "Fixed price",
-    sumFee: "Service fee",
     sumTotal: "To pay now",
     sumLater: "Cake requests (price follows)",
     secure: "Secure payment via Stripe. Showly never sees card details.",
@@ -185,7 +183,6 @@ const TEXT = {
     sumItems: "Artículos",
     sumSweets: "Tartas y dulces",
     fixed: "Precio fijo",
-    sumFee: "Tarifa de servicio",
     sumTotal: "A pagar ahora",
     sumLater: "Solicitudes de tartas (precio a confirmar)",
     secure: "Pago seguro con Stripe. Showly no ve los datos de la tarjeta.",
@@ -677,12 +674,6 @@ export function CartCheckout() {
                   <li>
                     <span>{X.sumSweets}</span>
                     <span>{fmt(totals.sweets)}</span>
-                  </li>
-                )}
-                {totals.fees > 0 && (
-                  <li>
-                    <span>{X.sumFee}</span>
-                    <span>{fmt(totals.fees)}</span>
                   </li>
                 )}
                 <li className="total">

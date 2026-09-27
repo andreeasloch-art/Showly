@@ -1,4 +1,5 @@
 import { useNavigate } from "@tanstack/react-router";
+import { FEE_RATE } from "@/showly/pricing";
 import { useMemo, useRef, useState } from "react";
 import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
@@ -75,7 +76,7 @@ const COPY = {
     modeRequest: "Erst anfragen",
     modeRequestP: "Jede Buchung kommt als Anfrage. Du nimmst sie innerhalb von 48 Stunden an oder lehnst sie ab. Bezahlt wird erst bei Zusage.",
     hoursN: (n: number) => (n === 1 ? "1 Stunde" : `${n} Stunden`),
-    preview: (p: string) => `Kunden sehen: ${p} pro Stunde inkl. Servicegebühr`,
+    preview: (p: string, n: string) => `Kunden zahlen ${p} pro Stunde. Nach 20 % Showly-Gebühr bekommst du ${n}.`,
     pkgNote: "Als Planer verkaufst du feste Pakete. Der Betrag hier ist dein Einstiegspreis.",
     contactH: "Kontakt & Einsatzgebiet",
     contactP:
@@ -150,7 +151,7 @@ const COPY = {
     modeRequest: "Request first",
     modeRequestP: "Every booking arrives as a request. You accept or decline within 48 hours. Payment is only taken once you accept.",
     hoursN: (n: number) => (n === 1 ? "1 hour" : `${n} hours`),
-    preview: (p: string) => `Clients see: ${p} per hour incl. service fee`,
+    preview: (p: string, n: string) => `Clients pay ${p} per hour. After the 20% Showly fee you receive ${n}.`,
     pkgNote: "As a planner you sell fixed packages. This amount is your starting price.",
     contactH: "Contact & area",
     contactP:
@@ -225,7 +226,7 @@ const COPY = {
     modeRequest: "Primero solicitud",
     modeRequestP: "Cada reserva llega como solicitud. La aceptas o rechazas en 48 horas. El pago solo se cobra si aceptas.",
     hoursN: (n: number) => (n === 1 ? "1 hora" : `${n} horas`),
-    preview: (p: string) => `Los clientes ven: ${p} por hora con tarifa de servicio`,
+    preview: (p: string, n: string) => `Los clientes pagan ${p} por hora. Tras la comisión del 20 % de Showly recibes ${n}.`,
     pkgNote: "Como organizador vendes paquetes fijos. Este importe es tu precio de entrada.",
     contactH: "Contacto y zona",
     contactP:
@@ -805,7 +806,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
           </div>
           {!isPlanner && patch.price > 0 && (
             <p className="pe-note">
-              <Icon name="eye" /> {C.preview(fmt(Math.round(patch.price * 1.2)))}
+              <Icon name="eye" /> {C.preview(fmt(patch.price), fmt(Math.round(patch.price * (1 - FEE_RATE))))}
             </p>
           )}
           <fieldset className="pe-mode">

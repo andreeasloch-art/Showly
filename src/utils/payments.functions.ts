@@ -157,10 +157,10 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         : String((v as Record<string, string> | null)?.[lang] ?? (v as Record<string, string> | null)?.["de"] ?? "");
     const labels =
       lang === "en"
-        ? { rent: "rental", buy: "purchase", fee: "Service fee" }
+        ? { rent: "rental", buy: "purchase" }
         : lang === "es"
-          ? { rent: "alquiler", buy: "compra", fee: "Tarifa de servicio" }
-          : { rent: "Miete", buy: "Kauf", fee: "Servicegebühr" };
+          ? { rent: "alquiler", buy: "compra" }
+          : { rent: "Miete", buy: "Kauf" };
     /* Echte Künstler und Anbieter-Angebote stehen in der Datenbank */
     let extra: import("@/showly/pricing").Extra | undefined;
     try {

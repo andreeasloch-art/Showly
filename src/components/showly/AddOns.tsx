@@ -389,7 +389,7 @@ export function AddOnShelf({
             </span>
             <b className="shelf-name">{L(a.name)}</b>
             <span className="shelf-price">
-              {fmt(Math.round(a.price * 1.2))} <small>{X.perH}</small>
+              {fmt(a.price)} <small>{X.perH}</small>
             </span>
             <Link className="shelf-btn" to="/kuenstler/$id" params={{ id: String(a.id) }} onClick={onLeave}>
               {X.view}

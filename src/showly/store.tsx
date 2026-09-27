@@ -37,7 +37,7 @@ import { hydrateDbArtists } from "./cloudArtists";
 import { hydrateDbProviders, saveBakerCloud, saveSweetCloud } from "./cloudProviders";
 import type { Baker, Sweet } from "./sweets";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
+import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
 import {
   HEARING_DAYS,
   PENALTY_RATE,
@@ -1049,7 +1049,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     /* Strafen zu Buchungen aus der Datenbank legt der Server an */
     if (cloudOn && isDbId(b.id)) return;
     const a = findArtist(b.artistId);
-    const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount / 1.2);
+    const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount * (1 - FEE_RATE));
     /* Privatanbieter: keine Geldstrafe, der Eintrag zählt nur für das
        Stufenmodell (AGB § 9 Abs. 6) */
     const amount = isBusiness(a) ? Math.round(net * PENALTY_RATE[reason]) : 0;

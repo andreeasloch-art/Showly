@@ -76,8 +76,8 @@ function Detail() {
   const h = Math.min(maxHours, Math.max(minHours, hours ?? Math.max(minHours, 2)));
   const hourly = a.price;
   const base = curPkg ? curPkg.price : hourly * h;
-  const fee = Math.round(base * 0.2);
-  const total = base + fee;
+  /* Endpreis für den Kunden, ohne Aufschlag */
+  const total = base;
   const photos = ((a["photos"] as { id: string }[] | undefined) || []).slice(0, 3);
   const figImages = (a["figureImages"] as Record<string, { id: string }> | undefined) || {};
   const figs = figuresOf(a);
@@ -503,7 +503,7 @@ function Detail() {
                   </>
                 ) : (
                   <>
-                    {fmt(Math.round(hourly * 1.2))}{" "}
+                    {fmt(hourly)}{" "}
                     <span className="price-unit">{t("book.perHour")}</span>
                   </>
                 )}
@@ -625,10 +625,6 @@ function Detail() {
                   {curPkg ? L(curPkg.name) : t("book.timesH", { p: fmt(hourly), n: h })}
                 </span>
                 <span>{fmt(base)}</span>
-              </div>
-              <div className="pb-row">
-                <span>{t("book.fee")}</span>
-                <span>{fmt(fee)}</span>
               </div>
               <div className="pb-row">
                 <span>{t("book.total")}</span>

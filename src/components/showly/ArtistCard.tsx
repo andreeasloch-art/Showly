@@ -84,7 +84,7 @@ export function ArtistCard({ a }: { a: Artist }) {
         <div className="act-card-row act-card-foot">
           <span className="act-card-price">
             {hasPackages && <small>{t("pkg.from")} </small>}
-            <b>{fmt(Math.round(a.price * 1.2))}</b>{" "}
+            <b>{fmt(a.price)}</b>{" "}
             <small>{t(hasPackages ? "card.pkgUnit" : "card.hour")}</small>
           </span>
           {a.verified && (

@@ -51,8 +51,7 @@ export function BookingModal({
      Paketpreis, unabhängig von Stunden. */
   const hourly = a.price;
   const base = pkg ? pkg.price : hourly * hours;
-  const fee = Math.round(base * 0.2);
-  const total = base + fee;
+  const total = base;
 
   const [occasion, setOccasion] = useState("");
   const [notes, setNotes] = useState("");
@@ -149,7 +148,7 @@ export function BookingModal({
                       >
                         {Array.from({ length: 12 - minHours + 1 }, (_, i) => minHours + i).map((n) => (
                           <option value={n} key={n}>
-                            {t("book.hoursVal", { n })} · {fmt(Math.round(hourly * n * 1.2))}
+                            {t("book.hoursVal", { n })} · {fmt(hourly * n)}
                           </option>
                         ))}
                       </select>
@@ -198,10 +197,6 @@ export function BookingModal({
                         : `${t("mod.feeFor", { name: L(a.name) })} · ${t("book.timesH", { p: fmt(hourly), n: hours })}`}
                     </span>
                     <span>{fmt(base)}</span>
-                  </div>
-                  <div className="pb-row">
-                    <span>{t("book.fee")}</span>
-                    <span>{fmt(fee)}</span>
                   </div>
                   <p className="mod-cart-note">
                     <Icon name="cart" /> {C.note}

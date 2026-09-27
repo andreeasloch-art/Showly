@@ -16,7 +16,8 @@ export interface Extra {
   item?: (id: number) => ShopItem | undefined;
 }
 
-/** Servicegebühr auf Buchungen */
+/** Provision, die Showly von der Gage einbehält. Kunden zahlen den
+ *  angezeigten Endpreis ohne Aufschlag; Künstler bekommen 80 %. */
 export const FEE_RATE = 0.2;
 export const MAX_HOURS = 12;
 
@@ -71,7 +72,9 @@ export function bookingPrice(a: Artist, hours: number, pkgId?: string) {
   const hourly = a.price;
   const base = pkg ? pkg.price : hourly * h;
   const fee = Math.round(base * FEE_RATE);
-  return { pkg, hours: h, hourly, base, fee, total: base + fee, payout: Math.round(base * (1 - FEE_RATE)) };
+  /* total = was der Kunde zahlt (Endpreis), fee = Showly-Provision,
+     payout = was beim Künstler ankommt */
+  return { pkg, hours: h, hourly, base, fee, total: base, payout: base - fee };
 }
 
 export function shopUnit(i: ShopItem, mode: Mode) {
@@ -112,13 +115,10 @@ export function cartTotals(
     if (i) items += shopUnit(i, l.mode) * l.qty;
   }
   let artists = 0;
-  let fees = 0;
   for (const b of bookings) {
     const a = findArtist(b.artistId);
     if (!a) continue;
-    const p = bookingPrice(a, b.hours, b.pkg);
-    artists += p.base;
-    fees += p.fee;
+    artists += bookingPrice(a, b.hours, b.pkg).total;
   }
   /* Direkt gebuchte Süßwaren zählen zu den Artikeln. Eigene Angebote aus
      dem Browser haben noch keinen Katalogpreis; dann gilt der angezeigte. */
@@ -128,9 +128,8 @@ export function cartTotals(
   return {
     items,
     artists,
-    fees,
     sweets,
-    total: items + artists + fees + sweets,
+    total: items + artists + sweets,
   };
 }
 
@@ -146,13 +145,12 @@ export function priceLines(
   shop: { shopId: number; mode: Mode; qty: number }[],
   bookings: { artistId: number; hours: number; pkg?: string | undefined; dateISO: string; slot: string }[],
   name: (v: unknown) => string,
-  labels: { rent: string; buy: string; fee: string },
+  labels: { rent: string; buy: string },
   sweets: { sweetId: number; qty: number; dateISO: string }[] = [],
   extra?: Extra,
 ): { lines: PriceLine[]; unknown: string[] } {
   const lines: PriceLine[] = [];
   const unknown: string[] = [];
-  let fee = 0;
   for (const b of bookings) {
     const a = findArtist(b.artistId, extra);
     if (!a) {
@@ -165,7 +163,6 @@ export function priceLines(
         ? { name: `${name(a.name)} · ${name(p.pkg.name)} · ${b.dateISO} ${b.slot}`, amountInCents: Math.round(p.base * 100), quantity: 1 }
         : { name: `${name(a.name)} · ${b.dateISO} ${b.slot} · Std.`, amountInCents: Math.round(p.hourly * 100), quantity: p.hours },
     );
-    fee += p.fee;
   }
   for (const l of shop) {
     const i = findItem(l.shopId, extra);
@@ -193,11 +190,5 @@ export function priceLines(
       quantity: 1,
     });
   }
-  if (fee > 0)
-    lines.push({
-      name: labels.fee,
-      amountInCents: Math.round(fee * 100),
-      quantity: 1,
-    });
   return { lines, unknown };
 }

@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { FEE_RATE } from "@/showly/pricing";
 import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -98,7 +99,6 @@ function Become() {
     email: "",
     pw: "",
     hp: "",
-    birth: "",
     cat: "fairy",
     stage: "",
     figfree: "",
@@ -115,6 +115,9 @@ function Become() {
   const [business, setBusiness] = useState<boolean | null>(null);
   const [rulesOk, setRulesOk] = useState(false);
   const [taxOk, setTaxOk] = useState(false);
+  const [adult, setAdult] = useState(false);
+  const [privOk, setPrivOk] = useState(false);
+  const P = usePrivacyCopy();
   const RG =
     {
       de: {
@@ -123,6 +126,8 @@ function Become() {
         rulesPriv:
           "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen. Spätere Absagen und Nichterscheinen ohne belegten Notfall führen zu Verwarnung, Einschränkung und Sperre des Profils (AGB § 9).",
         rulesLink: "AGB lesen",
+        adult: "Ich bin mindestens 18 Jahre alt.",
+        adultNeed: "Anbieten können nur Volljährige. Bitte bestätige, dass du mindestens 18 bist.",
         need: "Bitte wähle privat oder gewerblich und bestätige die Punkte unten.",
         sweets: "Torten, Deko & Süßes",
         sweetsH: "Du bietest Torten, Süßes oder Deko an?",
@@ -137,6 +142,8 @@ function Become() {
         rulesPriv:
           "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences. Later cancellations and no-shows without a proven emergency lead to a warning, restrictions and suspension of the profile (T&C § 9).",
         rulesLink: "Read T&C",
+        adult: "I am at least 18 years old.",
+        adultNeed: "Only adults can offer services. Please confirm that you are at least 18.",
         need: "Please choose private or commercial and confirm the points below.",
         sweets: "Cakes, decor & sweets",
         sweetsH: "You offer cakes, sweets or decor?",
@@ -151,6 +158,8 @@ function Become() {
         rulesPriv:
           "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias. Las cancelaciones posteriores y las ausencias sin emergencia justificada llevan a aviso, restricción y bloqueo del perfil (CG § 9).",
         rulesLink: "Leer CG",
+        adult: "Tengo al menos 18 años.",
+        adultNeed: "Solo pueden ofrecer servicios mayores de edad. Confirma que tienes al menos 18 años.",
         need: "Elige particular o profesional y confirma los puntos de abajo.",
         sweets: "Tartas, deco y dulces",
         sweetsH: "¿Ofreces tartas, dulces o decoración?",
@@ -199,17 +208,15 @@ function Become() {
     if (!real || !form.loc.trim()) return toast(t("toast.regNeed"));
     if (!okText(form.desc)) return;
     if (business === null || !rulesOk || !taxOk) return toast(RG!.need);
+    if (!privOk) return toast(P.need);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
       return toast(t("sec.badEmail"));
     if (pw.score < 2) return toast(t("sec.weakPw"));
     const cat = form.cat;
     if (!CATS.some((c) => c.id === cat)) return toast(t("sec.badCat"));
-    /* Geburtsdatum: Pflicht, liegt in der Vergangenheit und ergibt ein
-       plausibles Alter. Es lässt sich später nicht mehr selbst ändern, weil
-       es mit dem Ausweis abgeglichen wird. */
-    const born = form.birth ? new Date(form.birth + "T00:00:00") : null;
-    const age = born ? (Date.now() - born.getTime()) / (365.25 * 86_400_000) : NaN;
-    if (!born || Number.isNaN(age) || age < 0 || age > 110) return toast(t("reg.birthNeed"));
+    /* Datensparsamkeit: kein Geburtsdatum, nur die Bestätigung der
+       Volljährigkeit. Das Alter prüft die Ausweisprüfung ohnehin. */
+    if (!adult) return toast(RG!.adultNeed);
     /* Gage immer pro Stunde. Planer geben den Preis ihres kleinsten Pakets an. */
     const price = parseInt(form.price || "0", 10) || (planner ? 890 : 80);
     const id = Math.max(...ARTISTS.map((a) => a.id)) + 1;
@@ -226,13 +233,13 @@ function Become() {
       color: "#F1EAFF",
       price: planner ? Math.min(price, 890) : price,
       minHours: 1,
-      birthDate: form.birth,
+      adultConfirmedAt: new Date().toISOString(),
       rating: 0,
       reviews: 0,
       verified: true,
       superhost: false,
       events: 0,
-      responseTime: { de: "1 Std.", en: "1h" },
+      responseTime: { de: "48 Std.", en: "48h", es: "48 h" },
       responseRate: "100%",
       shopIds: [],
       name: form.stage || real,
@@ -271,7 +278,7 @@ function Become() {
         planner,
         figures: [...figs, ...custom],
         radiusKm: prof.radiusKm,
-        birthDate: form.birth,
+        adult: true,
         business,
         rulesAcceptedAt: prof.rulesAcceptedAt,
         taxAck: true,
@@ -656,20 +663,10 @@ function Become() {
                   : ""}
               </div>
             </div>
-            <div className="input-group">
-              <label htmlFor="reg-birth">{t("reg.birth")}</label>
-              <input
-                id="reg-birth"
-                type="date"
-                autoComplete="bday"
-                max={new Date().toISOString().slice(0, 10)}
-                value={form.birth}
-                onChange={(e) => set("birth", e.target.value)}
-              />
-              <div className="join26-fieldnote">
-                <Icon name="lock" /> {t("reg.birthNote")}
-              </div>
-            </div>
+            <label className="reg-check">
+              <input id="reg-adult" type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />
+              <span>{RG!.adult}</span>
+            </label>
             <div className="hp-field" aria-hidden="true">
               <label htmlFor="reg-hp">Bitte leer lassen</label>
               <input
@@ -799,6 +796,7 @@ function Become() {
             </label>
             <TaxNotice compact />
             <TaxAck checked={taxOk} onChange={setTaxOk} />
+            <PrivacyAck checked={privOk} onChange={setPrivOk} id="reg-privacy" />
             <button className="home-btn primary wide" onClick={submit}>
               {planner ? t("reg.btnP") : t("reg.btn")}
               <Icon name="arrow" />

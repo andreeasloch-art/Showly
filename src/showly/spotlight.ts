@@ -2,6 +2,7 @@
    Jede Stadt der Welt hat ihren eigenen Top Act; bezahlt wird nur für die
    eigene Stadt und deren Umgebung (gleiches Land / gleiche Region). */
 
+import { allowed } from "./consent";
 import { countryForCity } from "./country";
 
 export const SPOTLIGHT_PRICE = 99;
@@ -127,7 +128,7 @@ function readClicks(): Clicks {
 
 /** Klick auf die Top-Act-Kachel zählen (pro Stadt + Act). */
 export function trackSpotlightClick(city: string, act: string) {
-  if (typeof localStorage === "undefined") return;
+  if (typeof localStorage === "undefined" || !allowed("comfort")) return;
   const all = readClicks();
   const k = `${citySlug(city)}::${citySlug(act)}`;
   const prev = all[k];

@@ -115,6 +115,20 @@ export const SEO: Record<string, Record<Lang, SeoText>> = {
         "Aviso legal, privacidad, seguridad, cookies y condiciones de Showly, de forma transparente.",
     },
   },
+  "/widerruf": {
+    de: {
+      title: "Vertrag widerrufen | Showly",
+      description: "Einen Kauf über Showly online widerrufen: Erklärung abgeben, bestätigen, Eingangsbestätigung per E-Mail.",
+    },
+    en: {
+      title: "Withdraw from contract | Showly",
+      description: "Withdraw from a purchase made through Showly online: submit, confirm, receive an email acknowledgement.",
+    },
+    es: {
+      title: "Desistir del contrato | Showly",
+      description: "Desiste en línea de una compra hecha en Showly: envía, confirma y recibe un acuse por correo.",
+    },
+  },
   "/anmelden": {
     de: {
       title: "Anmelden – mit Google, E-Mail oder Telefon | Showly",

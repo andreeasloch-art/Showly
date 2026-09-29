@@ -4,6 +4,7 @@
  * und werden in der Verwaltung beantwortet; die Antwort geht per Mail raus
  * und steht hier unter "Meine Anfragen". Ohne Datenbank (Vorschau) wird
  * nichts verschickt. */
+import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
@@ -138,6 +139,8 @@ function HelpPage() {
   const [topic, setTopic] = useState<SupportTopic>("booking");
   const [body, setBody] = useState("");
   const [hp, setHp] = useState("");
+  const [ack, setAck] = useState(false);
+  const P = usePrivacyCopy();
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [mine, setMine] = useState<Ticket[]>([]);
@@ -153,6 +156,7 @@ function HelpPage() {
   async function send() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast(C.needMail);
     if (body.trim().length < 5) return toast(C.needBody);
+    if (!ack) return toast(P.need);
     if (!cloud) {
       setSent(true);
       return;
@@ -200,7 +204,9 @@ function HelpPage() {
         ) : (
           <div className="help26-form">
             <label className="pe-field">
-              <span className="pe-label">{C.name}</span>
+              <span className="pe-label">
+                {C.name} <small>({lang === "en" ? "optional" : lang === "es" ? "opcional" : "freiwillig"})</small>
+              </span>
               <input value={name} autoComplete="name" onChange={(e) => setName(e.target.value)} />
             </label>
             <label className="pe-field">
@@ -223,6 +229,7 @@ function HelpPage() {
             </label>
             {/* Unsichtbar für Menschen, Bots füllen es aus */}
             <input className="help26-hp" tabIndex={-1} autoComplete="off" value={hp} onChange={(e) => setHp(e.target.value)} aria-hidden="true" />
+            <PrivacyAck checked={ack} onChange={setAck} id="help-privacy" />
             {!cloud && <p className="help26-note">{C.practice}</p>}
             <button type="button" className="home-btn primary" disabled={busy} onClick={() => void send()}>
               {C.send}

@@ -347,7 +347,6 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const isPlanner = ((a as { packages?: unknown[] }).packages || []).length > 0;
   const real = realName(a);
-  const birth = a["birthDate"] as string | undefined;
   const presets = figureList(a.cat).filter((f) => !draft.figures.includes(f.id));
 
   function set<K extends keyof Draft>(k: K, v: Draft[K]) {
@@ -500,13 +499,6 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
               <span className="pe-label">{C.realName}</span>
               <div className="pe-readonly">
                 <span>{real || "—"}</span>
-                <Icon name="lock" />
-              </div>
-            </div>
-            <div className="pe-field">
-              <span className="pe-label">{C.birth}</span>
-              <div className="pe-readonly">
-                <span>{birth ? fmtDate(birth) : C.notYet}</span>
                 <Icon name="lock" />
               </div>
             </div>

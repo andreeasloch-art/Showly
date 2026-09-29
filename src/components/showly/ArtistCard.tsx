@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { DemoBadge } from "@/components/showly/DemoBadge";
 import { useShowly } from "@/showly/store";
 import { CATS, ICON, type Artist } from "@/showly/data";
 import { CatIcon, Html, Icon, bgOf, hasImg } from "@/showly/ui";
@@ -31,6 +32,7 @@ export function ArtistCard({ a }: { a: Artist }) {
             </span>
           )}
         </div>
+        {a.demo && <DemoBadge className="on-card" />}
         {a.superhost && (
           <span className="act-card-badge">
             <Icon name="trophy" /> {t("card.superhost")}

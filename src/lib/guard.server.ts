@@ -33,11 +33,20 @@ export function clientIp(): string {
 
 /** true: erlaubt. Bei einer Störung der Datenbank wird nicht blockiert,
  *  damit echte Kunden nicht an einem Zählerfehler scheitern. */
+/* Datensparsamkeit: In der Zählertabelle steht nie die IP-Adresse oder
+   Nutzerkennung selbst, nur ein gekürzter Hash davon. Die Einträge
+   werden nach 2 Tagen gelöscht (hit_rate_limit). */
+async function pseudonym(who: string): Promise<string> {
+  const salt = process.env["RATE_LIMIT_SALT"] ?? "showly-rl";
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(salt + ":" + who));
+  return Array.from(new Uint8Array(buf).slice(0, 12), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 export async function allow(key: LimitKey, who: string): Promise<boolean> {
   const [max, seconds] = LIMITS[key];
   try {
     const { data, error } = await adminClient().rpc("hit_rate_limit", {
-      p_bucket: `${key}:${who}`,
+      p_bucket: `${key}:${await pseudonym(who)}`,
       p_max: max,
       p_seconds: seconds,
     });

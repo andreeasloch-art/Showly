@@ -36,6 +36,9 @@ const TEXT = {
     own: "Von dir",
     at: "Event am",
     photos: "Fotos vom Event",
+    onlyBooked: "Bewerten können nur Kunden, die dieses Profil über Showly gebucht haben, nach dem Termin.",
+    publish: "Ich willige ein, dass meine Bewertung mit dem angegebenen Namen und den Fotos öffentlich im Profil erscheint. Ich kann sie jederzeit löschen.",
+    needPublish: "Bitte bestätige, dass die Bewertung öffentlich erscheinen darf.",
   },
   en: {
     h: "Your review",
@@ -54,6 +57,9 @@ const TEXT = {
     own: "By you",
     at: "Event on",
     photos: "Photos from the event",
+    onlyBooked: "Only customers who booked this profile through Showly can leave a review, after the event.",
+    publish: "I agree that my review is shown publicly on the profile with the name and photos I entered. I can delete it at any time.",
+    needPublish: "Please confirm that the review may be shown publicly.",
   },
   es: {
     h: "Tu reseña",
@@ -72,6 +78,9 @@ const TEXT = {
     own: "Tuya",
     at: "Evento el",
     photos: "Fotos del evento",
+    onlyBooked: "Solo pueden opinar los clientes que reservaron este perfil en Showly, después del evento.",
+    publish: "Consiento que mi opinión se muestre públicamente en el perfil con el nombre y las fotos indicados. Puedo borrarla en cualquier momento.",
+    needPublish: "Confirma que la opinión puede mostrarse públicamente.",
   },
 } as const;
 
@@ -143,9 +152,13 @@ export function UserReviewList({ artistId }: { artistId: number }) {
 
 export function ReviewComposer({ artistId }: { artistId: number }) {
   const okText = useContactCheck();
-  const { lang, session, toast } = useShowly();
+  const { lang, session, toast, bookings } = useShowly();
   const L = (lang as "de" | "en" | "es") ?? "de";
   const T = TEXT[L] ?? TEXT.de;
+  /* Nur echte Kunden nach dem Termin (§ 5b Abs. 3 UWG: Bewertungen müssen
+     von Personen stammen, die das Angebot tatsächlich genutzt haben). */
+  const today = new Date().toISOString().slice(0, 10);
+  const mayReview = bookings.some((b) => b.artistId === artistId && b.status === "confirmed" && b.dateISO < today);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(session?.name ?? "");
@@ -154,6 +167,7 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
   const [when, setWhen] = useState("");
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [err, setErr] = useState("");
+  const [pub, setPub] = useState(false);
 
   /* Das Konto steht erst nach dem ersten Rendern bereit. */
   useEffect(() => {
@@ -163,6 +177,7 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
   function send() {
     if (!name.trim()) return setErr(T.needName);
     if (text.trim().length < 12) return setErr(T.needText);
+    if (!pub) return setErr(T.needPublish);
     if (!okText(name, text)) return;
     addReview({
       artistId,
@@ -179,6 +194,8 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
     setOpen(false);
     toast(T.thanks);
   }
+
+  if (!mayReview) return <p className="rev-only">{T.onlyBooked}</p>;
 
   if (!open) {
     return (
@@ -238,6 +255,10 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
 
       <MediaPicker value={media} onChange={setMedia} lang={L} />
 
+      <label className="reg-check">
+        <input type="checkbox" checked={pub} onChange={(e) => setPub(e.target.checked)} />
+        <span>{T.publish}</span>
+      </label>
       {err && <p className="picker-err">{err}</p>}
 
       <div className="rev-form-foot">

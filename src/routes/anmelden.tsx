@@ -6,7 +6,7 @@
  * bisherigen Lösung, nämlich im Browser abgelegte Passwörter.
  *
  * Die Sitzung landet danach in einem Cookie, das JavaScript nicht lesen kann. */
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
@@ -47,7 +47,7 @@ const COPY = {
     offH: "Die Datenbank ist noch nicht verbunden",
     offP: "Sobald die Zugangsdaten für Supabase hinterlegt sind, funktioniert diese Seite. Bis dahin läuft Showly im örtlichen Übungsbetrieb weiter.",
     privacy:
-      "Mit der Anmeldung stimmst du zu, dass wir deine Adresse zur Bestätigung nutzen. Mehr dazu in der Datenschutzerklärung.",
+      "Wir nutzen deine E-Mail-Adresse bzw. Telefonnummer, um dich anzumelden und dir Nachrichten zu deinen Buchungen zu schicken. Bei „Mit Google“ oder „Mit Apple“ gehen deine Anmeldedaten über Google bzw. Apple. Mehr in den",
   },
   en: {
     eyebrow: "Sign in",
@@ -76,7 +76,7 @@ const COPY = {
     offH: "The database is not connected yet",
     offP: "This page works as soon as the Supabase keys are in place. Until then Showly keeps running in local practice mode.",
     privacy:
-      "By signing in you agree that we use your address for confirmation. See the privacy notice for details.",
+      "We use your email address or phone number to sign you in and to send you messages about your bookings. With “Google” or “Apple”, sign-in goes through Google or Apple. More in the",
   },
   es: {
     eyebrow: "Entrar",
@@ -105,7 +105,7 @@ const COPY = {
     offH: "La base de datos aún no está conectada",
     offP: "Esta página funciona en cuanto estén las claves de Supabase. Mientras tanto Showly sigue en modo local.",
     privacy:
-      "Al entrar aceptas que usemos tu dirección para la confirmación. Más en el aviso de privacidad.",
+      "Usamos tu correo o teléfono para iniciar sesión y enviarte mensajes sobre tus reservas. Con «Google» o «Apple», el acceso pasa por Google o Apple. Más en la",
   },
 } as const;
 
@@ -298,7 +298,11 @@ function SignInPage() {
           )}
 
           <p className="konto-note">
-            <Icon name="shield" /> {T.privacy}
+            <Icon name="shield" /> {T.privacy}{" "}
+            <Link to="/rechtliches/$doc" params={{ doc: "privacy" }}>
+              {lang === "en" ? "privacy notice" : lang === "es" ? "información de privacidad" : "Datenschutzhinweisen"}
+            </Link>
+            .
           </p>
         </div>
       </div>

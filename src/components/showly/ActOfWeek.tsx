@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { DemoBadge } from "@/components/showly/DemoBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ARTISTS, type Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
@@ -147,6 +148,7 @@ export function ActOfWeek() {
                 <span className="aotw-chip">
                   <CatIcon id={a.cat} /> {catLabel(a.cat)}
                 </span>
+                {a.demo && <DemoBadge className="on-card" />}
                 {a.superhost && (
                   <span className="aotw-chip gold">
                     <Icon name="trophy" /> {t("card.superhost")}

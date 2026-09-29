@@ -1,5 +1,6 @@
 /* Bausteine für Torten & Süßes: Texte, Anbieterkarte, Angebotskarte,
    Anfrage-Fenster und die Liste eigener Anfragen. */
+import { DemoBadge } from "@/components/showly/DemoBadge";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
@@ -282,6 +283,7 @@ export function BakerCard({ b }: { b: Baker }) {
         <span className="act-card-badge">
           <KindBadge b={b} />
         </span>
+        {b.demo && <DemoBadge className="on-card" />}
       </div>
       <div className="act-card-body">
         <div className="act-card-row">

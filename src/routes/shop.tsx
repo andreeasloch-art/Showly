@@ -1,4 +1,6 @@
 import { seoHead } from "@/showly/seo";
+import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
+import { DemoBadge } from "@/components/showly/DemoBadge";
 import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
@@ -502,6 +504,8 @@ function DecoOffer({
   const [photo, setPhoto] = useState<MediaRef | undefined>();
   const [business, setBusiness] = useState<boolean | null>(null);
   const [taxOk, setTaxOk] = useState(false);
+  const [privOk, setPrivOk] = useState(false);
+  const P = usePrivacyCopy();
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -519,6 +523,7 @@ function DecoOffer({
     const r = price(rent);
     if (!vendor.trim() || !name.trim() || (!b && !r)) return toast(F.need);
     if (business === null || !taxOk) return toast(F.needStatus);
+    if (!privOk) return toast(P.need);
     if (!okText(name, desc)) return;
     /* Mit Datenbank: Angebot auf dem Server, sichtbar nach Freischaltung */
     if (session?.backend) {
@@ -632,6 +637,7 @@ function DecoOffer({
           <StatusChoice value={business} onChange={setBusiness} />
           <TaxNotice compact />
           <TaxAck checked={taxOk} onChange={setTaxOk} />
+          <PrivacyAck checked={privOk} onChange={setPrivOk} id="deco-privacy" />
           <p className="pe-note">
             <Icon name="lock" /> {F.note}
           </p>
@@ -673,6 +679,7 @@ function ProductCard({
       <div className="act-card-media prod-media">
         <div className="act-card-img" style={shopBg(i)} />
         {i.own && <span className="prod-new">{C.newTag}</span>}
+        {i.demo && <DemoBadge className="on-card" />}
         <span className={"act-card-badge prod-badge" + (both ? " both" : "")}>
           {t(both ? "shop.rentBuy" : "shop.buyOnly")}
         </span>

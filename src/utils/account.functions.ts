@@ -50,6 +50,26 @@ export const deleteMyAccount = createServerFn({ method: "POST" }).handler(
       }
       if ((asCustomer || 0) + asArtist > 0) return { error: "open" };
 
+      /* Ausweisbilder und Selfie bei Stripe löschen lassen, bevor das Konto
+         verschwindet; danach wüsste niemand mehr, zu wem sie gehören. */
+      const { data: checks } = await admin
+        .from("verifications")
+        .select("provider_session_id")
+        .eq("profile_id", userId);
+      if (checks?.length) {
+        try {
+          const { createStripeClient } = await import("@/lib/stripe.server");
+          const stripe = createStripeClient(
+            process.env["STRIPE_LIVE_API_KEY"] && process.env["NODE_ENV"] === "production" ? "live" : "sandbox",
+          );
+          for (const c of checks)
+            if (c.provider_session_id)
+              await stripe.identity.verificationSessions.redact(c.provider_session_id).catch(() => null);
+        } catch {
+          /* Stripe nicht erreichbar: Konto trotzdem löschen, Rest per Support */
+        }
+      }
+
       const { error } = await admin.auth.admin.deleteUser(userId);
       if (error) return { error: "failed", message: error.message };
       return { ok: true };

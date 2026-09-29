@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { allowed } from "@/showly/consent";
 import { useRouter, useRouterState } from "@tanstack/react-router";
 import { ARTISTS } from "@/showly/data";
 import {
@@ -150,7 +151,9 @@ export function CityAutocomplete({
   // Echte Adresssuche (Straße, Hausnummer, PLZ, Ort) über Photon/OSM – debounced + gecacht.
   useEffect(() => {
     const q = value.trim();
-    if (q.length < 3) {
+    /* Fremder Dienst (Komoot Photon): nur mit Einwilligung, sonst reicht
+       die eingebaute Städteliste */
+    if (q.length < 3 || !allowed("places")) {
       setRemote([]);
       setLoading(false);
       return;

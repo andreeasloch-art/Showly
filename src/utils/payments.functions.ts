@@ -183,11 +183,12 @@ export const createCartCheckout = createServerFn({ method: "POST" })
       labels,
       data.sweets ?? [],
       extra,
+      { allowDemo: false },
     );
     if (unknown.length) {
       return {
         error:
-          "Einige Posten sind noch nicht in der Datenbank und können nicht online bezahlt werden: " +
+          "Beispielangebote und Posten, die nicht in der Datenbank stehen, können nicht bezahlt werden: " +
           unknown.join(", "),
       };
     }

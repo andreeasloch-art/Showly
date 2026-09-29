@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router"
 import { LEGAL_DOCS, LEGAL_DOCS_ES } from "@/showly/legal";
 import { useShowly } from "@/showly/store";
 import { Footer } from "@/components/showly/Footer";
+import { openConsentSettings } from "@/showly/consent";
 
 const TABS: [string, string][] = [
   ["imprint", "legal.imprint"],
@@ -10,7 +11,14 @@ const TABS: [string, string][] = [
   ["security", "sec.tab"],
   ["cookies", "legal.cookies"],
   ["terms", "legal.terms"],
+  ["withdrawal", "legal.withdrawal"],
+  ["accessibility", "legal.accessibility"],
 ];
+
+const EXTRA: Record<string, Record<string, string>> = {
+  withdrawal: { de: "Widerruf", en: "Withdrawal", es: "Desistimiento" },
+  accessibility: { de: "Barrierefreiheit", en: "Accessibility", es: "Accesibilidad" },
+};
 
 export const Route = createFileRoute("/rechtliches/$doc")({
   head: ({ params }) => seoHead("/rechtliches/$doc", `/rechtliches/${params.doc}`),
@@ -38,10 +46,15 @@ function Legal() {
                 className={"legal-tab" + (id === active ? " on" : "")}
                 onClick={() => navigate({ to: "/rechtliches/$doc", params: { doc: id } })}
               >
-                {t(key)}
+                {EXTRA[id]?.[lang] ?? EXTRA[id]?.["de"] ?? t(key)}
               </button>
             ))}
           </div>
+          {active === "cookies" && (
+            <button type="button" className="home-btn primary legal-consent-btn" onClick={openConsentSettings}>
+              {lang === "en" ? "Open privacy settings" : lang === "es" ? "Abrir ajustes de privacidad" : "Einstellungen öffnen"}
+            </button>
+          )}
           <div
             className="legal-doc"
             dangerouslySetInnerHTML={{ __html: docs[active] || LEGAL_DOCS[active]! }}

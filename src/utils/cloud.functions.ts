@@ -108,7 +108,7 @@ async function artistTerms(admin: ReturnType<typeof adminClient>, artistId: numb
   const { isInstant, standingOf } = await import("@/showly/booking");
   if (artistId < REAL_ARTIST_FROM) {
     const a = findArtist(artistId);
-    if (!a) return null;
+    if (!a || a.demo) return null; // Beispielprofile sind nicht buchbar
     const p = bookingPrice(a, hours, pkg);
     return {
       artist_id: null as number | null,
@@ -226,6 +226,7 @@ export const recordCart = createServerFn({ method: "POST" })
         { rent: "", buy: "" },
         snap.requests.filter((r) => r.direct).map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
         cat.extra,
+        { allowDemo: false },
       );
       const expected = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
       if (unknown.length || expected !== amount) return { error: "Betrag passt nicht zum Warenkorb" };
@@ -507,7 +508,8 @@ export interface ArtistSignup {
   planner: boolean;
   figures: string[];
   radiusKm: number;
-  birthDate: string;
+  /** Volljährigkeit bestätigt (kein Geburtsdatum, Datensparsamkeit) */
+  adult: boolean;
   business: boolean;
   rulesAcceptedAt: string;
   taxAck: boolean;
@@ -526,12 +528,12 @@ export const registerArtist = createServerFn({ method: "POST" })
       planner: !!d.planner,
       figures: Array.isArray(d.figures) ? d.figures.map((f) => s(f, 60)).filter(Boolean).slice(0, 30) : [],
       radiusKm: Math.max(1, Math.min(800, Math.round(Number(d.radiusKm)) || 50)),
-      birthDate: DATE.test(d.birthDate) ? d.birthDate : "",
+      adult: d.adult === true,
       business: d.business === true,
       rulesAcceptedAt: s(d.rulesAcceptedAt, 40),
       taxAck: d.taxAck === true,
     };
-    if (!/^[a-z0-9_-]{2,40}$/.test(out.cat) || !out.real || !out.loc || !out.birthDate)
+    if (!/^[a-z0-9_-]{2,40}$/.test(out.cat) || !out.real || !out.loc || !out.adult)
       throw new Error("Angaben unvollständig");
     /* AGB § 18: privat oder gewerblich angegeben, Regeln zu Absage und
        Nichterscheinen sowie Steuerhinweis bestätigt */

@@ -43,8 +43,15 @@ function mapStatus(s: Stripe.Identity.VerificationSession["status"]): Verificati
   }
 }
 
-/** Schritt 1: Prüfung starten. Nur für angemeldete Künstler und Planer. */
-export const startIdentityCheck = createServerFn({ method: "POST" }).handler(
+/** Schritt 1: Prüfung starten. Nur für angemeldete Künstler und Planer.
+ *  Das Selfie ist ein biometrisches Merkmal (Art. 9 DSGVO); ohne
+ *  ausdrückliche Einwilligung startet die Prüfung nicht. */
+export const startIdentityCheck = createServerFn({ method: "POST" })
+  .inputValidator((d: { consent: boolean }) => {
+    if (d?.consent !== true) throw new Error("Einwilligung fehlt");
+    return { consent: true as const };
+  })
+  .handler(
   async (): Promise<{ clientSecret: string } | { error: string }> => {
     try {
       const { user } = await requireRole("artist", "planner");
@@ -116,6 +123,10 @@ export const refreshIdentityCheck = createServerFn({ method: "POST" }).handler(
       if (status === "verified") {
         /* Mit bestandener Prüfung wird das Profil auch sichtbar und buchbar */
         await db.from("artists").update({ verified: true, published: true }).eq("owner", user.id);
+        /* Ausweisbilder und Selfie bei Stripe löschen lassen (Redaction).
+           Showly braucht nur das Ergebnis; so wird das Versprechen im
+           Hinweistext tatsächlich eingelöst. */
+        await stripe.identity.verificationSessions.redact(row.provider_session_id).catch(() => null);
       }
 
       return reason ? { status, reason } : { status };

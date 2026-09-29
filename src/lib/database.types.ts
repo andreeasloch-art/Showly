@@ -373,6 +373,10 @@ export type Database = {
         Args: { p_bucket: string; p_max: number; p_seconds: number };
         Returns: boolean;
       };
+      purge_old_data: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     CompositeTypes: Record<string, never>;
     Enums: {

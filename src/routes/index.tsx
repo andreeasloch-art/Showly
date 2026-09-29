@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
 /* Texte, die es nur auf dieser Seite gibt. */
 const COPY = {
   de: {
-    pill: (n: number) => `${n} geprüfte Acts · Festpreise · sichere Zahlung`,
+    pill: (n: number) => (n > 0 ? `${n} geprüfte Acts · Festpreise · sichere Zahlung` : "Festpreise · sichere Zahlung · ausweisgeprüfte Anbieter"),
     facts: "Showly in Zahlen",
     acts: "Acts auf Showly",
     cats: "Sparten",
@@ -40,7 +40,7 @@ const COPY = {
     ],
   },
   en: {
-    pill: (n: number) => `${n} verified acts · fixed prices · secure payment`,
+    pill: (n: number) => (n > 0 ? `${n} verified acts · fixed prices · secure payment` : "Fixed prices · secure payment · ID-checked providers"),
     facts: "Showly in numbers",
     acts: "Acts on Showly",
     cats: "Categories",
@@ -57,7 +57,7 @@ const COPY = {
     ],
   },
   es: {
-    pill: (n: number) => `${n} acts verificados · precios fijos · pago seguro`,
+    pill: (n: number) => (n > 0 ? `${n} acts verificados · precios fijos · pago seguro` : "Precios fijos · pago seguro · proveedores con identidad verificada"),
     facts: "Showly en cifras",
     acts: "Acts en Showly",
     cats: "Categorías",
@@ -107,14 +107,15 @@ function Home() {
   /* Kennzahlen aus den echten Daten. Vorher standen hier feste Werte wie
      "2.400+ Künstler" und "18.700+ Events", bei 25 Profilen auf der Seite.
      Solche Zahlen fallen Kunden auf und sind im Wettbewerbsrecht heikel. */
+  /* Beispielprofile zählen nicht mit: Zahlen nur aus echten Profilen. */
   const facts = useMemo(() => {
-    const reviews = ARTISTS.reduce((s, a) => s + (a.reviews || 0), 0);
-    const rating = reviews
-      ? ARTISTS.reduce((s, a) => s + a.rating * (a.reviews || 0), 0) / reviews
-      : 0;
-    const cities = new Set(ARTISTS.map((a) => String(L(a.loc)))).size;
+    const real = ARTISTS.filter((a) => !a.demo);
+    const reviews = real.reduce((s, a) => s + (a.reviews || 0), 0);
+    const rating = reviews ? real.reduce((s, a) => s + a.rating * (a.reviews || 0), 0) / reviews : 0;
+    const cities = new Set(real.map((a) => String(L(a.loc)))).size;
     const cats = CATS.filter((c) => c.id !== "all").length;
-    return { acts: ARTISTS.length, reviews, rating, cities, cats };
+    const verified = real.filter((a) => a.verified).length;
+    return { acts: real.length, reviews, rating, cities, cats, verified };
   }, [L]);
 
   function scrollToGrid() {
@@ -180,7 +181,7 @@ function Home() {
           <div className="home-hero-copy">
             <div className="home-pill rise" style={{ ["--d" as string]: "0ms" }}>
               <span className="home-pill-dot" aria-hidden="true" />
-              {C.pill(facts.acts)}
+              {C.pill(facts.verified)}
             </div>
 
             <h1 className="home-h1 h1-lockup">
@@ -344,6 +345,8 @@ function Home() {
         </div>
       </div>
 
+      {/* Nur echte Profile; solange es keine gibt, keine Zahlen */}
+      {facts.acts > 0 && (
       <section className="home-facts" aria-label={C.facts} data-reveal>
         <div className="home-facts-inner">
           <div className="home-fact">
@@ -358,6 +361,7 @@ function Home() {
             </b>
             <span>{C.cats}</span>
           </div>
+          {facts.reviews > 0 && (
           <div className="home-fact">
             <b>
               <CountUp value={facts.rating} format={(n) => num(n, 2)} />
@@ -367,6 +371,7 @@ function Home() {
             </b>
             <span>{C.rating(facts.reviews.toLocaleString(lang === "en" ? "en" : "de"))}</span>
           </div>
+          )}
           <div className="home-fact">
             <b>
               <CountUp value={facts.cities} format={(n) => String(Math.round(n))} />
@@ -375,6 +380,7 @@ function Home() {
           </div>
         </div>
       </section>
+      )}
 
       <section className="home-how">
         <div className="home-how-inner">

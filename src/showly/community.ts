@@ -161,3 +161,17 @@ export function addComment(postId: string, author: string, text: string) {
   );
   publish();
 }
+
+/** Beim Löschen des Kontos: alle Beiträge, Kommentare und Bewertungen
+ *  dieser Person samt Fotos und Videos wirklich entfernen. */
+export function removeAllBy(author: string) {
+  ensure();
+  const mine = (a: string) => a.trim().toLowerCase() === author.trim().toLowerCase();
+  for (const r of reviews) if (mine(r.author)) r.media.forEach((m) => void deleteMedia(m.id));
+  for (const p of posts) if (mine(p.author)) p.media.forEach((m) => void deleteMedia(m.id));
+  reviews = reviews.filter((r) => !mine(r.author));
+  posts = posts
+    .filter((p) => !mine(p.author))
+    .map((p) => ({ ...p, comments: p.comments.filter((c) => !mine(c.author)) }));
+  publish();
+}

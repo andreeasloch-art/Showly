@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { DemoBadge, DemoNote, demoBookable } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { isBusiness } from "@/showly/providerStatus";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
@@ -184,6 +185,7 @@ function Detail() {
                   {a.verified && (
                     <span className="detail-flag detail-flag-ok">✓ {t("card.verified")}</span>
                   )}
+                  {a.demo && <DemoBadge />}
                 </div>
                 <h1 className="detail-h1">{L(a.name)}</h1>
                 <div className="detail-meta">
@@ -232,7 +234,7 @@ function Detail() {
                 ))}
               </div>
             )}
-            <ProviderStatusNote business={isBusiness(a)} />
+            {a.demo ? <DemoNote /> : <ProviderStatusNote business={isBusiness(a)} />}
           </header>
 
           <div className="stats-grid">
@@ -634,6 +636,7 @@ function Detail() {
 
             <button
               className="btn-primary book-cta"
+              disabled={!!a.demo && !demoBookable()}
               onClick={() => {
                 if (!cal.sel.date || !cal.sel.slot) {
                   toast(t("book.pickFirst"));

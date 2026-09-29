@@ -1,5 +1,6 @@
 // Standorterkennung (Zeitzone) -> Land, Sprache und lokale Städtevorschläge.
 
+import { allowed } from "./consent";
 import type { Lang } from "./data";
 import { citiesOf, cityCountry } from "./cities";
 
@@ -243,6 +244,7 @@ export function countryForCity(city: string): CountryCode | null {
 
 /** Zuletzt erkannte/gewählte Stadt merken. */
 export function rememberCity(city: string) {
+  if (!allowed("comfort")) return;
   try {
     if (city) localStorage.setItem(CITY_KEY, city);
   } catch {
@@ -333,6 +335,8 @@ export async function requestGeoCity(): Promise<string | null> {
 }
 
 async function reverseCity(lat: number, lon: number): Promise<string | null> {
+  /* Standort geht nur mit Einwilligung an Komoot (Cookie-Einstellungen) */
+  if (!allowed("places")) return null;
   try {
     const url = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}&limit=1`;
     const r = await fetch(url);
@@ -367,6 +371,7 @@ export async function geoCity(): Promise<string | null> {
     );
   });
   if (!pos) return null;
+  if (!allowed("places")) return null;
   try {
     const url = `https://photon.komoot.io/reverse?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}&limit=1`;
     const r = await fetch(url);

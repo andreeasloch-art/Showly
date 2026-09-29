@@ -74,6 +74,8 @@ export interface Baker {
   /** Liefergebiet in Kilometern, 0 = nur Abholung */
   radiusKm: number;
   verified: boolean;
+  /** Beispielprofil aus dem Katalog, kein echter Anbieter */
+  demo?: boolean;
   /** Bild aus public/sweets als Titelbild, solange keine Fotos da sind */
   coverImg: number;
   photos?: MediaRef[] | undefined;
@@ -136,9 +138,9 @@ export const BAKERS: Baker[] = [
     kind: "business",
     name: L("Konditorei Zuckerblüte", "Zuckerblüte Patisserie", "Pastelería Zuckerblüte"),
     city: "Berlin",
-    rating: 4.97,
-    reviews: 184,
-    since: 2019,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Hochzeitstorten mit echten Blüten",
       "Wedding cakes with real flowers",
@@ -152,7 +154,8 @@ export const BAKERS: Baker[] = [
     specialties: ["wedding", "motif", "cakes"],
     leadDays: 21,
     radiusKm: 40,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 1,
     diets: ["vegetarisch", "glutenfrei auf Anfrage"],
   },
@@ -161,9 +164,9 @@ export const BAKERS: Baker[] = [
     kind: "business",
     name: L("Tortenatelier Sahnehäubchen", "Sahnehäubchen Cake Studio", "Taller de tartas Sahnehäubchen"),
     city: "München",
-    rating: 4.92,
-    reviews: 131,
-    since: 2020,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Drip Cakes und Zahlentorten für jede Party",
       "Drip cakes and number cakes for every party",
@@ -177,7 +180,8 @@ export const BAKERS: Baker[] = [
     specialties: ["birthday", "motif"],
     leadDays: 7,
     radiusKm: 25,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 3,
   },
   {
@@ -185,9 +189,9 @@ export const BAKERS: Baker[] = [
     kind: "business",
     name: L("Candy Bar Company", "Candy Bar Company", "Candy Bar Company"),
     city: "Köln",
-    rating: 4.95,
-    reviews: 96,
-    since: 2021,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Candy Bars und Donut-Wände mit Aufbau",
       "Candy bars and donut walls with setup",
@@ -201,7 +205,8 @@ export const BAKERS: Baker[] = [
     specialties: ["candybar", "cupcakes"],
     leadDays: 10,
     radiusKm: 80,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 8,
   },
   {
@@ -209,9 +214,9 @@ export const BAKERS: Baker[] = [
     kind: "private",
     name: L("Mia backt", "Mia bakes", "Mia hornea"),
     city: "Leipzig",
-    rating: 4.99,
-    reviews: 47,
-    since: 2023,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Cupcakes und Cake Pops aus der Hobbyküche",
       "Cupcakes and cake pops from a home kitchen",
@@ -225,7 +230,8 @@ export const BAKERS: Baker[] = [
     specialties: ["cupcakes", "birthday"],
     leadDays: 5,
     radiusKm: 15,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 6,
     foodRegistered: true,
   },
@@ -234,9 +240,9 @@ export const BAKERS: Baker[] = [
     kind: "business",
     name: L("Patisserie Petit Four", "Petit Four Patisserie", "Pastelería Petit Four"),
     city: "Frankfurt",
-    rating: 4.9,
-    reviews: 78,
-    since: 2018,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Macarons, Petit Fours und Logo-Torten für Firmen",
       "Macarons, petits fours and logo cakes for companies",
@@ -250,7 +256,8 @@ export const BAKERS: Baker[] = [
     specialties: ["patisserie", "motif", "wedding"],
     leadDays: 7,
     radiusKm: 60,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 10,
   },
   {
@@ -258,9 +265,9 @@ export const BAKERS: Baker[] = [
     kind: "private",
     name: L("Omas Kuchenküche – Helga", "Grandma's cake kitchen – Helga", "La cocina de la abuela – Helga"),
     city: "Stuttgart",
-    rating: 4.96,
-    reviews: 39,
-    since: 2024,
+    rating: 0,
+    reviews: 0,
+    since: 2026,
     tagline: L(
       "Blechkuchen wie früher, auch vegan",
       "Traybakes like in the old days, vegan too",
@@ -274,7 +281,8 @@ export const BAKERS: Baker[] = [
     specialties: ["cakes"],
     leadDays: 3,
     radiusKm: 10,
-    verified: true,
+    verified: false,
+    demo: true,
     coverImg: 12,
     diets: ["vegan"],
     foodRegistered: true,

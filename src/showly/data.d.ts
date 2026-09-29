@@ -10,7 +10,9 @@ export interface Artist {
   /** Einsatzradius in km ab dem eigenen Standort; 800 steht für deutschlandweit. */
   radiusKm?: number;
   shopIds?: number[]; name: LText; loc: LText; exp?: LText; desc: LText; tags?: LList; langs?: LList;
-  includes?: LList; figures?: any[]; pkgs?: Pkg[]; rev?: Review[]; real?: LText; [k: string]: any;
+  includes?: LList; figures?: any[]; pkgs?: Pkg[]; rev?: Review[]; real?: LText;
+  /** Beispielprofil aus dem Katalog: nicht echt, nicht buchbar */
+  demo?: boolean; [k: string]: any;
 }
 export interface ShopItem {
   id: number; cat: string; artistCat?: string; rent: number; buy: number; rating: number; reviews: number;
@@ -25,6 +27,8 @@ export interface ShopItem {
   photo?: { id: string; kind: "image" | "video"; name?: string; ratio?: number } | undefined;
   /** Von einem Anbieter in diesem Browser angelegt */
   own?: boolean;
+  /** Beispielartikel aus dem Katalog: nicht echt, nicht kaufbar */
+  demo?: boolean;
 }
 export const I18N: Record<string, Record<string, string>>;
 export const ICON: Record<string, string>;

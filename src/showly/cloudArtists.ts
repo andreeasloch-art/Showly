@@ -37,7 +37,8 @@ export function artistFromRow(r: PublicRow): Artist {
     verified: r.verified,
     superhost: r.superhost,
     events: r.events_count || 0,
-    responseTime: txt(r.response_time),
+    /* Keine erfundene Antwortzeit: ohne Wert gilt die Frist aus den AGB */
+    responseTime: txt(r.response_time).de ? txt(r.response_time) : { de: "48 Std.", en: "48h", es: "48 h" },
     responseRate: r.response_rate || "100%",
     shopIds: [],
     name: txt(r.name),

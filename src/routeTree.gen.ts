@@ -22,6 +22,7 @@ import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TopActRouteImport } from './routes/top-act'
+import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
 import { Route as KuenstlerIdRouteImport } from './routes/kuenstler.$id'
@@ -95,6 +96,11 @@ const TopActRoute = TopActRouteImport.update({
   path: '/top-act',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WiderrufRoute = WiderrufRouteImport.update({
+  id: '/widerruf',
+  path: '/widerruf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRueckkehrRoute = AuthRueckkehrRouteImport.update({
   id: '/auth/rueckkehr',
   path: '/auth/rueckkehr',
@@ -145,6 +151,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/widerruf': typeof WiderrufRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -167,6 +174,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/widerruf': typeof WiderrufRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -190,6 +198,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/widerruf': typeof WiderrufRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/widerruf'
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
@@ -236,6 +246,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/widerruf'
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
@@ -258,6 +269,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/widerruf'
     | '/auth/rueckkehr'
     | '/checkout_/return'
     | '/kuenstler/$id'
@@ -281,6 +293,7 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TopActRoute: typeof TopActRoute
+  WiderrufRoute: typeof WiderrufRoute
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   KuenstlerIdRoute: typeof KuenstlerIdRoute
@@ -383,6 +396,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TopActRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/widerruf': {
+      id: '/widerruf'
+      path: '/widerruf'
+      fullPath: '/widerruf'
+      preLoaderRoute: typeof WiderrufRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/rueckkehr': {
       id: '/auth/rueckkehr'
       path: '/auth/rueckkehr'
@@ -449,6 +469,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TopActRoute: TopActRoute,
+  WiderrufRoute: WiderrufRoute,
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   KuenstlerIdRoute: KuenstlerIdRoute,

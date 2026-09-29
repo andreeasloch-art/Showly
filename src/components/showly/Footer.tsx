@@ -1,4 +1,5 @@
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { openConsentSettings } from "@/showly/consent";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 
@@ -113,22 +114,38 @@ export function Footer() {
           <div>
             <div className="footer-col-title">{t("foot.platform")}</div>
             <ul className="footer-links">
-              <li onClick={() => navigate({ to: "/" })}>{t("foot.find")}</li>
-              <li onClick={() => navigate({ to: "/shop" })}>{t("foot.shop")}</li>
-              <li onClick={() => navigate({ to: "/shop", search: { bereich: "deko" } })}>{t("shop.deko")}</li>
-              <li onClick={() => navigate({ to: "/torten" })}>{t("nav.sweets")}</li>
-              <li onClick={() => navigate({ to: "/mitmachen" })}>{t("foot.become")}</li>
-              {session && <li onClick={() => navigate({ to: "/dashboard" })}>{t("foot.dash")}</li>}
-              {session?.admin && <li onClick={() => navigate({ to: "/admin" })}>Verwaltung</li>}
+              <li>
+                <Link to="/">{t("foot.find")}</Link>
+              </li>
+              <li>
+                <Link to="/shop">{t("foot.shop")}</Link>
+              </li>
+              <li>
+                <Link to="/shop" search={{ bereich: "deko" }}>{t("shop.deko")}</Link>
+              </li>
+              <li>
+                <Link to="/torten">{t("nav.sweets")}</Link>
+              </li>
+              <li>
+                <Link to="/mitmachen">{t("foot.become")}</Link>
+              </li>
+              {session && <li>
+                <Link to="/dashboard">{t("foot.dash")}</Link>
+              </li>}
+              {session?.admin && <li>
+                <Link to="/admin">Verwaltung</Link>
+              </li>}
             </ul>
           </div>
           <div>
             <div className="footer-col-title">{t("foot.company")}</div>
             <ul className="footer-links">
               <li>{t("foot.about")}</li>
-              <li onClick={() => navigate({ to: "/blog" })}>{t("foot.blog")}</li>
-              <li onClick={() => navigate({ to: "/hilfe" })}>
-                {lang === "en" ? "Help & contact" : lang === "es" ? "Ayuda y contacto" : "Hilfe & Kontakt"}
+              <li>
+                <Link to="/blog">{t("foot.blog")}</Link>
+              </li>
+              <li>
+                <Link to="/hilfe">{lang === "en" ? "Help & contact" : lang === "es" ? "Ayuda y contacto" : "Hilfe & Kontakt"}</Link>
               </li>
               <li>{t("foot.jobs")}</li>
               <li>{t("foot.press")}</li>
@@ -137,17 +154,32 @@ export function Footer() {
           <div>
             <div className="footer-col-title">{t("foot.legal")}</div>
             <ul className="footer-links">
-              <li onClick={() => navigate({ to: "/rechtliches/$doc", params: { doc: "terms" } })}>
-                {t("foot.terms")}
+              <li>
+                <Link to="/rechtliches/$doc" params={{ doc: "terms" }}>{t("foot.terms")}</Link>
               </li>
-              <li onClick={() => navigate({ to: "/rechtliches/$doc", params: { doc: "privacy" } })}>
-                {t("foot.privacy")}
+              <li>
+                <Link to="/rechtliches/$doc" params={{ doc: "privacy" }}>{t("foot.privacy")}</Link>
               </li>
-              <li onClick={() => navigate({ to: "/rechtliches/$doc", params: { doc: "imprint" } })}>
-                {t("foot.imprint")}
+              <li>
+                <Link to="/rechtliches/$doc" params={{ doc: "imprint" }}>{t("foot.imprint")}</Link>
               </li>
-              <li onClick={() => navigate({ to: "/rechtliches/$doc", params: { doc: "cookies" } })}>
-                {t("cookie.change")}
+              <li>
+                <Link to="/widerruf">{lang === "en" ? "Withdraw from contract" : lang === "es" ? "Desistir del contrato" : "Vertrag widerrufen"}</Link>
+              </li>
+              <li>
+                <Link to="/rechtliches/$doc" params={{ doc: "withdrawal" }}>
+                  {lang === "en" ? "Withdrawal policy" : lang === "es" ? "Derecho de desistimiento" : "Widerrufsbelehrung"}
+                </Link>
+              </li>
+              <li>
+                <Link to="/rechtliches/$doc" params={{ doc: "accessibility" }}>
+                  {lang === "en" ? "Accessibility" : lang === "es" ? "Accesibilidad" : "Barrierefreiheit"}
+                </Link>
+              </li>
+              <li>
+                <button type="button" className="footer-linkbtn" onClick={openConsentSettings}>
+                  {t("cookie.change")}
+                </button>
               </li>
             </ul>
           </div>

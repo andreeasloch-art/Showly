@@ -5,7 +5,9 @@
  * Kennungen entgegen (Künstler, Stunden, Artikel, Menge), nie Beträge.
  * So kann niemand im Browser einen Preis auf 1 Euro ändern. */
 import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
-import { SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
+import { BAKERS, SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
+
+const bakerIsDemo = (id: number) => !!BAKERS.find((b) => b.id === id)?.demo;
 
 /** Zusätzliche Einträge aus der Datenbank (echte Künstler, Torten und Deko
  *  von Anbietern). Der Server lädt sie vor dem Rechnen und reicht sie hier
@@ -148,12 +150,16 @@ export function priceLines(
   labels: { rent: string; buy: string },
   sweets: { sweetId: number; qty: number; dateISO: string }[] = [],
   extra?: Extra,
+  /* Der Server lässt Beispielprofile und -artikel aus dem Katalog nicht
+     bezahlen: Hinter ihnen steht kein echter Anbieter. */
+  opts: { allowDemo?: boolean } = {},
 ): { lines: PriceLine[]; unknown: string[] } {
+  const allowDemo = opts.allowDemo ?? true;
   const lines: PriceLine[] = [];
   const unknown: string[] = [];
   for (const b of bookings) {
     const a = findArtist(b.artistId, extra);
-    if (!a) {
+    if (!a || (!allowDemo && a.demo)) {
       unknown.push(`artist:${b.artistId}`);
       continue;
     }
@@ -167,7 +173,7 @@ export function priceLines(
   for (const l of shop) {
     const i = findItem(l.shopId, extra);
     const qty = Math.min(99, Math.max(1, Math.round(l.qty) || 1));
-    if (!i || i.own) {
+    if (!i || i.own || (!allowDemo && i.demo)) {
       unknown.push(`item:${l.shopId}`);
       continue;
     }
@@ -180,7 +186,8 @@ export function priceLines(
   for (const x of sweets) {
     const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);
     const price = sweetPrice(x.sweetId, x.qty, extra);
-    if (!s || price === null) {
+    const demoBaker = !allowDemo && s && (extra?.sweet?.(x.sweetId) ? false : bakerIsDemo(s.bakerId));
+    if (!s || price === null || demoBaker) {
       unknown.push(`sweet:${x.sweetId}`);
       continue;
     }

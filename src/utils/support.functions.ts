@@ -43,6 +43,7 @@ export const createTicket = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !row) return { error: "Nachricht konnte nicht gesendet werden" };
+    if (Math.random() < 0.2) await adminClient().rpc("purge_old_data").then(undefined, () => null);
     return { ok: true, id: row.id };
   });
 
@@ -74,5 +75,49 @@ export const logClientError = createServerFn({ method: "POST" })
     await adminClient()
       .from("client_errors")
       .insert({ profile: uid, message: data.message, stack: data.stack, url: data.url, user_agent: data.ua });
+    /* Gelegentlich alte Daten nach den zugesagten Fristen löschen (0006) */
+    if (Math.random() < 0.05) await adminClient().rpc("purge_old_data").then(undefined, () => null);
     return { ok: true };
+  });
+
+/* ---------------------------------------------------------------------------
+ * Elektronische Widerrufsfunktion (EU-Richtlinie 2023/2673, seit 19.06.2026)
+ *
+ * Verbraucher erklären hier den Widerruf eines Kaufs. Der Server speichert die
+ * Erklärung als Support-Vorgang und schickt sofort eine Eingangsbestätigung
+ * mit Inhalt, Datum und Uhrzeit per E-Mail (dauerhafter Datenträger).
+ * ------------------------------------------------------------------------ */
+export const submitWithdrawal = createServerFn({ method: "POST" })
+  .inputValidator((d: { name: string; email: string; contract: string; note?: string; hp?: string }) => {
+    const email = String(d.email || "").trim().slice(0, 200);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Bitte eine gültige E-Mail-Adresse angeben");
+    const name = String(d.name || "").trim().slice(0, 120);
+    if (name.length < 2) throw new Error("Bitte deinen Namen angeben");
+    const contract = String(d.contract || "").trim().slice(0, 200);
+    if (contract.length < 2) throw new Error("Bitte angeben, welcher Vertrag widerrufen wird");
+    return { email, name, contract, note: String(d.note || "").trim().slice(0, 2000), hp: String(d.hp || "") };
+  })
+  .handler(async ({ data }): Promise<{ ok: true; at: string; id: number } | { error: string }> => {
+    const at = new Date().toISOString();
+    if (data.hp) return { ok: true, at, id: 0 };
+    const uid = await uidOrNull();
+    if (!(await allow("support", uid ?? clientIp()))) return { error: TOO_MANY };
+    const body = `[Widerruf] Hiermit widerrufe ich den folgenden Vertrag: ${data.contract}.${data.note ? `\nAnmerkung: ${data.note}` : ""}\nName: ${data.name}\nEingang: ${at}`;
+    const { data: row, error } = await adminClient()
+      .from("support_tickets")
+      .insert({ profile: uid, email: data.email, name: data.name, topic: "payment", body })
+      .select("id")
+      .single();
+    if (error || !row) return { error: "Der Widerruf konnte nicht gespeichert werden. Bitte schreib an kontakt@showly.de." };
+    const { sendMail } = await import("@/lib/mail.server");
+    const when = new Date(at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+    await sendMail(data.email, "Eingangsbestätigung deines Widerrufs", [
+      `Hallo ${data.name},`,
+      `wir haben deinen Widerruf am ${when} Uhr erhalten (Vorgang ${row.id}).`,
+      `Inhalt deiner Erklärung: Widerruf des Vertrags „${data.contract}“.${data.note ? ` Anmerkung: ${data.note}` : ""}`,
+      "Wir melden uns mit den nächsten Schritten zur Rücksendung und Erstattung.",
+    ]);
+    const team = process.env["SHOWLY_SUPPORT_MAIL"];
+    if (team) await sendMail(team, `Neuer Widerruf (Vorgang ${row.id})`, [body]);
+    return { ok: true, at, id: row.id };
   });

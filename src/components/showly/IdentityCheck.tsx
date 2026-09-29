@@ -40,7 +40,8 @@ const TEXT = {
     okP: "Das Siegel ist ab sofort im Katalog sichtbar.",
     waitP: "Die Prüfung läuft. Das dauert meist wenige Minuten, in Einzelfällen länger.",
     failP: "Die Prüfung ist nicht durchgegangen. Häufigste Ursache: Das Bild war unscharf oder der Ausweis abgelaufen.",
-    note: "Ausweisbilder und biometrische Merkmale werden bei unserem Prüfdienst verarbeitet und dort nach der Prüfung gelöscht. Showly speichert ausschließlich das Ergebnis.",
+    note: "Ausweisbilder und Selfie verarbeitet unser Prüfdienst Stripe. Nach bestandener Prüfung veranlasst Showly die Löschung dieser Bilder bei Stripe und speichert nur das Ergebnis.",
+    consent: "Ich willige ein, dass Stripe mein Ausweisfoto und ein Selfie verarbeitet, um meine Identität per Gesichtsabgleich zu prüfen (biometrische Daten, Art. 9 Abs. 2 lit. a DSGVO). Die Einwilligung ist freiwillig; ohne sie kann das Profil aber nicht freigeschaltet werden. Widerruf jederzeit an datenschutz@showly.de.",
     off: "Die Prüfung steht bereit, sobald die Datenbank verbunden ist.",
     err: "Die Prüfung konnte nicht gestartet werden.",
   },
@@ -68,7 +69,8 @@ const TEXT = {
     okP: "The badge is now visible in the catalogue.",
     waitP: "The check is running. Usually a few minutes, sometimes longer.",
     failP: "The check did not pass. Most common reason: blurred photo or an expired document.",
-    note: "ID images and biometric features are processed by our checking service and deleted there afterwards. Showly stores the result only.",
+    note: "ID images and the selfie are processed by our checking service Stripe. After a successful check Showly has these images deleted at Stripe and stores the result only.",
+    consent: "I consent to Stripe processing my ID photo and a selfie to verify my identity by face matching (biometric data, Art. 9(2)(a) GDPR). Consent is voluntary, but without it the profile cannot be activated. Withdraw any time at datenschutz@showly.de.",
     off: "The check is ready as soon as the database is connected.",
     err: "The check could not be started.",
   },
@@ -96,7 +98,8 @@ const TEXT = {
     okP: "El sello ya se ve en el catálogo.",
     waitP: "La verificación está en curso. Suele tardar unos minutos.",
     failP: "No se ha superado. Motivo más común: foto borrosa o documento caducado.",
-    note: "Las imágenes del documento y los rasgos biométricos los trata nuestro servicio de verificación y los borra después. Showly solo guarda el resultado.",
+    note: "Las imágenes del documento y el selfie los trata nuestro servicio de verificación Stripe. Tras una verificación correcta, Showly solicita su borrado en Stripe y solo guarda el resultado.",
+    consent: "Consiento que Stripe trate la foto de mi documento y un selfie para verificar mi identidad mediante comparación facial (datos biométricos, art. 9.2.a RGPD). Es voluntario, pero sin ello no se puede activar el perfil. Revocable en cualquier momento en datenschutz@showly.de.",
     off: "La verificación estará lista en cuanto se conecte la base de datos.",
     err: "No se pudo iniciar la verificación.",
   },
@@ -107,6 +110,7 @@ export function IdentityCheck() {
   const T = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
   const [status, setStatus] = useState<VerificationStatus>("none");
   const [busy, setBusy] = useState(false);
+  const [consent, setConsent] = useState(false);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -131,7 +135,7 @@ export function IdentityCheck() {
     setErr("");
     setBusy(true);
     try {
-      const res = await startIdentityCheck();
+      const res = await startIdentityCheck({ data: { consent } });
       if ("error" in res) {
         setErr(res.error);
         return;
@@ -201,8 +205,14 @@ export function IdentityCheck() {
       {err && <p className="picker-err">{err}</p>}
 
       <div className="rev-form-foot">
+        {!done && !running && (
+          <label className="reg-check verify-consent">
+            <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+            <span>{T.consent}</span>
+          </label>
+        )}
         {!done && (
-          <button className="btn-primary" onClick={() => void start()} disabled={busy}>
+          <button className="btn-primary" onClick={() => void start()} disabled={busy || !consent}>
             {busy ? T.busy : status === "failed" ? T.again : T.start}
           </button>
         )}

@@ -1,4 +1,5 @@
 import { seoHead } from "@/showly/seo";
+import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
@@ -176,6 +177,8 @@ function Onboard() {
   const [legal, setLegal] = useState(false);
   const [terms, setTerms] = useState(false);
   const [taxOk, setTaxOk] = useState(false);
+  const [privOk, setPrivOk] = useState(false);
+  const P = usePrivacyCopy();
   const isPrivate = kind === "private";
   const int = (v: string, max: number) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
 
@@ -193,6 +196,7 @@ function Onboard() {
     const price = parsePrice(offer.price);
     if (!offer.name.trim() || !price) return toast(C.needOffer);
     if (!legal || !terms || !taxOk) return toast(C.needLegal);
+    if (!privOk) return toast(P.need);
     if (!okText(tagline, about, offer.name, offer.desc)) return;
     /* Mit Datenbank: Profil und erstes Angebot auf dem Server, sichtbar nach
        Freischaltung durch die Verwaltung */
@@ -414,6 +418,7 @@ function Onboard() {
             </label>
             <TaxNotice compact />
             <TaxAck checked={taxOk} onChange={setTaxOk} />
+            <PrivacyAck checked={privOk} onChange={setPrivOk} id="baker-privacy" />
             <p className="pe-note">
               <Icon name="lock" /> {C.note}
             </p>

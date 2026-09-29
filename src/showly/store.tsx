@@ -1,5 +1,6 @@
 /* Globaler Zustand der Showly-App: Sprache, Favoriten, Warenkorb,
    Buchungen, Bestellungen, Session, Verfügbarkeiten und Toasts. */
+import { removeAllBy } from "./community";
 import { isBusiness } from "./providerStatus";
 import {
   createContext,
@@ -1346,6 +1347,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       await supabase().auth.signOut();
     }
     deleteLocalAccount(session.email, session.providerId);
+    /* Eigene Beiträge, Kommentare, Bewertungen und die Fotos dazu löschen,
+       wie im Dialog versprochen */
+    removeAllBy(session.name);
     /* Buchungen bleiben für die Buchhaltung, aber ohne Name und Adresse */
     setBookings((list) => list.map(({ customer: _c, address: _a, ...rest }) => rest));
     setFavorites([]);

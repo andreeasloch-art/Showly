@@ -6399,6 +6399,7 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .help26-qa p{margin:0;padding:0 16px 14px;font-size:14.5px;line-height:1.55;color:var(--h-ink2,#3A3350)}
 .help26-form{display:flex;flex-direction:column;gap:10px}
 .help26-form select,.help26-form textarea,.help26-form input{width:100%}
+.help26-form input[type=checkbox]{width:18px;height:18px;flex:none}
 .help26-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .help26-note{margin:0;font-size:13px;color:var(--h-muted,#6B6480)}
 .help26-sent{display:flex;gap:8px;align-items:center;padding:14px;border-radius:14px;background:#EEF7F2;color:#1B6F4C;font-weight:600}
@@ -6492,3 +6493,28 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .wd-review dt{font-weight:600;color:var(--ink2)}
 .wd-review dd{margin:0;word-break:break-word}
 .wd-btns{display:flex;gap:10px;flex-wrap:wrap}
+
+/* Showly als App installieren */
+.install-app{display:flex;align-items:center;gap:12px;width:100%;max-width:340px;margin-top:10px;padding:10px 14px 10px 10px;border-radius:16px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:inherit;text-align:left;cursor:pointer;font:inherit}
+.install-app:hover{background:rgba(255,255,255,.12)}
+.install-app:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.install-app img{flex:none;width:40px;height:40px;border-radius:10px}
+.install-app b{display:block;font:600 14.5px/1.25 var(--font-head);color:#fff}
+.install-app small{display:block;margin-top:2px;font-size:12.5px;line-height:1.4;color:rgba(255,255,255,.75)}
+.install-help{max-width:380px;margin:auto;padding:24px;border-radius:22px;background:#fff;color:var(--ink);text-align:center}
+.install-help img{width:72px;height:72px;border-radius:17px;box-shadow:0 8px 24px rgba(40,20,90,.25)}
+.install-help h2{margin:14px 0 10px;font:700 19px/1.25 var(--font-head)}
+.install-help ol{list-style:none;margin:0 0 18px;padding:0;text-align:left;display:flex;flex-direction:column;gap:10px}
+.install-help li{display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:#f5f2fb;font-size:14.5px}
+.install-help li svg{width:18px;height:18px;color:#5b2bd1;flex:none}
+.install-help p{margin:0 0 18px;font-size:14.5px;line-height:1.5;color:var(--ink2)}
+
+/* Als installierte App: Platz für die Statusleiste des Handys */
+@media (display-mode: standalone){
+  body{padding-top:env(safe-area-inset-top)}
+  nav{height:calc(72px + env(safe-area-inset-top))!important;padding-top:env(safe-area-inset-top)}
+}
+.install-help{width:100%}
+.install-help img{display:block;margin:0 auto}
+.install-close{min-width:160px;min-height:46px;padding:10px 22px;border:0;border-radius:999px;background:linear-gradient(120deg,#5b2bd1,#c026d3);color:#fff;font:600 15px/1.2 var(--font-body);cursor:pointer}
+.install-close:focus-visible{outline:3px solid #5b2bd1;outline-offset:3px}

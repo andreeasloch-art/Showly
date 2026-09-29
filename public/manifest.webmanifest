@@ -1,19 +1,31 @@
 {
-  "name": "Showly - Künstler buchen in 3 Minuten",
+  "id": "/",
+  "name": "Showly – Künstler, Torten & Deko für dein Event",
   "short_name": "Showly",
-  "description": "Buche Show-, Event- und Walking-Acts für deine Feier, Messe oder Firmenevent.",
-  "start_url": "/",
+  "description": "Künstler, Eventplaner, Torten, Kostüme und Deko für dein Event finden, buchen und sicher bezahlen.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "/?quelle=app",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0F172A",
-  "theme_color": "#0F172A",
-  "orientation": "portrait-primary",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#0B0618",
+  "theme_color": "#0B0618",
+  "categories": ["entertainment", "lifestyle", "shopping"],
   "icons": [
     { "src": "/icons/icon-48.webp", "sizes": "48x48", "type": "image/webp" },
     { "src": "/icons/icon-72.webp", "sizes": "72x72", "type": "image/webp" },
     { "src": "/icons/icon-96.webp", "sizes": "96x96", "type": "image/webp" },
     { "src": "/icons/icon-128.webp", "sizes": "128x128", "type": "image/webp" },
-    { "src": "/icons/icon-192.webp", "sizes": "192x192", "type": "image/webp" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-256.webp", "sizes": "256x256", "type": "image/webp" },
-    { "src": "/icons/icon-512.webp", "sizes": "512x512", "type": "image/webp" }
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Künstler finden", "short_name": "Künstler", "url": "/?quelle=app", "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }] },
+    { "name": "Torten & Süßes", "short_name": "Torten", "url": "/torten?quelle=app", "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }] },
+    { "name": "Meine Buchungen", "short_name": "Buchungen", "url": "/dashboard?quelle=app", "icons": [{ "src": "/icons/icon-96.webp", "sizes": "96x96" }] }
   ]
 }

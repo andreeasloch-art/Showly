@@ -6118,7 +6118,7 @@ button.cart-addon{cursor:pointer}
 .bm-note svg{flex:none;width:17px;height:17px;margin-top:1px}
 .bm-note span{display:flex;flex-direction:column;gap:2px}
 .bm-note b{font-weight:600}
-.bm-note small{font-size:13px;opacity:.85}
+.bm-note small{font-size:13px}
 .bm-note.instant{background:#E6F6EE;color:#1B6F4C}
 .bm-note.request{background:#FFF4E5;color:#8A4A0F}
 

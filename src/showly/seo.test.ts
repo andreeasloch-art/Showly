@@ -14,6 +14,7 @@ const ROUTES: [string, string][] = [
   ["/kuenstler/$id", "/kuenstler/3"],
   ["/rechtliches/$doc", "/rechtliches/privacy"],
   ["/anmelden", "/anmelden"],
+  ["/widerruf", "/widerruf"],
   ["/konto", "/konto"],
   ["/blog", "/blog"],
   ["/torten", "/torten"],

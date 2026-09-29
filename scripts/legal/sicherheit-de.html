@@ -1,0 +1,52 @@
+<h1>Sicherheit &amp; Schutz deiner Daten</h1>
+<div class="legal-meta">Technische und organisatorische Maßnahmen (Art. 32 DSGVO) · Stand: 29. September 2026</div>
+<div class="legal-note"><span data-icon="clipboard"></span> Hier steht nur, was in der App tatsächlich umgesetzt ist. Absolute Sicherheit gibt es nicht; was noch fehlt, steht am Ende.</div>
+
+<h3>1. Zugriffsschutz in der Datenbank</h3>
+<ul>
+<li>Jede Tabelle ist mit Zeilen-Zugriffsregeln (Row Level Security) geschützt: Du liest nur deine eigenen Buchungen, Nachrichten und Profildaten.</li>
+<li>Alle Änderungen an Buchungen, Zahlungen, Strafen und Freischaltungen macht der Server nach eigener Prüfung. Preise rechnet der Server selbst nach; im Browser lässt sich kein Betrag ändern.</li>
+<li>Rechte für die Verwaltung prüft der Server bei jedem Aufruf direkt in der Datenbank.</li>
+</ul>
+
+<h3>2. Anmeldung</h3>
+<ul>
+<li>Anmeldung mit Einmal-Code per E-Mail oder SMS oder über Google bzw. Apple. Showly speichert dafür kein Passwort.</li>
+<li>Die Anmeldung selbst übernimmt Supabase Auth; dort gelten dessen Schutzmechanismen gegen massenhafte Versuche.</li>
+</ul>
+
+<h3>3. Zahlungen</h3>
+<p>Kartendaten und Bankverbindungen gibst du ausschließlich in Fenstern von Stripe ein. Sie erreichen unsere Systeme nicht. Showly sieht nur, ob eine Zahlung erfolgreich war, und prüft den bezahlten Betrag gegen den Warenkorb.</p>
+
+<h3>4. Schutz vor Betrug und Spam</h3>
+<ul>
+<li>Profile von Künstlern und Planern werden erst nach einer Ausweisprüfung über Stripe Identity sichtbar. Eine Gewerbeanmeldung prüfen wir nicht; ob jemand privat oder gewerblich anbietet, gibt die Person selbst an und steht im Profil.</li>
+<li>Bewertungen können nur Kunden nach einer eigenen, stattgefundenen Buchung abgeben.</li>
+<li>Zähler begrenzen Registrierungen, Nachrichten, Buchungsaktionen und Formulare je Person bzw. IP-Adresse (gespeichert nur als gekürzter Hash, 2 Tage).</li>
+<li>Formulare haben ein unsichtbares Feld gegen Spam-Programme; ein CAPTCHA-Dienst wird nicht eingesetzt.</li>
+<li>Ein Filter verhindert, dass in Nachrichten und Profilen Kontaktdaten ausgetauscht werden, um Zahlungen an der Plattform vorbei zu vermeiden.</li>
+<li>Eingaben werden beim Anzeigen maskiert, damit kein fremder Code im Browser anderer Nutzer ausgeführt wird.</li>
+</ul>
+
+<h3>5. Übertragung und Server</h3>
+<ul>
+<li>Alle Verbindungen laufen verschlüsselt über HTTPS; der Server verlangt das auch künftig (HSTS).</li>
+<li>Weitere Sicherheits-Header verhindern, dass der Browser Dateitypen errät, und begrenzen, was an andere Seiten als Herkunft übertragen wird.</li>
+</ul>
+
+<h3>6. Datensparsamkeit und Löschung</h3>
+<ul>
+<li>Keine Tracker, keine Werbe-Pixel, keine fremden Schriften. Externe Dienste nur, wo sie für die Funktion nötig sind oder nach deiner Einwilligung.</li>
+<li>Löschfristen werden in der Datenbank automatisch umgesetzt (siehe Datenschutzerklärung, Ziffer 12).</li>
+<li>Beim Löschen deines Kontos werden Konto, Profil, Beiträge, Bewertungen und Fotos gelöscht, und wir veranlassen bei Stripe die Löschung der Ausweisbilder.</li>
+</ul>
+
+<h3>7. Wenn doch etwas passiert</h3>
+<p>Bei einer Verletzung des Schutzes personenbezogener Daten melden wir den Vorfall innerhalb von 72 Stunden der zuständigen Aufsichtsbehörde (Art. 33 DSGVO) und informieren dich unverzüglich, wenn ein hohes Risiko für dich besteht (Art. 34 DSGVO). Sicherheitslücken kannst du vertraulich an security@showly.de (Muster) melden.</p>
+
+<h3>8. Was noch fehlt</h3>
+<ul>
+<li>Eine strenge Content-Security-Policy (Liste erlaubter Quellen für Skripte und Verbindungen) ist noch nicht aktiv.</li>
+<li>Zwei-Faktor-Anmeldung für Verwaltungszugänge ist noch nicht eingerichtet.</li>
+<li>Ein Protokoll der Verwaltungszugriffe gibt es noch nicht.</li>
+</ul>

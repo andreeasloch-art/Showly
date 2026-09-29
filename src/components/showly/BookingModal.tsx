@@ -1,4 +1,5 @@
 /* Dreistufiges Buchungs-Modal: Details → Zahlung → Bestätigung. */
+import { useEscape } from "@/showly/useEscape";
 import { useState } from "react";
 import { BookingModeNote } from "@/components/showly/BookingModeNote";
 import { useNavigate } from "@tanstack/react-router";
@@ -41,6 +42,7 @@ export function BookingModal({
   const { t, lang, L, fmt, num, fmtDate, addCartBooking } = useShowly();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  useEscape(true, onClose);
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const [g, setG] = useState(guests);
   const minHours = Math.max(1, Number(a["minHours"]) || 1);

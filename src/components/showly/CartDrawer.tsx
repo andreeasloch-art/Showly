@@ -1,5 +1,6 @@
 /* Warenkorb: Künstlerbuchungen, Artikel aus dem Shop und Torten-Anfragen
    an einem Ort. Von hier geht es zur Kasse, wo alles zusammen bezahlt wird. */
+import { useEscape } from "@/showly/useEscape";
 import { useNavigate } from "@tanstack/react-router";
 import { useShowly } from "@/showly/store";
 import { SHOP_ITEMS } from "@/showly/data";
@@ -84,6 +85,7 @@ export function CartDrawer() {
     cartRequests,
     removeCartRequest,
   } = useShowly();
+  useEscape(cartOpen, () => setCartOpen(false));
   const X = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
   const navigate = useNavigate();
   const empty = !cart.length && !cartBookings.length && !cartRequests.length;

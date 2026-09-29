@@ -44,12 +44,29 @@ function isH3SwallowedErrorBody(body: string): boolean {
   }
 }
 
+/* Sicherheits-Header, die nichts kaputt machen können: kein MIME-Raten,
+   sparsame Referrer, nur HTTPS, kein Mikrofon. (Eine strenge Content-Security-
+   Policy fehlt noch; sie muss auf Supabase, Stripe und Komoot abgestimmt und
+   im Live-Betrieb getestet werden.) */
+function withSecurityHeaders(res: Response): Response {
+  try {
+    const h = new Headers(res.headers);
+    h.set("X-Content-Type-Options", "nosniff");
+    h.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+    h.set("Permissions-Policy", "microphone=(), interest-cohort=()");
+    return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
+  } catch {
+    return res;
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
-      return await normalizeCatastrophicSsrResponse(response);
+      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

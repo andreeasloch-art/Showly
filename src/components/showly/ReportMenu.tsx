@@ -1,6 +1,7 @@
 /* Menü "•••" an Beiträgen, Kommentaren und Bewertungen: melden oder die
  * Person blockieren. Öffnet ein kleines Fenster statt confirm(), weil
  * Browser-Dialoge in der App-Hülle gesperrt sein können. */
+import { useEscape } from "@/showly/useEscape";
 import { useState, useSyncExternalStore } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
@@ -113,6 +114,8 @@ export function ReportMenu({
     setReason("");
     setDetails("");
   }
+
+  useEscape(step !== "", close);
 
   function send() {
     if (!reason) return;

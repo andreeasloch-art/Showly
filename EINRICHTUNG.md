@@ -67,6 +67,26 @@ In Supabase unter **Authentication → Providers → Email** die Option
 Dienst. Für den Echtbetrieb dort einen eigenen SMTP-Zugang hinterlegen, sonst
 gilt ein niedriges Sendelimit.
 
+## 3b. Passwort vergessen
+
+1. Supabase → **Authentication → URL Configuration**: unter **Redirect URLs**
+   `https://DEINE-DOMAIN/auth/rueckkehr*` eintragen (auch die Vorschau-Adresse
+   von Lovable). Ohne diesen Eintrag landet der Link aus der E-Mail auf der
+   Startseite statt bei „Neues Passwort“.
+2. **Authentication → Email Templates → Reset Password**: Betreff
+   „Dein neues Passwort für Showly“, Inhalt aus
+   `supabase/templates/passwort-zuruecksetzen.html` einfügen.
+3. **Authentication → Providers → Email**: „Secure password change“ und eine
+   Mindestlänge von 8 Zeichen einstellen; „Leaked password protection“
+   einschalten, falls verfügbar.
+4. Für zuverlässige Zustellung eigenen SMTP-Versand einrichten (etwa Resend
+   mit der Showly-Domain). Der eingebaute Versand von Supabase schickt nur
+   wenige Mails pro Stunde.
+
+Ablauf: /passwort-vergessen → E-Mail → /auth/rueckkehr → /passwort-neu. Die
+Seite antwortet immer gleich, egal ob es die Adresse gibt. Nach dem Speichern
+werden alle anderen Sitzungen abgemeldet.
+
 ## 4. Anmeldung per Telefon
 
 Unter **Authentication → Providers → Phone** einen SMS-Dienst hinterlegen,

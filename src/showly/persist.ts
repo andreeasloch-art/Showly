@@ -169,3 +169,44 @@ export function accountExists(email: string): boolean {
   const e = email.trim().toLowerCase();
   return list.some((x) => x.email === e);
 }
+
+/* ---------- Passwort zurücksetzen im Übungsbetrieb ----------
+ * Ohne Server gibt es keinen E-Mail-Versand. Die Vorschau legt deshalb einen
+ * Einmal-Link an, der 30 Minuten gilt und nach dem Einlösen verfällt. Mit
+ * verbundener Datenbank übernimmt Supabase diesen Schritt und schickt die
+ * E-Mail wirklich. */
+export interface LocalReset {
+  email: string;
+  token: string;
+  exp: number;
+}
+
+export function createLocalReset(email: string): LocalReset | null {
+  const e = email.trim().toLowerCase();
+  if (!accountExists(e)) return null;
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  const token = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const r = { email: e, token, exp: Date.now() + 30 * 60 * 1000 };
+  saveJSON("pwReset", r);
+  return r;
+}
+
+export function readLocalReset(token: string): LocalReset | null {
+  const r = loadJSON<LocalReset | null>("pwReset", null);
+  if (!r || !token || r.token !== token || r.exp < Date.now()) return null;
+  return r;
+}
+
+/** Neues Passwort setzen und den Link sofort entwerten. */
+export function redeemLocalReset(token: string, pw: string): Account | null {
+  const r = readLocalReset(token);
+  if (!r) return null;
+  const list = loadJSON<Account[]>("accounts", []);
+  const acc = list.find((x) => x.email === r.email);
+  if (!acc) return null;
+  acc.pwHash = hash(pw);
+  saveJSON("accounts", list);
+  saveJSON("pwReset", null);
+  return acc;
+}

@@ -18,6 +18,8 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HilfeRouteImport } from './routes/hilfe'
 import { Route as KontoRouteImport } from './routes/konto'
 import { Route as MitmachenRouteImport } from './routes/mitmachen'
+import { Route as PasswortNeuRouteImport } from './routes/passwort-neu'
+import { Route as PasswortVergessenRouteImport } from './routes/passwort-vergessen'
 import { Route as PortalRouteImport } from './routes/portal'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
@@ -74,6 +76,16 @@ const KontoRoute = KontoRouteImport.update({
 const MitmachenRoute = MitmachenRouteImport.update({
   id: '/mitmachen',
   path: '/mitmachen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasswortNeuRoute = PasswortNeuRouteImport.update({
+  id: '/passwort-neu',
+  path: '/passwort-neu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PasswortVergessenRoute = PasswortVergessenRouteImport.update({
+  id: '/passwort-vergessen',
+  path: '/passwort-vergessen',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PortalRoute = PortalRouteImport.update({
@@ -147,6 +159,8 @@ export interface FileRoutesByFullPath {
   '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
+  '/passwort-neu': typeof PasswortNeuRoute
+  '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -170,6 +184,8 @@ export interface FileRoutesByTo {
   '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
+  '/passwort-neu': typeof PasswortNeuRoute
+  '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -194,6 +210,8 @@ export interface FileRoutesById {
   '/hilfe': typeof HilfeRoute
   '/konto': typeof KontoRoute
   '/mitmachen': typeof MitmachenRoute
+  '/passwort-neu': typeof PasswortNeuRoute
+  '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -219,6 +237,8 @@ export interface FileRouteTypes {
     | '/hilfe'
     | '/konto'
     | '/mitmachen'
+    | '/passwort-neu'
+    | '/passwort-vergessen'
     | '/portal'
     | '/shop'
     | '/sitemap.xml'
@@ -242,6 +262,8 @@ export interface FileRouteTypes {
     | '/hilfe'
     | '/konto'
     | '/mitmachen'
+    | '/passwort-neu'
+    | '/passwort-vergessen'
     | '/portal'
     | '/shop'
     | '/sitemap.xml'
@@ -265,6 +287,8 @@ export interface FileRouteTypes {
     | '/hilfe'
     | '/konto'
     | '/mitmachen'
+    | '/passwort-neu'
+    | '/passwort-vergessen'
     | '/portal'
     | '/shop'
     | '/sitemap.xml'
@@ -289,6 +313,8 @@ export interface RootRouteChildren {
   HilfeRoute: typeof HilfeRoute
   KontoRoute: typeof KontoRoute
   MitmachenRoute: typeof MitmachenRoute
+  PasswortNeuRoute: typeof PasswortNeuRoute
+  PasswortVergessenRoute: typeof PasswortVergessenRoute
   PortalRoute: typeof PortalRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -366,6 +392,20 @@ declare module '@tanstack/react-router' {
       path: '/mitmachen'
       fullPath: '/mitmachen'
       preLoaderRoute: typeof MitmachenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passwort-neu': {
+      id: '/passwort-neu'
+      path: '/passwort-neu'
+      fullPath: '/passwort-neu'
+      preLoaderRoute: typeof PasswortNeuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/passwort-vergessen': {
+      id: '/passwort-vergessen'
+      path: '/passwort-vergessen'
+      fullPath: '/passwort-vergessen'
+      preLoaderRoute: typeof PasswortVergessenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/portal': {
@@ -465,6 +505,8 @@ const rootRouteChildren: RootRouteChildren = {
   HilfeRoute: HilfeRoute,
   KontoRoute: KontoRoute,
   MitmachenRoute: MitmachenRoute,
+  PasswortNeuRoute: PasswortNeuRoute,
+  PasswortVergessenRoute: PasswortVergessenRoute,
   PortalRoute: PortalRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,

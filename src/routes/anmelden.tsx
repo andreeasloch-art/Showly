@@ -1,9 +1,10 @@
-/* Anmeldung über Google, eigene E-Mail-Adresse oder Telefonnummer.
+/* Anmeldung über Google, Apple, einen Code per E-Mail oder SMS oder mit
+ * E-Mail und Passwort.
  *
- * Es gibt bewusst kein Passwortfeld mehr. Alle drei Wege laufen ohne
- * gespeichertes Passwort: Google bestätigt selbst, E-Mail und Telefon
- * bekommen einen Einmalcode. Damit entfällt die größte Schwachstelle der
- * bisherigen Lösung, nämlich im Browser abgelegte Passwörter.
+ * Der Code-Weg braucht kein Passwort. Wer lieber ein Passwort nutzt, legt es
+ * über "Passwort vergessen" fest; Supabase speichert es nur als Hash, nie im
+ * Browser. Das Passwort-Formular sagt bei falschen Daten nicht, ob es die
+ * Adresse gibt.
  *
  * Die Sitzung landet danach in einem Cookie, das JavaScript nicht lesen kann. */
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -23,12 +24,17 @@ const COPY = {
   de: {
     eyebrow: "Anmelden",
     h1: "Willkommen bei Showly",
-    sub: "Melde dich an, um zu buchen, zu bewerten und Beiträge zu schreiben. Ein Passwort brauchst du nicht.",
+    sub: "Melde dich an, um zu buchen, zu bewerten und Beiträge zu schreiben. Mit Code geht es ganz ohne Passwort.",
     google: "Mit Google anmelden",
     apple: "Mit Apple anmelden",
     or: "oder",
     tabMail: "E-Mail",
     tabPhone: "Telefon",
+    tabPw: "Passwort",
+    pw: "Passwort",
+    forgot: "Passwort vergessen?",
+    pwHint: "Noch kein Passwort? Über „Passwort vergessen?“ legst du eins fest.",
+    errPw: "E-Mail oder Passwort stimmt nicht.",
     mail: "Deine E-Mail-Adresse",
     mailPh: "name@beispiel.de",
     phone: "Deine Handynummer",
@@ -52,12 +58,17 @@ const COPY = {
   en: {
     eyebrow: "Sign in",
     h1: "Welcome to Showly",
-    sub: "Sign in to book, review and post. You do not need a password.",
+    sub: "Sign in to book, review and post. With a code you do not even need a password.",
     google: "Continue with Google",
     apple: "Continue with Apple",
     or: "or",
     tabMail: "Email",
     tabPhone: "Phone",
+    tabPw: "Password",
+    pw: "Password",
+    forgot: "Forgot password?",
+    pwHint: "No password yet? Use “Forgot password?” to set one.",
+    errPw: "Email or password is not correct.",
     mail: "Your email address",
     mailPh: "name@example.com",
     phone: "Your mobile number",
@@ -81,12 +92,17 @@ const COPY = {
   es: {
     eyebrow: "Entrar",
     h1: "Bienvenida a Showly",
-    sub: "Entra para reservar, reseñar y publicar. No necesitas contraseña.",
+    sub: "Entra para reservar, reseñar y publicar. Con un código no necesitas contraseña.",
     google: "Continuar con Google",
     apple: "Continuar con Apple",
     or: "o",
     tabMail: "Correo",
     tabPhone: "Teléfono",
+    tabPw: "Contraseña",
+    pw: "Contraseña",
+    forgot: "¿Has olvidado la contraseña?",
+    pwHint: "¿Aún no tienes contraseña? Con «¿Has olvidado la contraseña?» eliges una.",
+    errPw: "El correo o la contraseña no es correcta.",
     mail: "Tu correo",
     mailPh: "nombre@ejemplo.es",
     phone: "Tu móvil",
@@ -117,7 +133,8 @@ function SignInPage() {
   const T = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState<"mail" | "phone">("mail");
+  const [mode, setMode] = useState<"mail" | "phone" | "pw">("mail");
+  const [pw, setPw] = useState("");
   const [target, setTarget] = useState("");
   const [code, setCode] = useState("");
   const [sent, setSent] = useState(false);
@@ -179,6 +196,19 @@ function SignInPage() {
     setSent(true);
   }
 
+  async function signInPw() {
+    setErr("");
+    const value = target.trim();
+    if (!MAIL.test(value)) return setErr(T.errMail);
+    if (!pw) return setErr(T.errPw);
+    setBusy(true);
+    const { error } = await supabase().auth.signInWithPassword({ email: value, password: pw });
+    setBusy(false);
+    if (error) return setErr(T.errPw);
+    toast(T.ok);
+    navigate({ to: "/dashboard" });
+  }
+
   async function verify() {
     setErr("");
     setBusy(true);
@@ -238,27 +268,66 @@ function SignInPage() {
                 >
                   {T.tabPhone}
                 </button>
+                <button
+                  role="tab"
+                  aria-selected={mode === "pw"}
+                  className={"konto-tab" + (mode === "pw" ? " on" : "")}
+                  onClick={() => {
+                    setMode("pw");
+                    setErr("");
+                  }}
+                >
+                  {T.tabPw}
+                </button>
               </div>
 
               <div className="input-group">
-                <label htmlFor="auth-target">{mode === "mail" ? T.mail : T.phone}</label>
+                <label htmlFor="auth-target">{mode === "phone" ? T.phone : T.mail}</label>
                 <input
                   id="auth-target"
-                  type={mode === "mail" ? "email" : "tel"}
-                  inputMode={mode === "mail" ? "email" : "tel"}
-                  autoComplete={mode === "mail" ? "email" : "tel"}
+                  type={mode === "phone" ? "tel" : "email"}
+                  inputMode={mode === "phone" ? "tel" : "email"}
+                  autoComplete={mode === "phone" ? "tel" : mode === "pw" ? "username" : "email"}
                   value={target}
-                  placeholder={mode === "mail" ? T.mailPh : T.phonePh}
+                  placeholder={mode === "phone" ? T.phonePh : T.mailPh}
                   onChange={(e) => setTarget(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && void sendCode()}
+                  onKeyDown={(e) => e.key === "Enter" && void (mode === "pw" ? signInPw() : sendCode())}
                 />
               </div>
 
-              {err && <p className="picker-err">{err}</p>}
+              {mode === "pw" && (
+                <div className="input-group">
+                  <div className="pw-labelrow">
+                    <label htmlFor="auth-pw">{T.pw}</label>
+                    <Link to="/passwort-vergessen" className="konto-link pw-forgot">
+                      {T.forgot}
+                    </Link>
+                  </div>
+                  <input
+                    id="auth-pw"
+                    type="password"
+                    autoComplete="current-password"
+                    value={pw}
+                    onChange={(e) => setPw(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && void signInPw()}
+                  />
+                </div>
+              )}
 
-              <button className="btn-primary konto-go" onClick={() => void sendCode()} disabled={busy}>
-                {T.send}
+              {err && (
+                <p className="picker-err" role="alert">
+                  {err}
+                </p>
+              )}
+
+              <button
+                className="btn-primary konto-go"
+                onClick={() => void (mode === "pw" ? signInPw() : sendCode())}
+                disabled={busy}
+              >
+                {mode === "pw" ? T.verify : T.send}
               </button>
+              {mode === "pw" && <p className="konto-small">{T.pwHint}</p>}
             </>
           ) : (
             <>

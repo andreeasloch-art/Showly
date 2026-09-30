@@ -6518,3 +6518,27 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .install-help img{display:block;margin:0 auto}
 .install-close{min-width:160px;min-height:46px;padding:10px 22px;border:0;border-radius:999px;background:linear-gradient(120deg,#5b2bd1,#c026d3);color:#fff;font:600 15px/1.2 var(--font-body);cursor:pointer}
 .install-close:focus-visible{outline:3px solid #5b2bd1;outline-offset:3px}
+
+/* ---------- Passwort vergessen / neues Passwort ---------- */
+.pw-labelrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pw-labelrow label{margin-bottom:6px}
+.pw-forgot{font-size:13px}
+.pw-field{position:relative}
+.pw-field input{padding-right:48px}
+.pw-eye{position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;border:0;background:none;color:var(--sh-muted);border-radius:10px;cursor:pointer}
+.pw-eye:hover,.pw-eye:focus-visible{color:var(--v700);background:rgba(124,58,237,.08)}
+.pw-eye svg{width:20px;height:20px}
+.pw-for{font-size:14px;color:var(--sh-muted);margin:-4px 0 14px;overflow-wrap:anywhere}
+.pw-sent-ico{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:rgba(124,58,237,.1);color:var(--v700);margin:6px 0 14px}
+.pw-sent-ico.ok{background:rgba(10,140,123,.12);color:#0A7A6B}
+.pw-sent-ico svg{width:26px;height:26px}
+.pw-link-btn{display:flex;align-items:center;justify-content:center;text-decoration:none}
+.pw-demo-mail{margin:18px 0 6px;border:1px dashed var(--sh-border);border-radius:16px;padding:14px;background:rgba(124,58,237,.04)}
+.pw-demo-h{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--v700);margin-bottom:10px}
+.pw-demo-body{background:#fff;color:#1a1326;border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(20,10,40,.08)}
+.pw-demo-body p{font-size:14px;line-height:1.5;margin:0 0 10px}
+.pw-demo-subj{font-weight:800;font-size:15px;margin-bottom:10px}
+.pw-demo-btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin:4px 0 12px;width:auto;padding-inline:20px}
+.pw-demo-small{font-size:12.5px!important;color:#5b5368}
+.pw-demo-note{font-size:12.5px;color:var(--sh-muted);margin:10px 0 0}
+.pw-demo-none{font-size:13.5px;color:var(--sh-muted);border:1px dashed var(--sh-border);border-radius:12px;padding:12px;margin:14px 0 0}

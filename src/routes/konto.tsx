@@ -38,7 +38,7 @@ const COPY = {
     pw2: "Passwort wiederholen",
     signIn: "Anmelden",
     signUp: "Konto anlegen",
-    forgot: "Passwort vergessen? Lege einfach ein neues Konto an.",
+    forgot: "Passwort vergessen?",
     artist: "Du bist Künstler oder Planer?",
     artistLink: "Hier entlang",
     errMail: "Bitte eine gültige E-Mail-Adresse eingeben.",
@@ -71,7 +71,7 @@ const COPY = {
     pw2: "Repeat password",
     signIn: "Sign in",
     signUp: "Create account",
-    forgot: "Forgot your password? Just create a new account.",
+    forgot: "Forgot your password?",
     artist: "Are you an artist or planner?",
     artistLink: "This way",
     errMail: "Please enter a valid email address.",
@@ -104,7 +104,7 @@ const COPY = {
     pw2: "Repite la contraseña",
     signIn: "Entrar",
     signUp: "Crear cuenta",
-    forgot: "¿Olvidaste la contraseña? Crea una cuenta nueva.",
+    forgot: "¿Has olvidado la contraseña?",
     artist: "¿Eres artista u organizador?",
     artistLink: "Por aquí",
     errMail: "Introduce un correo válido.",
@@ -260,7 +260,14 @@ function AccountPage() {
           </div>
 
           <div className="input-group">
-            <label htmlFor="k-pw">{T.pw}</label>
+            <div className="pw-labelrow">
+              <label htmlFor="k-pw">{T.pw}</label>
+              {mode === "in" && (
+                <Link to="/passwort-vergessen" className="konto-link pw-forgot">
+                  {T.forgot}
+                </Link>
+              )}
+            </div>
             <input
               id="k-pw"
               type="password"
@@ -305,7 +312,6 @@ function AccountPage() {
           <p className="konto-note">
             <Icon name="lock" /> {T.note}
           </p>
-          {mode === "in" && <p className="konto-small">{T.forgot}</p>}
 
           <div className="konto-switch">
             {T.artist}{" "}

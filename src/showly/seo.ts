@@ -133,15 +133,15 @@ export const SEO: Record<string, Record<Lang, SeoText>> = {
     de: {
       title: "Anmelden – mit Google, E-Mail oder Telefon | Showly",
       description:
-        "Melde dich ohne Passwort an: mit Google, einem Code per E-Mail oder einem Code aufs Handy.",
+        "Melde dich an: mit Google oder Apple, einem Code per E-Mail oder aufs Handy oder mit deinem Passwort.",
     },
     en: {
       title: "Sign in – with Google, email or phone | Showly",
-      description: "Sign in without a password: Google, an email code or a code to your phone.",
+      description: "Sign in with Google or Apple, a code by email or text, or your password.",
     },
     es: {
       title: "Entrar – con Google, correo o teléfono | Showly",
-      description: "Entra sin contraseña: Google, un código por correo o un código al móvil.",
+      description: "Entra con Google o Apple, un código por correo o SMS, o tu contraseña.",
     },
   },
   "/konto": {

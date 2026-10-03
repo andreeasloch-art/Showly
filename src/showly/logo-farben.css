@@ -469,7 +469,6 @@ html body .home-search{
    Weniger Wiederholungen und kürzere Wege auf der Startseite:
    - keine kleinen Überschriften über den Überschriften
    - Versprechen als eine kompakte Zeile
-   - "Act der Woche" am Handy erst weiter unten nicht mehr im Kopfbereich
    - "So funktioniert's" am Handy als 2 × 2 statt vier langer Absätze
    - Raster mit "weitere zeigen" statt 29 Karten am Stück
    ========================================================================== */
@@ -480,7 +479,6 @@ html body .home-more-btn{display:flex;justify-content:center;padding:28px 16px 8
 html body .home-more-btn .btn-secondary{min-height:48px;padding:0 26px;border-radius:999px;font-weight:700;font-size:16px;color:var(--lg-blau-d)}
 html body .act-card-meta{margin-top:2px}
 @media(max-width:820px){
-  html body .home-hero .aotw,html body .home-hero .home-aotw{display:none}
   html body .home-hero{padding-bottom:34px}
   html body .home-trust{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:18px}
   html body .home-trust li{font-size:13.5px}

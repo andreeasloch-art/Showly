@@ -7,7 +7,7 @@ import { InstallApp } from "@/components/showly/InstallApp";
 /* Die Adressen der Showly-Kanaele stehen an einer Stelle. Sobald die echten
    Benutzernamen feststehen, nur hier austauschen. */
 const SOCIAL = [
-  { name: "Instagram", icon: "instagram", url: "https://www.instagram.com/showly" },
+  { name: "Instagram", icon: "instagram", url: "https://www.instagram.com/__showly__/" },
   { name: "Facebook", icon: "facebook", url: "https://www.facebook.com/showly" },
   { name: "TikTok", icon: "tiktok", url: "https://www.tiktok.com/@showly" },
   { name: "X (Twitter)", icon: "twitter", url: "https://x.com/showly" },

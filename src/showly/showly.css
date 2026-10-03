@@ -6301,26 +6301,21 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .home-h1.h1-lockup{width:fit-content;max-width:100%}
 .h1-lockup .grad-art{display:block;width:0;min-width:calc(100% - .07em);margin-left:.07em;height:auto!important;margin-top:.1em!important}
 
-/* Startbild beim Öffnen der App (Splash.tsx). Das Foto (941 x 1672) füllt
-   den Bildschirm wie object-fit:cover; das Logo steht in derselben Fläche,
-   halb so breit wie das Foto und genau in dessen Mitte, wo im Foto der
-   Lichtschein ist. Es fliegt aus der Tiefe nach vorne. */
-.splash{position:fixed;inset:0;z-index:10000;background:#2a0f2e;overflow:hidden;
+/* Startvideo beim Öffnen der App (Splash.tsx). Das Video (720 x 1264,
+   Hochformat) füllt am Handy den Bildschirm wie object-fit:cover. Auf breiten
+   Bildschirmen steht es in voller Höhe in der Mitte, dahinter dasselbe Bild
+   unscharf, damit nichts vom Logo abgeschnitten wird. */
+.splash{position:fixed;inset:0;z-index:10000;background:#3b1a8f;overflow:hidden;
   transition:opacity .5s ease,visibility .5s;cursor:pointer}
 .splash.out{opacity:0;visibility:hidden}
+.splash-backdrop{position:absolute;inset:-40px;background:url("/splash-still.webp") center/cover no-repeat;
+  filter:blur(28px) saturate(1.2);opacity:.85}
 .splash-stage{position:absolute;left:50%;top:50%;
-  width:max(100vw,calc(100vh * 941 / 1672));height:max(100vh,calc(100vw * 1672 / 941));
-  transform:translate(-50%,-50%);animation:splash-zoom 3.6s ease-out both}
-.splash-photo{position:absolute;inset:0;width:100%;height:100%;display:block}
-.splash-logo{position:absolute;left:50%;top:50%;width:52%;translate:-50% -50%;
-  animation:splash-fly 1.5s cubic-bezier(.16,.84,.3,1) .25s both}
-.splash-logo img{display:block;width:100%;height:auto;filter:drop-shadow(0 2px 10px rgba(255,255,255,.6))}
-@keyframes splash-zoom{from{transform:translate(-50%,-50%) scale(1.06)}to{transform:translate(-50%,-50%) scale(1)}}
-@keyframes splash-fly{
-  0%{opacity:0;transform:scale(.12);filter:blur(10px)}
-  35%{opacity:1}
-  100%{opacity:1;transform:scale(1);filter:blur(0)}}
-@media (prefers-reduced-motion:reduce){.splash-stage,.splash-logo{animation:none}}
+  width:max(100vw,calc(100vh * 720 / 1264));height:max(100vh,calc(100vw * 1264 / 720));
+  transform:translate(-50%,-50%)}
+@media (min-aspect-ratio:4/5){
+  .splash-stage{height:100vh;width:calc(100vh * 720 / 1264);box-shadow:0 0 80px rgba(26,14,61,.45)}}
+.splash-video{position:absolute;inset:0;width:100%;height:100%;display:block;object-fit:cover}
 
 /* Nachrichten zu Buchungen und Torten-Anfragen (Chat.tsx) */
 .chat26-overlay{z-index:9000;display:flex;align-items:flex-end;justify-content:center}

@@ -9,7 +9,7 @@ import { InstallApp } from "@/components/showly/InstallApp";
 const SOCIAL = [
   { name: "Instagram", icon: "instagram", url: "https://www.instagram.com/__showly__/" },
   { name: "Facebook", icon: "facebook", url: "https://www.facebook.com/showly" },
-  { name: "TikTok", icon: "tiktok", url: "https://www.tiktok.com/@showly" },
+  { name: "TikTok", icon: "tiktok", url: "https://www.tiktok.com/@showly938" },
   { name: "X (Twitter)", icon: "twitter", url: "https://x.com/showly" },
 ] as const;
 

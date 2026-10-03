@@ -8,6 +8,13 @@
 import type { ArtistRow } from "@/lib/database.types";
 import { ARTISTS, CATS, type Artist } from "./data";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
+import { preloadMedia } from "./media";
+
+/* Titelbilder werden synchron als Hintergrund gesetzt; deshalb ihre Adressen
+   gleich nach dem Laden der Profile holen (nur freigegebene kommen zurück). */
+function preloadCloudGalleries(ids: string[]) {
+  return ids.length ? preloadMedia(ids) : Promise.resolve();
+}
 
 type PublicRow = Omit<ArtistRow, "owner" | "published" | "blocked" | "blocked_reason" | "tax_ack_at" | "created_at" | "updated_at">;
 
@@ -52,6 +59,13 @@ export function artistFromRow(r: PublicRow): Artist {
     rev: [],
     instantBook: r.instant_book !== false,
     business: r.business !== false,
+    /* Galerie: Kennungen der Server-Dateien mit "c:" davor. Adressen gibt der
+       Server öffentlich nur für freigegebene Dateien heraus (media.functions). */
+    photos: (Array.isArray(r.media) ? r.media : []).map((m) => ({
+      id: "c:" + m.id,
+      kind: m.kind === "video" ? ("video" as const) : ("image" as const),
+      ratio: Number(m.ratio) || 1,
+    })),
     fromDb: true,
   };
 }
@@ -77,6 +91,7 @@ export async function hydrateDbArtists(ownerId?: string): Promise<number> {
       upsert(artistFromRow(r));
       n++;
     }
+    void preloadCloudGalleries((data || []).flatMap((r) => (Array.isArray(r.media) ? r.media : []).map((m) => "c:" + m.id)));
   }
   if (ownerId) {
     const { data } = await sb.from("artists").select("*").eq("owner", ownerId).limit(5);
@@ -84,6 +99,7 @@ export async function hydrateDbArtists(ownerId?: string): Promise<number> {
       upsert(artistFromRow(r));
       n++;
     }
+    void preloadCloudGalleries((data || []).flatMap((r) => (Array.isArray(r.media) ? r.media : []).map((m) => "c:" + m.id)));
   }
   return n;
 }

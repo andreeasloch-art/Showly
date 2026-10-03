@@ -3,7 +3,7 @@
  * Von Hand geschrieben, passend zu supabase/migrations/0001_showly_grundlage.sql,
  * 0002_anfragen_konto_meldungen.sql, 0003_buchungsablauf_geld.sql und
  * 0004_chat_admin_anbieter_support.sql und
- * 0005_privat_gewerblich_steuer.sql.
+ * 0005_privat_gewerblich_steuer.sql und 0007_medien_pruefung.sql.
  * Sobald das Supabase-Projekt steht, lässt sich diese Datei erzeugen mit:
  *   npx supabase gen types typescript --project-id <kennung> > src/lib/database.types.ts
  * Dann bleibt sie automatisch im Takt mit dem Schema. */
@@ -70,6 +70,24 @@ export type ProfileRow = {
   updated_at: string;
 }
 
+export type MediaStatus = "pending" | "approved" | "rejected";
+export type MediaRow = {
+  id: string;
+  owner: string;
+  kind: "image" | "video";
+  path: string;
+  mime: string;
+  bytes: number;
+  duration: number | null;
+  ratio: number | null;
+  auto_check: Record<string, unknown>;
+  status: MediaStatus;
+  reason: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
 export type ArtistRow = {
   id: number;
   owner: string;
@@ -84,6 +102,8 @@ export type ArtistRow = {
   price_cents: number;
   color: string | null;
   image_path: string | null;
+  /** Galerie: Fotos und Videos (Kennungen aus public.media) */
+  media: { id: string; kind: "image" | "video"; ratio?: number }[];
   verified: boolean;
   superhost: boolean;
   published: boolean;
@@ -357,6 +377,7 @@ export type Database = {
       messages: Table<MessageRow>;
       support_tickets: Table<SupportTicketRow>;
       client_errors: Table<ClientErrorRow>;
+      media: Table<MediaRow>;
       rate_limits: Table<{ bucket: string; window_start: string; hits: number }>;
     };
     Views: {

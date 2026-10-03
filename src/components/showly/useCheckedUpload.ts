@@ -5,12 +5,15 @@
  * wurde und wo. Der Zustand "label" sagt, was gerade passiert, damit beim
  * Prüfen eines Videos niemand denkt, die App hänge. */
 import { useState } from "react";
-import { MediaError, preloadMedia, putMedia, MAX_VIDEO_BYTES, type MediaRef } from "@/showly/media";
+import { MediaError, deleteMedia, preloadMedia, putMedia, MAX_VIDEO_BYTES, type MediaRef } from "@/showly/media";
 import { checkMedia, mediaCheckMessage } from "@/showly/mediaCheck";
+import { cloudUser, uploadToCloud } from "@/showly/cloudMedia";
 
 const T = {
   de: {
     checking: "Wird auf Kontaktdaten geprüft …",
+    uploading: "Wird hochgeladen …",
+    errUpload: "Hochladen hat nicht geklappt. Bitte versuch es noch einmal.",
     checkingVideo: (d: number, n: number) => `Video wird geprüft … ${d}/${n}`,
     errType: "Nur Fotos und Videos sind möglich.",
     errTypeImg: "Hier sind nur Fotos möglich.",
@@ -19,6 +22,8 @@ const T = {
   },
   en: {
     checking: "Checking for contact details …",
+    uploading: "Uploading …",
+    errUpload: "Upload failed. Please try again.",
     checkingVideo: (d: number, n: number) => `Checking video … ${d}/${n}`,
     errType: "Only photos and videos are allowed.",
     errTypeImg: "Only photos are allowed here.",
@@ -27,6 +32,8 @@ const T = {
   },
   es: {
     checking: "Comprobando datos de contacto …",
+    uploading: "Subiendo …",
+    errUpload: "No se pudo subir. Inténtalo de nuevo.",
     checkingVideo: (d: number, n: number) => `Comprobando vídeo … ${d}/${n}`,
     errType: "Solo se permiten fotos y vídeos.",
     errTypeImg: "Aquí solo se permiten fotos.",
@@ -59,7 +66,20 @@ export function useCheckedUpload(lang: string, toast: (msg: string) => void) {
         continue;
       }
       try {
-        out.push(await putMedia(f));
+        let ref = await putMedia(f);
+        /* Mit Datenbank: auf den Server, dort wartet die Datei auf Freigabe */
+        const uid = await cloudUser();
+        if (uid) {
+          setLabel(C.uploading);
+          try {
+            ref = await uploadToCloud(ref, r, uid);
+          } catch (e) {
+            void deleteMedia(ref.id);
+            toast(e instanceof Error && e.message ? `${C.errUpload} (${e.message})` : C.errUpload);
+            continue;
+          }
+        }
+        out.push(ref);
       } catch (e) {
         const why = e instanceof MediaError ? e.reason : "store";
         toast(why === "type" ? C.errType : why === "size" ? C.errSize : C.errStore);

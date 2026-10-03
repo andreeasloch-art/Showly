@@ -529,3 +529,33 @@ html body .profile-video:focus-visible{outline:3px solid var(--lg-violett,#6D3EE
 html body .pe-photo-video{display:block;overflow:hidden;background:#1A0E3D}
 html body .pe-photo-video .media-cell{width:100%;height:100%;margin:0;border-radius:inherit}
 html body .pe-photo-video video{width:100%;height:100%;object-fit:cover}
+
+/* Prüfstatus an Fotos und Videos in der Profilbearbeitung (MediaStatusBadge) */
+html body .pe-photo{position:relative}
+html body .media-status{position:absolute;left:8px;bottom:44px;z-index:2;display:inline-flex;align-items:center;gap:5px;
+  max-width:calc(100% - 16px);padding:4px 9px;border-radius:999px;font:600 11.5px/1.2 'Outfit',system-ui,sans-serif;
+  background:rgba(255,255,255,.92);color:#5B3A00;box-shadow:0 2px 8px rgba(26,14,61,.18)}
+html body .media-status svg{width:13px;height:13px;flex:none}
+html body .media-status em{font-style:normal;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .media-status.st-pending{color:#7A4B00;background:#FFF4DC}
+html body .media-status.st-approved{color:#0B6B4C;background:#DFFBF0}
+html body .media-status.st-rejected{color:#9B1C3A;background:#FFE3EA}
+
+/* Verwaltung: Fotos & Videos freigeben (AdminMedia) */
+html body .admin-media{display:grid;gap:14px}
+html body .admin-media-hint{margin:0;color:var(--h-muted,#5B5378);font-size:14px;line-height:1.5;max-width:70ch}
+html body .admin-media-filter{display:flex;gap:8px;flex-wrap:wrap}
+html body .admin-media-filter button{border:1px solid #DCD5F5;background:#fff;border-radius:999px;padding:7px 14px;font:600 13.5px 'Outfit',system-ui,sans-serif;color:#1A0E3D;cursor:pointer}
+html body .admin-media-filter button.on{background:#1A0E3D;color:#fff;border-color:#1A0E3D}
+html body .admin-media-list{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+html body .admin-media-item{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:16px;padding:14px;border:1px solid #E7E2F8;
+  border-radius:18px;background:#fff}
+@media (max-width:640px){html body .admin-media-item{grid-template-columns:minmax(0,1fr)}}
+html body .admin-media-item.st-pending{border-left:4px solid #F2B33D}
+html body .admin-media-item.st-approved{border-left:4px solid #2FBF8A}
+html body .admin-media-item.st-rejected{border-left:4px solid #E5486E}
+html body .admin-media-view img,html body .admin-media-view video{display:block;width:100%;max-height:320px;object-fit:contain;border-radius:12px;background:#1A0E3D}
+html body .admin-media-info{display:grid;gap:8px;align-content:start;min-width:0}
+html body .admin-media-info small{color:#5B5378;line-height:1.45}
+html body .admin-media-info p{margin:0}
+html body .admin-media-info .dash26-mini{justify-self:start}

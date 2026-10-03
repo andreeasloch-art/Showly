@@ -70,6 +70,16 @@ export const deleteMyAccount = createServerFn({ method: "POST" }).handler(
         }
       }
 
+      /* Hochgeladene Fotos und Videos aus dem Speicher löschen; die
+         Einträge in public.media verschwinden mit dem Profil (cascade). */
+      try {
+        const { data: files } = await admin.from("media").select("path").eq("owner", userId);
+        const paths = (files || []).map((f) => f.path);
+        for (let i = 0; i < paths.length; i += 100) await admin.storage.from("medien").remove(paths.slice(i, i + 100));
+      } catch {
+        /* Speicher nicht erreichbar: Rest räumt die Verwaltung auf */
+      }
+
       const { error } = await admin.auth.admin.deleteUser(userId);
       if (error) return { error: "failed", message: error.message };
       return { ok: true };

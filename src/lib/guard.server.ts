@@ -21,6 +21,7 @@ export const LIMITS = {
   report: [20, 86400],
   connect: [10, 3600],
   offer: [60, 3600],
+  upload: [60, 3600],
 } as const satisfies Record<string, readonly [number, number]>;
 
 export type LimitKey = keyof typeof LIMITS;

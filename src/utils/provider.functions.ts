@@ -51,6 +51,14 @@ function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
     radiusKm: n(d["radiusKm"], 0, 800, 20),
     diets: Array.isArray(d["diets"]) ? (d["diets"] as unknown[]).map((x) => s(x, 30)).filter(Boolean).slice(0, 8) : [],
     coverImg: n(d["coverImg"], 1, 14, 1),
+    /* Galerie: nur Kennungen aus public.media; Adressen gibt der Server nur
+       für freigegebene Dateien heraus (media.functions.ts) */
+    photos: Array.isArray(d["photos"])
+      ? (d["photos"] as { id?: unknown; kind?: unknown; ratio?: unknown }[])
+          .filter((m) => m && /^[0-9a-f-]{36}$/.test(String(m.id)))
+          .slice(0, 8)
+          .map((m) => ({ id: String(m.id), kind: m.kind === "video" ? "video" : "image", ratio: n(Number(m.ratio) * 1000, 100, 10000, 1000) / 1000 }))
+      : [],
     foodRegistered: d["foodRegistered"] === true,
     since: n(d["since"], 2000, 2100, new Date().getFullYear()),
     taxAckAt,
@@ -75,6 +83,9 @@ export const saveProvider = createServerFn({ method: "POST" })
     } else if (!d["vendor"]) return { error: "Name fehlt" };
     if (!(await noContact(String(d["tagline"] || ""), String(d["about"] || ""), String(d["name"] || d["vendor"] || ""))))
       return { error: "Bitte keine Kontaktdaten im Profil" };
+    const photos = (Array.isArray(d["photos"]) ? d["photos"] : []) as { id: string }[];
+    const { ownsAll } = await import("@/lib/media.server");
+    if (!(await ownsAll(ctx.user.id, photos.map((m) => m.id)))) return { error: "Unbekannte Datei in der Galerie" };
 
     const admin = adminClient();
     const now = new Date().toISOString();

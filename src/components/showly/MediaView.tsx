@@ -1,7 +1,7 @@
 /* Anzeige für hochgeladene Fotos und Videos.
  * Die Dateien liegen in IndexedDB, die Adresse wird beim Anzeigen aufgelöst. */
 import { useEffect, useState } from "react";
-import { mediaUrl, type MediaRef } from "@/showly/media";
+import { isCloudMedia, mediaStatusSync, mediaUrl, mediaUrlSync, subscribeMedia, type MediaRef } from "@/showly/media";
 import { Icon } from "@/showly/ui";
 
 function useMediaUrl(id: string) {
@@ -172,7 +172,11 @@ function CarouselSlide({ item }: { item: MediaRef }) {
  * die automatische Prüfung nicht erkennen, deshalb gibt es keinen Ton und
  * keinen Regler dafür. Tippen startet und hält an. */
 export function ProfileVideos({ items, title }: { items: MediaRef[]; title: string }) {
-  const videos = items.filter((m) => m.kind === "video");
+  const [, bump] = useState(0);
+  useEffect(() => subscribeMedia(() => bump((n) => n + 1)), []);
+  /* Server-Dateien nur, wenn der Server eine Adresse herausgegeben hat
+     (freigegeben oder eigene); sonst gibt es auch keine Überschrift. */
+  const videos = items.filter((m) => m.kind === "video" && (!isCloudMedia(m.id) || mediaUrlSync(m.id)));
   if (!videos.length) return null;
   return (
     <section className="profile-videos">
@@ -187,8 +191,19 @@ export function ProfileVideos({ items, title }: { items: MediaRef[]; title: stri
 }
 
 function SilentVideo({ item }: { item: MediaRef }) {
-  const url = useMediaUrl(item.id);
+  const [url, setUrl] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let alive = true;
+    void mediaUrl(item.id).then((u) => {
+      if (alive) setUrl(u);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [item.id]);
   const [playing, setPlaying] = useState(false);
+  /* Noch nicht freigegeben (oder nicht mehr da): gar nicht zeigen */
+  if (url === null) return null;
   if (!url) return <div className="profile-video media-loading" aria-hidden="true" />;
   return (
     <button
@@ -221,5 +236,28 @@ function SilentVideo({ item }: { item: MediaRef }) {
         </span>
       )}
     </button>
+  );
+}
+
+/* Prüfstatus einer Server-Datei in der Profilbearbeitung: "In Prüfung",
+ * "Freigegeben" oder "Abgelehnt" mit Grund. Im Übungsbetrieb ohne Server
+ * (örtliche Dateien) erscheint nichts. */
+export function MediaStatusBadge({ id, lang = "de" }: { id: string; lang?: string }) {
+  const [, bump] = useState(0);
+  useEffect(() => subscribeMedia(() => bump((n) => n + 1)), []);
+  if (!isCloudMedia(id)) return null;
+  const st = mediaStatusSync(id);
+  const T =
+    lang === "en"
+      ? { pending: "Under review", approved: "Approved", rejected: "Not approved" }
+      : lang === "es"
+        ? { pending: "En revisión", approved: "Aprobado", rejected: "No aprobado" }
+        : { pending: "In Prüfung", approved: "Freigegeben", rejected: "Abgelehnt" };
+  const status = st?.status ?? "pending";
+  return (
+    <span className={"media-status st-" + status} title={st?.reason || undefined}>
+      <Icon name={status === "approved" ? "check" : status === "rejected" ? "close" : "clock"} /> {T[status]}
+      {status === "rejected" && st?.reason ? <em>: {st.reason}</em> : null}
+    </span>
   );
 }

@@ -12,6 +12,7 @@
 import { SHOP_ITEMS, type ShopItem } from "./data";
 import { BAKERS, SWEETS, setCloudOwnBakers, type Baker, type Sweet } from "./sweets";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
+import { preloadMedia } from "./media";
 import { removeOffer, saveOffer, saveProvider } from "@/utils/provider.functions";
 
 export const DB_FROM = 100000;
@@ -52,6 +53,12 @@ function bakerFromRow(r: Row, own: boolean, published: boolean): Baker {
     coverImg: Number(d["coverImg"]) || 1,
     diets: (Array.isArray(d["diets"]) ? d["diets"] : []) as string[],
     foodRegistered: d["foodRegistered"] === true,
+    /* Galerie aus der Datenbank: Kennungen mit "c:" davor (Server-Dateien) */
+    photos: (Array.isArray(d["photos"]) ? (d["photos"] as { id: string; kind?: string; ratio?: number }[]) : []).map((m) => ({
+      id: "c:" + m.id,
+      kind: m.kind === "video" ? ("video" as const) : ("image" as const),
+      ratio: Number(m.ratio) || 1,
+    })),
     ...(own ? { own: true } : {}),
   };
 }
@@ -117,6 +124,8 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
       if (o.kind === "sweet") upsert(SWEETS, sweetFromOffer(o));
       else upsert(SHOP_ITEMS, itemFromOffer(o, vendors.get(o.provider_id) || ""));
     }
+    /* Galerien: Adressen gleich holen (nur freigegebene kommen zurück) */
+    void preloadMedia(BAKERS.flatMap((b) => (b.photos || []).map((m) => m.id)).filter((id) => id.startsWith("c:")));
   }
   const mine: { baker?: number; deco?: number } = {};
   if (ownerId) {
@@ -129,6 +138,8 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
       } else mine.deco = p.id;
     }
     setCloudOwnBakers(mine.baker ? [mine.baker] : []);
+    if (mine.baker)
+      void preloadMedia((BAKERS.find((b) => b.id === mine.baker)?.photos || []).map((m) => m.id));
     if (ids.length) {
       const { data: offers } = await sb.from("provider_offers").select("*").in("provider_id", ids);
       const vendor = String(((provs || []).find((p) => p.kind === "deco")?.data as Record<string, unknown> | undefined)?.["vendor"] || "");
@@ -160,6 +171,10 @@ export async function saveBakerCloud(b: Partial<Baker>): Promise<Result<{ id: nu
         radiusKm: b.radiusKm,
         diets: b.diets,
         coverImg: b.coverImg,
+        /* Nur Dateien auf dem Server ("c:"); örtliche bleiben im Browser */
+        photos: (b.photos || [])
+          .filter((m) => m.id.startsWith("c:"))
+          .map((m) => ({ id: m.id.slice(2), kind: m.kind, ratio: m.ratio })),
         foodRegistered: b.foodRegistered,
         since: b.since,
         taxAckAt: b.taxAckAt,

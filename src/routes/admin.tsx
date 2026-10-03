@@ -12,6 +12,7 @@ import { Icon } from "@/showly/ui";
 import { isBackendConfigured } from "@/lib/supabase";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { adminAct, adminExport, adminList, adminOverview, type AdminSection } from "@/utils/admin.functions";
+import { AdminMedia } from "@/components/showly/AdminMedia";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Verwaltung – Showly" }, { name: "robots", content: "noindex" }] }),
@@ -20,8 +21,9 @@ export const Route = createFileRoute("/admin")({
 
 type Row = Record<string, unknown> & { id: number };
 
-const TABS: { id: AdminSection | "overview" | "export"; label: string; icon: string }[] = [
+const TABS: { id: AdminSection | "overview" | "export" | "media"; label: string; icon: string }[] = [
   { id: "overview", label: "Übersicht", icon: "chart" },
+  { id: "media", label: "Fotos & Videos", icon: "image" },
   { id: "reports", label: "Meldungen", icon: "shield" },
   { id: "penalties", label: "Strafen & Nachweise", icon: "scale" },
   { id: "artists", label: "Künstler", icon: "star" },
@@ -51,7 +53,7 @@ function AdminPage() {
       else if (r) toast(r.error);
       return;
     }
-    if (tab === "export") return;
+    if (tab === "export" || tab === "media") return;
     const r = await adminList({ data: { section: tab } }).catch(() => null);
     if (!r) return;
     if ("error" in r) return toast(r.error);
@@ -139,6 +141,7 @@ function AdminPage() {
         {tab === "overview" && counts && (
           <div className="admin26-grid">
             {[
+              ["Fotos & Videos warten auf Freigabe", counts["media"], "media"],
               ["Offene Meldungen", counts["reports"], "reports"],
               ["Nachweise und Anhörungen", counts["penalties"], "penalties"],
               ["Künstler warten auf Freischaltung", counts["artists"], "artists"],
@@ -147,13 +150,15 @@ function AdminPage() {
               ["Offene Hilfe-Anfragen", counts["tickets"], "tickets"],
               ["Fehler in 24 Stunden", counts["errors"], "errors"],
             ].map(([label, n, id]) => (
-              <button key={String(id)} type="button" className="admin26-card" onClick={() => setTab(id as AdminSection)}>
+              <button key={String(id)} type="button" className="admin26-card" onClick={() => setTab(id as (typeof TABS)[number]["id"])}>
                 <b>{String(n ?? 0)}</b>
                 <span>{String(label)}</span>
               </button>
             ))}
           </div>
         )}
+
+        {tab === "media" && <AdminMedia />}
 
         {tab === "reports" && (
           <ul className="admin26-list">
@@ -324,7 +329,7 @@ function AdminPage() {
           </div>
         )}
 
-        {tab !== "overview" && tab !== "export" && rows.length === 0 && <p className="dash26-none">Keine Einträge.</p>}
+        {tab !== "overview" && tab !== "export" && tab !== "media" && rows.length === 0 && <p className="dash26-none">Keine Einträge.</p>}
       </div>
     </div>
   );

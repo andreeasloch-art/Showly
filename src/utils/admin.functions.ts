@@ -55,7 +55,8 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(
     const since = new Date(Date.now() - 86400000).toISOString();
     const count = async (q: PromiseLike<{ count: number | null }>) =>
       (await q).count || 0;
-    const [reports, penalties, artists, providers, tickets, errors, refunds] =
+    const { pendingMediaCount } = await import("@/lib/media.server");
+    const [reports, penalties, artists, providers, tickets, errors, refunds, media] =
       await Promise.all([
         count(
           a
@@ -103,8 +104,9 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(
             .in("status", ["cancelled", "declined", "noshow"])
             .eq("refunded_cents", 0),
         ),
+        pendingMediaCount(),
       ]);
-    return { reports, penalties, artists, providers, tickets, errors, refunds };
+    return { reports, penalties, artists, providers, tickets, errors, refunds, media };
   },
 );
 

@@ -12,12 +12,17 @@
 export type MediaKind = "image" | "video";
 
 export interface MediaRef {
+  /** Örtliche Kennung, oder "c:<uuid>" für eine Datei auf dem Server */
   id: string;
   kind: MediaKind;
   name?: string;
   /** Seitenverhältnis, damit die Kachel vor dem Laden schon Platz hat. */
   ratio?: number;
 }
+
+/** Freigabe einer Server-Datei durch das Team */
+export type MediaStatus = "pending" | "approved" | "rejected";
+export const isCloudMedia = (id: string) => id.startsWith("c:");
 
 const DB_NAME = "showly-media";
 const STORE = "files";
@@ -134,6 +139,82 @@ export function mediaUrlSync(id: string): string | null {
   return urlCache.get(id) ?? null;
 }
 
+/* Prüfstatus der Server-Dateien, soweit die fragende Person ihn sehen darf
+   (eigene Dateien und Verwaltung; bei fremden nur "approved"). */
+const statusCache = new Map<string, { status: MediaStatus; reason: string | null }>();
+
+export function mediaStatusSync(id: string) {
+  return statusCache.get(id) ?? null;
+}
+
+function notify() {
+  mediaVer += 1;
+  mediaListeners.forEach((fn) => fn());
+}
+
+/* Adressen von Server-Dateien gesammelt holen. Der Server gibt nur heraus,
+   was die Person sehen darf; alles andere bleibt ohne Adresse und wird
+   deshalb nirgends angezeigt. */
+async function resolveCloud(ids: string[], force = false): Promise<void> {
+  const want = ids.filter((id) => isCloudMedia(id) && (force || !urlCache.has(id)));
+  if (!want.length) return;
+  try {
+    const { mediaUrls } = await import("@/utils/media.functions");
+    for (let i = 0; i < want.length; i += 80) {
+      const part = want.slice(i, i + 80);
+      const { items } = await mediaUrls({ data: { ids: part.map((x) => x.slice(2)) } });
+      for (const it of items) {
+        const key = "c:" + it.id;
+        statusCache.set(key, { status: it.status, reason: it.reason });
+        /* Eigene Vorschau aus dem Browser-Speicher behalten, sonst Server-Adresse */
+        if (!urlCache.has(key) || force) {
+          const local = await localBlobUrl(key);
+          urlCache.set(key, local ?? it.url);
+        }
+      }
+    }
+    notify();
+  } catch {
+    /* Server nicht erreichbar: ohne Adresse wird die Datei nicht angezeigt */
+  }
+}
+
+/** Prüfstatus eigener Server-Dateien neu laden (Profilbearbeitung) */
+export function refreshMediaStatus(ids: string[]) {
+  return resolveCloud(ids, true);
+}
+
+async function localBlobUrl(id: string): Promise<string | null> {
+  try {
+    const blob = await tx<Blob | undefined>("readonly", (s) => s.get(id) as IDBRequest<Blob | undefined>);
+    return blob ? URL.createObjectURL(blob) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Die gespeicherte Datei (für das Hochladen auf den Server) */
+export async function getMediaBlob(id: string): Promise<Blob | null> {
+  try {
+    return (await tx<Blob | undefined>("readonly", (s) => s.get(id) as IDBRequest<Blob | undefined>)) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** Nach dem Hochladen: örtliche Kopie unter der Server-Kennung ablegen,
+ *  damit die eigene Vorschau sofort und ohne Netz da ist. */
+export async function rekeyMedia(oldId: string, newId: string, status: MediaStatus = "pending") {
+  const blob = await getMediaBlob(oldId);
+  if (blob) await tx("readwrite", (s) => s.put(blob, newId) as IDBRequest<IDBValidKey>).catch(() => null);
+  const url = urlCache.get(oldId);
+  if (url) urlCache.set(newId, url);
+  urlCache.delete(oldId);
+  await tx("readwrite", (s) => s.delete(oldId) as IDBRequest<undefined>).catch(() => null);
+  statusCache.set(newId, { status, reason: null });
+  notify();
+}
+
 export function subscribeMedia(fn: () => void) {
   mediaListeners.add(fn);
   return () => {
@@ -146,8 +227,17 @@ export function mediaVersion() {
 }
 
 export async function preloadMedia(ids: string[]) {
-  let added = false;
-  for (const id of ids) {
+  /* Server-Dateien: zuerst die eigene Kopie im Browser, sonst gesammelt vom Server */
+  const cloud = ids.filter((id) => id && isCloudMedia(id) && !urlCache.has(id));
+  const missing: string[] = [];
+  for (const id of cloud) {
+    const local = await localBlobUrl(id);
+    if (local) urlCache.set(id, local);
+    else missing.push(id);
+  }
+  await resolveCloud(missing);
+  let added = cloud.length > missing.length;
+  for (const id of ids.filter((x) => !isCloudMedia(x))) {
     if (!id || urlCache.has(id)) continue;
     if (await mediaUrl(id)) added = true;
   }
@@ -161,6 +251,15 @@ export async function preloadMedia(ids: string[]) {
 export async function mediaUrl(id: string): Promise<string | null> {
   const cached = urlCache.get(id);
   if (cached) return cached;
+  if (isCloudMedia(id)) {
+    const local = await localBlobUrl(id);
+    if (local) {
+      urlCache.set(id, local);
+      return local;
+    }
+    await resolveCloud([id]);
+    return urlCache.get(id) ?? null;
+  }
   try {
     const blob = await tx<Blob | undefined>("readonly",
       (s) => s.get(id) as IDBRequest<Blob | undefined>);
@@ -174,6 +273,13 @@ export async function mediaUrl(id: string): Promise<string | null> {
 }
 
 export async function deleteMedia(id: string) {
+  /* Server-Datei: auch dort löschen (nur eigene; der Server prüft das) */
+  if (isCloudMedia(id)) {
+    void import("@/utils/media.functions")
+      .then(({ deleteMyMedia }) => deleteMyMedia({ data: { id: id.slice(2) } }))
+      .catch(() => null);
+    statusCache.delete(id);
+  }
   const url = urlCache.get(id);
   if (url) {
     URL.revokeObjectURL(url);

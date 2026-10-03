@@ -32,6 +32,8 @@ export interface MediaCheckResult {
   failed?: boolean;
   /** Video ist zu lang */
   tooLong?: boolean;
+  /** Länge des Videos in Sekunden */
+  duration?: number;
 }
 
 export const MAX_VIDEO_SECONDS = 60;
@@ -251,7 +253,7 @@ export async function checkVideo(
       if (found.length) return { ok: false, found, atSecond: Math.round(t) };
     }
     onProgress?.(n, n);
-    return { ok: true, found: [] };
+    return { ok: true, found: [], duration: dur };
   } catch {
     return { ok: false, found: [], failed: true };
   } finally {

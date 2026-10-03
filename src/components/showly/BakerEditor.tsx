@@ -3,12 +3,12 @@
    Künstler. Art des Anbieters (privat oder Konditorei), Bewertungen und
    Prüfsiegel ändert der Anbieter nicht selbst. */
 import { TaxNotice } from "@/components/showly/ProviderNotices";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
-import { deleteMedia, type MediaRef } from "@/showly/media";
+import { deleteMedia, isCloudMedia, refreshMediaStatus, type MediaRef } from "@/showly/media";
 import { ImagePick, useImageStore } from "@/components/showly/ImagePick";
-import { MediaThumb } from "@/components/showly/MediaView";
+import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { KindBadge, SweetCard, catName } from "@/components/showly/Sweets";
 import {
   SWEET_CATS,
@@ -221,6 +221,11 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
   const [saved, setSaved] = useState<Draft>(init);
   const [draft, setDraft] = useState<Draft>(init);
   const dirty = JSON.stringify(saved) !== JSON.stringify(draft);
+  /* Prüfstatus der Server-Dateien beim Öffnen aktuell holen */
+  useEffect(() => {
+    void refreshMediaStatus(draft.photos.map((m) => m.id).filter(isCloudMedia));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const setContact = (k: keyof Draft["contact"], v: string) =>
@@ -259,6 +264,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
         radiusKm: draft.radiusKm,
         leadDays: Math.max(1, draft.leadDays),
         specialties: draft.specialties.length ? draft.specialties : b.specialties,
+        photos: draft.photos,
         diets: draft.diets
           .split(",")
           .map((x) => x.trim())
@@ -337,6 +343,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
                   <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
                 )}
                 {i === 0 && m.kind !== "video" && <span className="pe-photo-tag">{X.cover}</span>}
+                <MediaStatusBadge id={m.id} lang={lang} />
                 <figcaption>
                   {i > 0 && m.kind !== "video" && (
                     <button

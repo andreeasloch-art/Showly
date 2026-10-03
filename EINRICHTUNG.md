@@ -23,6 +23,15 @@ Solange die Schlüssel fehlen, läuft Showly wie bisher im örtlichen
 
    **Lovable Cloud:** Im Lovable-Projekt „Showly“ sind alle vier Teile
    bereits eingespielt (Stand 26.09.2026). Dort ist nichts mehr zu tun.
+
+   **Neu: Fotos und Videos mit Freigabe** (`supabase/migrations/0007_medien_pruefung.sql`).
+   Auch in Lovable Cloud noch ausführen (vorher 0005 und 0006, falls noch
+   nicht geschehen). Die Datei legt den privaten Speicher „medien“ an, die
+   Tabelle `media` mit den Zugriffsregeln und die Galerie-Spalte bei den
+   Künstlern. Danach erscheint in der Verwaltung (`/admin`) der Reiter
+   „Fotos & Videos“: Jede neue Datei wartet dort, bis jemand aus dem Team
+   sie freigibt oder mit Grund ablehnt. Die Person bekommt eine Mail
+   (wenn der Mail-Dienst eingerichtet ist, Abschnitt 4).
 3. Unter **Project Settings → API** drei Werte abholen und in die Datei `.env`
    eintragen, Vorlage ist `.env.example`:
    - Project URL → `VITE_SUPABASE_URL`

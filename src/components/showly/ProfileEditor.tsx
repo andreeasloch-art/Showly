@@ -1,13 +1,14 @@
 import { useNavigate } from "@tanstack/react-router";
 import { FEE_RATE } from "@/showly/pricing";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 import { figName, figureList, figuresOf, realName } from "@/showly/figures";
-import { deleteMedia, type MediaRef } from "@/showly/media";
+import { deleteMedia, isCloudMedia, refreshMediaStatus, type MediaRef } from "@/showly/media";
+import { saveArtistMedia } from "@/utils/media.functions";
 import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
-import { MediaThumb } from "@/components/showly/MediaView";
+import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { updateArtistProfile } from "@/showly/persist";
 import { isInstant } from "@/showly/booking";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
@@ -345,6 +346,11 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
   const [figInput, setFigInput] = useState("");
   const [busy, setBusy] = useState(false);
   const up = useCheckedUpload(lang, toast);
+  /* Prüfstatus der Server-Dateien beim Öffnen aktuell holen */
+  useEffect(() => {
+    void refreshMediaStatus(draft.photos.map((m) => m.id).filter(isCloudMedia));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const photoInput = useRef<HTMLInputElement>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
@@ -474,6 +480,16 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
     before.filter((m) => !keep.has(m.id)).forEach((m) => void deleteMedia(m.id));
 
     updateArtistProfile(a.id, patch);
+    /* Profil aus der Datenbank: Galerie dort speichern. Neue Dateien sind
+       erst nach Freigabe durch das Team öffentlich zu sehen. */
+    if (a["fromDb"]) {
+      const items = patch.photos
+        .filter((m) => isCloudMedia(m.id))
+        .map((m) => ({ id: m.id.slice(2), kind: m.kind, ratio: m.ratio ?? 1 }));
+      void saveArtistMedia({ data: { items } }).then((r) => {
+        if ("error" in r) toast(r.error);
+      });
+    }
     setSaved(draft);
     toast(C.saved);
   }
@@ -529,6 +545,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
                   <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
                 )}
                 {i === 0 && m.kind !== "video" && <span className="pe-photo-tag">{C.cover}</span>}
+                <MediaStatusBadge id={m.id} lang={lang} />
                 <figcaption>
                   {i > 0 && m.kind !== "video" && (
                     <button type="button" onClick={() => makeCover(i)}>

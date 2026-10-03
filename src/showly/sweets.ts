@@ -348,7 +348,7 @@ function bg(url: string, pos = "center"): CSSProperties {
 export function sweetBg(s: Sweet): CSSProperties {
   const u = s.photo ? mediaUrlSync(s.photo.id) : null;
   if (u) return bg(u);
-  if (s.img) return bg(`/sweets/${s.img}.svg`);
+  if (s.img) return bg(`/sweets/${s.img}.webp`);
   return { background: "linear-gradient(135deg,#FFF1F4,#F6EEFF)" };
 }
 
@@ -356,7 +356,7 @@ export function bakerBg(b: Baker): CSSProperties {
   const first = b.photos?.[0];
   const u = first ? mediaUrlSync(first.id) : null;
   if (u) return bg(u);
-  return bg(`/sweets/${b.coverImg || 1}.svg`);
+  return bg(`/sweets/${b.coverImg || 1}.webp`);
 }
 
 export function sweetsOf(bakerId: number) {

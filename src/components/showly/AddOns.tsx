@@ -525,7 +525,7 @@ export function CartAddOns({ onLeave }: { onLeave: () => void }) {
             navigate({ to: "/torten" });
           }}
         >
-          <span className="cart-addon-img" style={{ backgroundImage: "url('/sweets/3.svg')" }} />
+          <span className="cart-addon-img" style={{ backgroundImage: "url('/sweets/3.webp')" }} />
           <span className="cart-addon-text">
             <b>{X.cartCake}</b>
             <small>{X.cartCakeP}</small>

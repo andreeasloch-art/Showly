@@ -288,13 +288,13 @@ function Home() {
           </div>
           <div className="more-tiles reveal-stagger">
             <Link className="more-tile" to="/shop">
-              <MoreTile img="/shop/1.svg" icon="mask" text={C.tiles[0]!} />
+              <MoreTile img="/shop/1.webp" icon="mask" text={C.tiles[0]!} />
             </Link>
             <Link className="more-tile" to="/shop" search={{ bereich: "deko" }}>
-              <MoreTile img="/shop/16.svg" icon="party" text={C.tiles[1]!} />
+              <MoreTile img="/shop/16.webp" icon="party" text={C.tiles[1]!} />
             </Link>
             <Link className="more-tile" to="/torten">
-              <MoreTile img="/sweets/1.svg" icon="gift" text={C.tiles[2]!} />
+              <MoreTile img="/sweets/1.webp" icon="gift" text={C.tiles[2]!} />
             </Link>
           </div>
         </div>

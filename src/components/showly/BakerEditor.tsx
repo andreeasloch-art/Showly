@@ -568,7 +568,7 @@ export function OfferFields({
     <>
       <div className="pe-field">
         <span className="pe-label">{X.photo}</span>
-        <ImagePick value={d.photo} onChange={(m) => up("photo", m)} fallback={d.img ? { backgroundImage: `url('/sweets/${d.img}.svg')`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />
+        <ImagePick value={d.photo} onChange={(m) => up("photo", m)} fallback={d.img ? { backgroundImage: `url('/sweets/${d.img}.webp')`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />
       </div>
       <label className="pe-field">
         <span className="pe-label">{X.offerName}</span>

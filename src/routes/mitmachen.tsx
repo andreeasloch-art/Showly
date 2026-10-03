@@ -25,10 +25,10 @@ const PLANNER_CATS = ["eventplanner", "weddingplanner"];
 /* Texte, die es nur im neuen Aufbau dieser Seite gibt. */
 const COPY = {
   de: {
-    pill: "Für Künstler · kostenlos starten",
+    pill: "Für Künstler · kostenlos registrieren",
     calc: "Verdienst berechnen",
     t1: "0 € Anmeldung",
-    t2: "Nur 20 % Gebühr",
+    t2: "20 % nur, wenn du gebucht wirst",
     t3: "Eigene Preise und Termine",
     example: "Beispielansicht",
     newReq: "Neue Buchungsanfrage",
@@ -48,7 +48,7 @@ const COPY = {
     pill: "For artists · start for free",
     calc: "Calculate earnings",
     t1: "€0 to sign up",
-    t2: "Only 20% fee",
+    t2: "20% only when you get booked",
     t3: "Your own prices and dates",
     example: "Example view",
     newReq: "New booking request",
@@ -68,7 +68,7 @@ const COPY = {
     pill: "Para artistas · empieza gratis",
     calc: "Calcular ingresos",
     t1: "0 € de alta",
-    t2: "Solo 20 % de comisión",
+    t2: "20 % solo si te reservan",
     t3: "Tus propios precios y fechas",
     example: "Vista de ejemplo",
     newReq: "Nueva solicitud de reserva",
@@ -399,17 +399,14 @@ function Become() {
               <div className="join26-profile-body">
                 <div className="act-card-row">
                   <b>{String(L(sample.name))}</b>
-                  <span className="act-card-rating">
-                    <span className="star">★</span>
-                    {num(sample.rating)}
-                  </span>
+                  <span className="act-card-new">{t("card.new")}</span>
                 </div>
                 <span className="join26-profile-meta">
                   {catLabel(sample.cat)} · {String(L(sample.loc))}
                 </span>
                 <div className="act-card-row">
                   <span className="act-card-price">
-                    <b>{fmt(Math.round(sample.price * 1.2))}</b> <small>{C.per}</small>
+                    <b>{fmt(sample.price)}</b> <small>{C.per}</small>
                   </span>
                   <span className="act-card-ok">
                     <Icon name="check" /> {t("card.verified")}
@@ -451,7 +448,7 @@ function Become() {
         </div>
       </section>
 
-      {/* Laufendes Band mit Acts, die schon dabei sind */}
+      {/* Laufendes Band mit Beispielprofilen */}
       <section className="join26-faces" aria-label={t("become.facesNote")}>
         <p>{t("become.facesNote")}</p>
         <div className="join26-marquee">

@@ -94,6 +94,8 @@ function Detail() {
       .concat(ARTISTS.filter((x) => x.id !== a.id && x.cat !== a.cat).sort((p, q) => q.rating - p.rating))
       .slice(0, 4);
 
+  const picked = !!(cal.sel.date && cal.sel.slot);
+  const chooseLbl = lang === "en" ? "Pick a date" : lang === "es" ? "Elegir fecha" : "Termin wählen";
   function scrollToCal() {
     if (typeof document === "undefined") return;
     document.getElementById("cal-detail")?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -130,7 +132,9 @@ function Detail() {
             </div>
           )}
 
-          <div className="gallery">
+          {/* Ohne eigene Fotos nur ein Bild: dreimal dieselbe Figur in
+              verschiedenen Ausschnitten sah nach Auswahl aus, war aber keine. */}
+          <div className={"gallery" + (photos.length >= 2 ? "" : " single")}>
             {/* Der Ausschnitt sitzt etwas hoeher, sonst schneidet das breite
                 Format den Kopf der Figur ab. */}
             <div className="gallery-main" style={bgOf(a, "center 32%")}>
@@ -144,30 +148,7 @@ function Detail() {
                   style={(photos[2] && mediaBg(photos[2].id)) || mediaBg(photos[0]!.id) || bgOf(a)}
                 />
               </div>
-            ) : (
-            <div className="gallery-side">
-              <div
-                className="gallery-thumb"
-                style={
-                  hasImg(a)
-                    ? { ...bgOf(a, "center 20%"), backgroundSize: "200%", fontSize: 50 }
-                    : { background: a.color, opacity: 0.75, fontSize: 50 }
-                }
-              >
-                <Face a={a} />
-              </div>
-              <div
-                className="gallery-thumb"
-                style={
-                  hasImg(a)
-                    ? { ...bgOf(a, "center 78%"), backgroundSize: "180%", fontSize: 40 }
-                    : { background: a.color, opacity: 0.5, fontSize: 40 }
-                }
-              >
-                <Face a={a} />
-              </div>
-            </div>
-            )}
+            ) : null}
           </div>
 
           <header className="detail-head">
@@ -472,7 +453,7 @@ function Detail() {
                   <div className="similar-body">
                     <div className="similar-name">{L(s.name)}</div>
                     <div className="similar-meta">
-                      {s.reviews > 0 ? `★ ${num(s.rating, 1)} · ` : `${t("card.new")} · `}{fmt(Math.round(s.price * 1.2))}{" "}
+                      {s.reviews > 0 ? `★ ${num(s.rating, 1)} · ` : `${t("card.new")} · `}{fmt(s.price)}{" "}
                       {t(((s as { packages?: unknown[] }).packages || []).length ? "card.pkgUnit" : "card.hour")}
                     </div>
                   </div>
@@ -637,16 +618,9 @@ function Detail() {
             <button
               className="btn-primary book-cta"
               disabled={!!a.demo && !demoBookable()}
-              onClick={() => {
-                if (!cal.sel.date || !cal.sel.slot) {
-                  toast(t("book.pickFirst"));
-                  scrollToCal();
-                  return;
-                }
-                setModal(true);
-              }}
+              onClick={() => (picked ? setModal(true) : scrollToCal())}
             >
-              {t("book.now")}
+              {picked ? t("book.now") : chooseLbl}
             </button>
             <div className="trust-row">
               <Icon name="lock" /> {t("book.secure")}
@@ -664,10 +638,11 @@ function Detail() {
         </aside>
       </div>
 
-      {/* Wie im Online-Shop: passende Extras direkt unter dem Profil */}
+      {/* Passende Extras direkt unter dem Profil */}
       <div className="ui26 addon-zone">
         <EventBundle a={a} artistTotal={total} hours={h} onBook={scrollToCal} />
         <AddOnShelf
+          title={lang === "en" ? "More for this occasion" : lang === "es" ? "Más para esta ocasión" : "Mehr für diesen Anlass"}
           deco={suggestForArtist(a, String(L(a.loc))).deco.slice(2)}
           sweets={suggestForArtist(a, String(L(a.loc))).sweets.slice(1)}
         />
@@ -697,8 +672,8 @@ function Detail() {
               : t("book.toCal")}
           </span>
         </div>
-        <button onClick={() => (cal.sel.date && cal.sel.slot ? setModal(true) : scrollToCal())}>
-          {t("book.now")}
+        <button onClick={() => (picked ? setModal(true) : scrollToCal())}>
+          {picked ? t("book.now") : chooseLbl}
         </button>
       </div>
       <Footer />

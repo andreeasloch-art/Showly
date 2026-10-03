@@ -97,22 +97,31 @@ export function Calendar({
     if (iso === tISO) cls.push("today");
     if (sel.date === iso) cls.push("sel");
     const clickable = !(st === "past" || (st === "full" && !owner));
-    const mini =
+    /* Im Kästchen nur ein Punkt bzw. Strich; die Zahl freier Zeitfenster
+       steht im Namen des Knopfs für Vorlesehilfen und im Tooltip. Vorher
+       standen "7 / 4 / frei" untereinander und waren nicht zu verstehen. */
+    const nFree = freeOn(iso).length;
+    const mini = st === "full" && owner ? t("cal.blocked") : "";
+    const label =
       st === "part"
-        ? `${freeOn(iso).length} ${t("cal.slotFree")}`
+        ? `${d}. – ${nFree} ${t("cal.slotFree")}`
         : st === "full"
-          ? owner
-            ? t("cal.blocked")
-            : "✕"
-          : "";
+          ? `${d}. – ${t("cal.full")}`
+          : st === "free"
+            ? `${d}. – ${t("cal.free")}`
+            : String(d);
     cells.push(
       <button
         className={cls.join(" ")}
         key={iso}
         disabled={!clickable}
+        aria-label={label}
+        title={label}
+        aria-pressed={sel.date === iso}
         onClick={() => clickable && pickDay(iso)}
       >
         {d}
+        {st === "part" && !owner && <span className="cal-dot" aria-hidden="true" />}
         {mini && <span className="cal-mini">{mini}</span>}
       </button>,
     );
@@ -144,19 +153,19 @@ export function Calendar({
         <div className="cal-grid">{cells}</div>
         <div className="cal-legend">
           <span>
-            <i className="lg-box" style={{ background: "#fff" }} />
+            <i className="lg-box lg-free" />
             {t("cal.free")}
           </span>
           <span>
-            <i className="lg-box" style={{ background: "#FFF7E6", borderColor: "#F0C36B" }} />
+            <i className="lg-box lg-part" />
             {t("cal.part")}
           </span>
           <span>
-            <i className="lg-box" style={{ background: "#FFE4DD", borderColor: "#F09A82" }} />
+            <i className="lg-box lg-full" />
             {t("cal.full")}
           </span>
           <span>
-            <i className="lg-box" style={{ boxShadow: "inset 0 0 0 2px var(--t)" }} />
+            <i className="lg-box lg-today" />
             {t("cal.today")}
           </span>
         </div>

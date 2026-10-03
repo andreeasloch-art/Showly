@@ -1,0 +1,175 @@
+/* ==========================================================================
+   LOGOFARBEN
+   Die Seite trägt die Farben der Wortmarke. Jeder Ton ist direkt aus dem
+   Logo ausgelesen (S, h, o, w, l, y):
+
+     Blauviolett  #4832FD   oben im S
+     Violett      #6D3EEA   Schaft des h
+     Lila         #8530D0   Mitte des S
+     Flieder      #B8AEFC   Bogen des S
+     Magenta      #ED31C5   unten im S
+     Pink         #FC5691   rechter Strich des w
+     Koralle      #FF976A   Fuß des h
+     Mint         #4AECB5   Spitze des y
+
+   Für Schrift und Knöpfe gibt es je eine dunklere Stufe, damit weiße bzw.
+   dunkle Schrift genug Kontrast hat (WCAG AA). Diese Datei liegt über
+   showly.css und setzt nur Farben, Verläufe und die Korrekturen aus der
+   Design-Prüfung; Aufbau und Schrift bleiben.
+   ========================================================================== */
+
+:root,.ui26{
+  --lg-blau:#4832FD;   --lg-blau-d:#3420D6;
+  --lg-violett:#6D3EEA; --lg-lila:#8530D0;
+  --lg-flieder:#B8AEFC; --lg-flieder-l:#F2EFFF;
+  --lg-magenta:#ED31C5; --lg-magenta-d:#B4178F;
+  --lg-pink:#FC5691;   --lg-pink-l:#FFEEF4;
+  --lg-koralle:#FF976A; --lg-koralle-d:#B5461A; --lg-koralle-l:#FFF1EA;
+  --lg-mint:#4AECB5;   --lg-mint-d:#0B7A57;   --lg-mint-l:#E6FBF3;
+  --lg-ink:#1A0E3D;
+
+  /* Der Bogen der Wortmarke, in der Reihenfolge der Buchstaben */
+  --lg-bogen:linear-gradient(105deg,#4832FD 0%,#6D3EEA 18%,#8530D0 34%,#ED31C5 52%,#FC5691 66%,#FF976A 82%,#4AECB5 100%);
+  /* Knopfverlauf: wie das S von oben nach unten, dunkel genug für weiße Schrift */
+  --lg-knopf:linear-gradient(120deg,#4832FD 0%,#6D3EEA 45%,#B4178F 100%);
+  --lg-knopf-hover:linear-gradient(120deg,#3420D6 0%,#5B2BD8 45%,#9E1180 100%);
+
+  /* Bestehende Werte auf die Logofarben legen */
+  --v50:var(--lg-flieder-l); --v100:#E4DEFF; --v200:#CFC6FE; --v300:var(--lg-flieder);
+  --v400:#7E66FB; --v500:var(--lg-blau); --v600:var(--lg-violett); --v700:var(--lg-blau-d); --v800:#2A1A9E; --v900:var(--lg-ink);
+  --m400:var(--lg-pink); --m500:var(--lg-magenta); --m600:var(--lg-magenta-d);
+  --o400:var(--lg-koralle); --o500:var(--lg-koralle);
+  --mint:var(--lg-mint); --mint-deep:var(--lg-mint-d); --mint-soft:var(--lg-mint-l);
+  --p:var(--lg-violett); --p2:var(--lg-blau-d); --p3:var(--lg-flieder-l);
+  --a:var(--lg-magenta); --a2:var(--lg-magenta-d); --a3:var(--lg-pink-l);
+  --ink:var(--lg-ink);
+  --grad:var(--lg-bogen);
+  --grad-accent:var(--lg-knopf);
+  --grad-warm:linear-gradient(120deg,#FF976A 0%,#FC5691 55%,#ED31C5 100%);
+  --grad-deep:linear-gradient(150deg,#1A0E3D 0%,#3420D6 55%,#8530D0 100%);
+  --h-violet:var(--lg-violett); --h-violet-d:var(--lg-blau-d);
+  --h-grad:var(--lg-bogen);
+  --h-ink:var(--lg-ink);
+}
+body[data-theme]{--sh-accent:var(--lg-violett);--sh-accent2:var(--lg-blau-d);--sh-accent-soft:var(--lg-flieder-l)}
+
+/* Markierter Text, Eingabemarke, Fokus in Logofarben */
+::selection{background:var(--lg-flieder);color:var(--lg-ink)}
+html{caret-color:var(--lg-magenta);accent-color:var(--lg-violett)}
+
+/* --- Knöpfe ------------------------------------------------------------- */
+/* Vorher lag weiße Schrift auf #8A5BF5 (4,3 : 1, knapp zu wenig). Der
+   Verlauf beginnt jetzt im Blauviolett und endet im dunklen Magenta. */
+html body .btn-primary,html body .search-btn,html body .btn-nav-fill,html body .book-cta,
+html body .home-btn.primary,html body .prod-btn.solid,html body .konto-go,html body .m-cta button,
+html body .spot-btn,html body .shop-btn.solid{
+  background:var(--lg-knopf)!important;color:#fff!important;
+  box-shadow:0 8px 22px -8px rgba(72,50,253,.55)!important;
+}
+html body .btn-primary:hover,html body .search-btn:hover,html body .book-cta:hover,html body .home-btn.primary:hover,
+html body .prod-btn.solid:hover,html body .konto-go:hover,html body .m-cta button:hover{
+  background:var(--lg-knopf-hover)!important;
+}
+
+/* --- Kopfzeile ---------------------------------------------------------- */
+/* Feste Höhe: das Schrumpfen beim Scrollen hat bei jedem Bild neu gerechnet */
+html body nav,html body nav .logo-img{transition:background-color .2s,box-shadow .2s!important}
+html body nav::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;background:var(--lg-bogen);opacity:.9;pointer-events:none;
+}
+html body .nav-link:hover,html body .nav-link.active,html body .nav-link[data-status="active"]{background:var(--lg-flieder-l);color:var(--lg-blau-d)}
+html body .cart-count{background:var(--lg-magenta);color:#fff}
+
+/* --- Startseite: Kopfbereich in den Logofarben -------------------------- */
+html body .home-hero{
+  background:
+    radial-gradient(70% 55% at 0% 0%,rgba(72,50,253,.26),transparent 70%),
+    radial-gradient(60% 50% at 100% 0%,rgba(237,49,197,.22),transparent 70%),
+    radial-gradient(65% 55% at 100% 100%,rgba(255,151,106,.28),transparent 70%),
+    radial-gradient(55% 45% at 0% 100%,rgba(74,236,181,.26),transparent 70%),
+    #FFFFFF;
+}
+/* Die Bühnenbilder im Hintergrund nur noch als Hauch, damit die Logofarben
+   tragen und nichts grau wirkt */
+html body .hero-reel{opacity:.12;mix-blend-mode:multiply}
+html body .home-hero::before{opacity:.5}
+html body .home-pill-dot{background:var(--lg-mint)}
+html body .home-pill-dot::after{border-color:rgba(74,236,181,.45)}
+/* Die drei Versprechen, jedes in einer Logofarbe */
+html body .home-trust li:nth-child(1) svg{color:var(--lg-violett)}
+html body .home-trust li:nth-child(2) svg{color:var(--lg-koralle-d)}
+html body .home-trust li:nth-child(3) svg{color:var(--lg-mint-d)}
+html body .home-chip svg{color:var(--lg-magenta)}
+
+/* Abschnitte abwechselnd in hellen Logotönen */
+html body .home-more{background:var(--lg-koralle-l)}
+html body .home-browse{background:#fff}
+html body .home-facts{background:var(--lg-mint-l)}
+html body .home-how{background:var(--lg-flieder-l)}
+html body .home-step-num{background:var(--lg-knopf)!important;color:#fff!important}
+html body .home-step:nth-child(2) .home-step-num{background:linear-gradient(120deg,#8530D0,#B4178F)!important}
+html body .home-step:nth-child(3) .home-step-num{background:linear-gradient(120deg,#B4178F,#D23A6E)!important}
+html body .home-step:nth-child(4) .home-step-num{background:linear-gradient(120deg,#B5461A,#D2306E)!important}
+html body .home-join-card{background:var(--grad-deep)!important}
+
+/* Kategorieleiste */
+html body .cat-chip.on{background:var(--lg-knopf)!important;color:#fff!important;border-color:transparent!important}
+html body .cat-chip.on svg{color:#fff!important}
+html body .cat-chip svg{color:var(--lg-violett)}
+
+/* Karten: Preis im Violett, Herz in Pink */
+html body .act-card-price b{color:var(--lg-blau-d)}
+html body .act-card-fav.on{color:var(--lg-pink)!important}
+html body .act-card-meta svg,html body .act-card-travel svg{color:var(--lg-magenta)}
+html body .act-card-rating.new,html body .act-card-new{
+  display:inline-flex;align-items:center;padding:2px 9px;border-radius:999px;
+  background:var(--lg-mint-l);color:var(--lg-mint-d);font-size:12.5px;font-weight:700;
+}
+
+/* --- Untere Leiste am Handy -------------------------------------------- */
+/* 10 px war unter der Lesbarkeitsgrenze */
+html body .tabbar .tab span{font-size:11.5px!important;letter-spacing:0!important}
+html body .tabbar .tab.active,html body .tabbar .tab.on{color:var(--lg-blau-d)}
+html body .tabbar::before{content:"";position:absolute;left:0;right:0;top:0;height:2px;background:var(--lg-bogen)}
+html body .tabbar{position:fixed}
+
+/* --- Buchungsleiste und Meldungen -------------------------------------- */
+/* Deckend statt durchscheinend: der Text dahinter störte beim Lesen */
+html body .m-cta{background:#fff!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+@media(max-width:820px){
+  html body:has(.m-cta) .page.active{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  html body:has(.m-cta) #toast{bottom:calc(100px + env(safe-area-inset-bottom))}
+}
+
+/* --- Kalender ----------------------------------------------------------- */
+/* Frei = Mint aus dem y, teilweise belegt = Koralle, ausgebucht = grau */
+html body .cal-day{position:relative}
+html body .cal-day.free{background:var(--lg-mint-l);border-color:#9DEFD2}
+html body .cal-day.part{background:var(--lg-koralle-l);border-color:#FFC3A6}
+html body .cal-day.full{background:#F1EFF5;color:#8A8597;text-decoration:line-through}
+html body .cal-day.sel{background:var(--lg-knopf)!important;color:#fff!important;border-color:transparent!important}
+.cal-dot{position:absolute;right:4px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--lg-koralle-d)}
+html body .cal-legend .lg-box{border:1.5px solid transparent}
+html body .cal-legend .lg-free{background:var(--lg-mint-l);border-color:#9DEFD2}
+html body .cal-legend .lg-part{background:var(--lg-koralle-l);border-color:#FFC3A6;position:relative}
+html body .cal-legend .lg-part::after{content:"";position:absolute;right:1px;top:1px;width:4px;height:4px;border-radius:50%;background:var(--lg-koralle-d)}
+html body .cal-legend .lg-full{background:#F1EFF5;border-color:#CFCBD8}
+html body .cal-legend .lg-today{background:#fff;box-shadow:inset 0 0 0 2px var(--lg-violett)}
+
+/* --- Shop: Mieten oder Kaufen, dann ein Knopf --------------------------- */
+.prod-mode{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:3px;margin-top:10px;border-radius:12px;background:var(--lg-flieder-l)}
+.prod-mode-opt{min-height:38px;border:none;border-radius:9px;background:transparent;color:var(--lg-ink);font-weight:600;font-size:14.5px;cursor:pointer}
+.prod-mode-opt.on{background:#fff;color:var(--lg-blau-d);box-shadow:0 1px 3px rgba(26,14,61,.12)}
+html body .prod-card .prod-btn.solid{width:100%;margin-top:10px;min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:12px}
+html body .prod-card .prod-btn.solid svg{width:18px;height:18px}
+
+/* --- Fuß ---------------------------------------------------------------- */
+html body footer{background:var(--lg-ink)!important;position:relative}
+html body .site-footer{position:relative}
+html body .site-footer::before{content:"";display:block;height:4px;background:var(--lg-bogen)}
+html body .footer-col-title{color:var(--lg-flieder)}
+html body .footer-links a:hover{color:var(--lg-mint)}
+
+@media (prefers-reduced-motion:reduce){
+  html body .home-pill-dot::after{animation:none}
+}

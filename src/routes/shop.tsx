@@ -67,6 +67,9 @@ const COPY = {
     perDay: "/ Tag",
     buy: "Kauf",
     added: "Im Warenkorb",
+    toCart: "In den Korb",
+    rentOpt: "Mieten",
+    buyOpt: "Kaufen",
     reset: "Filter zurücksetzen",
     emptyH: "Kein Kostüm gefunden",
     emptyP: "Versuch einen anderen Begriff oder wähle eine andere Kategorie.",
@@ -118,6 +121,9 @@ const COPY = {
     perDay: "/ day",
     buy: "Buy",
     added: "In your cart",
+    toCart: "Add to cart",
+    rentOpt: "Rent",
+    buyOpt: "Buy",
     reset: "Reset filters",
     emptyH: "No costume found",
     emptyP: "Try another term or pick a different category.",
@@ -169,6 +175,9 @@ const COPY = {
     perDay: "/ día",
     buy: "Compra",
     added: "En el carrito",
+    toCart: "Añadir al carrito",
+    rentOpt: "Alquilar",
+    buyOpt: "Comprar",
     reset: "Quitar filtros",
     emptyH: "No hay disfraces",
     emptyP: "Prueba otro término o elige otra categoría.",
@@ -664,6 +673,7 @@ function ProductCard({
   const { t, L, fmt, num, addToCart, catLabel } = useShowly();
   const both = i.rent > 0;
   const [done, setDone] = useState<"" | "rent" | "buy">("");
+  const [mode, setMode] = useState<"rent" | "buy">("rent");
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -726,24 +736,29 @@ function ProductCard({
           </span>
         </div>
 
-        <div className={"prod-btns" + (both ? "" : " one")}>
-          {both && (
-            <button
-              className={"prod-btn ghost" + (done === "rent" ? " done" : "")}
-              onClick={() => add("rent")}
-            >
-              {done === "rent" ? <Icon name="check" /> : null}
-              {done === "rent" ? C.added : t("shop.addRent")}
-            </button>
-          )}
-          <button
-            className={"prod-btn solid" + (done === "buy" ? " done" : "")}
-            onClick={() => add("buy")}
-          >
-            {done === "buy" ? <Icon name="check" /> : null}
-            {done === "buy" ? C.added : t("shop.addBuy")}
-          </button>
-        </div>
+        {/* Ein Knopf statt zwei: Bei Kostümen, die man mieten und kaufen
+            kann, wählt man vorher die Art. Vorher standen auf jeder Karte
+            zwei gleich laute Knöpfe, bei 15 Karten also 30. */}
+        {both && (
+          <div className="prod-mode" role="radiogroup" aria-label={t("shop.rentBuy")}>
+            {(["rent", "buy"] as const).map((m) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                className={"prod-mode-opt" + (mode === m ? " on" : "")}
+                onClick={() => setMode(m)}
+              >
+                {m === "rent" ? C.rentOpt : C.buyOpt}
+              </button>
+            ))}
+          </div>
+        )}
+        <button className={"prod-btn solid" + (done ? " done" : "")} onClick={() => add(both ? mode : "buy")}>
+          {done ? <Icon name="check" /> : <Icon name="cart" />}
+          {done ? C.added : C.toCart}
+        </button>
       </div>
     </article>
   );

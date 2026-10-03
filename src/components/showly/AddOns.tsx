@@ -84,8 +84,21 @@ function pickSweets(cats: SweetCat[], city: string, n: number, skipBaker?: numbe
   return out.slice(0, n);
 }
 
+/* Der Anlass kommt zuerst aus den Anlässen, die der Künstler selbst angibt:
+   ein Zauberer für Firmenfeiern und Galas bekommt keine Einhorntorte. Erst
+   wenn er keine angibt, entscheidet die Kategorie. */
+function occOf(a: Artist): Occ {
+  const tags = (typeof a.tags === "object" && a.tags ? (a.tags as { de?: string[] }).de : undefined) ?? [];
+  const first = tags.map((t) => t.toLowerCase()).find(Boolean) ?? "";
+  if (/kinder|kita|schul|familie/.test(first)) return "kids";
+  if (/hochzeit|trauung|standesamt|elopement/.test(first)) return "wedding";
+  if (/firmen|gala|messe|konferenz|empfang|jubil|preis|dinner/.test(first)) return "company";
+  if (first) return "birthday";
+  return ARTIST_OCC[a.cat] ?? "birthday";
+}
+
 export function suggestForArtist(a: Artist, city: string) {
-  const occ = ARTIST_OCC[a.cat] ?? "birthday";
+  const occ = occOf(a);
   return { occ, deco: byIds(OCC_DECO[occ]), sweets: pickSweets(OCC_SWEETS[occ], city, 4) };
 }
 
@@ -116,8 +129,8 @@ export function addOnsForCart(ids: number[]) {
 
 const TEXT = {
   de: {
-    bundleH: "Wird oft zusammen gebucht",
-    bundleP: "Mach dein Event komplett: Deko und Torte gleich mit dazu.",
+    bundleH: "Dein Event zusammenstellen",
+    bundleP: "Deko und Süßes für denselben Anlass. Hak an, was du dazunehmen willst.",
     thisArtist: "Dieser Act",
     perH: "/ Std.",
     estimate: "ca.",
@@ -146,8 +159,8 @@ const TEXT = {
     bakerShelfP: "Künstler und Deko, die zu dieser Feier passen",
   },
   en: {
-    bundleH: "Frequently booked together",
-    bundleP: "Complete your event: add decor and a cake right away.",
+    bundleH: "Put your event together",
+    bundleP: "Decor and sweets for the same occasion. Tick what you want to add.",
     thisArtist: "This act",
     perH: "/ hr",
     estimate: "approx.",
@@ -176,8 +189,8 @@ const TEXT = {
     bakerShelfP: "Artists and decor that suit this celebration",
   },
   es: {
-    bundleH: "Se reservan juntos a menudo",
-    bundleP: "Completa tu evento: añade decoración y tarta.",
+    bundleH: "Completa tu evento",
+    bundleP: "Decoración y dulces para la misma ocasión. Marca lo que quieras añadir.",
     thisArtist: "Este artista",
     perH: "/ h",
     estimate: "aprox.",
@@ -233,7 +246,7 @@ export function EventBundle({
   const d1 = deco[0];
   const d2 = deco[1];
   const s1 = sweets[0];
-  const [on, setOn] = useState<Record<string, boolean>>({ a: true, d1: true, d2: true, s1: true });
+  const [on, setOn] = useState<Record<string, boolean>>({ a: true, d1: false, d2: false, s1: false });
   const [asking, setAsking] = useState<Sweet | null>(null);
 
   const sweetEst = s1 ? estimate(s1, s1.unit === "set" ? 1 : s1.minQty) : 0;

@@ -362,7 +362,7 @@ function seedAvail(): Avail {
 
 export function ShowlyProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("de");
-  const [favorites, setFavorites] = useState<number[]>([1, 6]);
+  const [favorites, setFavorites] = useState<number[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartBookings, setCartBookings] = useState<CartBookingLine[]>([]);
   const [cartRequests, setCartRequests] = useState<CartRequestLine[]>([]);

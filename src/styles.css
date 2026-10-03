@@ -2,6 +2,7 @@
 @source "../src";
 @import "tw-animate-css";
 @import "./showly/showly.css";
+@import "./showly/logo-farben.css";
 
 @custom-variant dark (&:is(.dark *));
 

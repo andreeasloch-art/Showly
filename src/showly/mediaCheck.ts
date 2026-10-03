@@ -72,7 +72,11 @@ async function getWorker(): Promise<OcrWorker> {
       const w = await createWorker("eng", 1, {
         workerPath: `${base}/worker.min.js`,
         corePath: `${base}/${core}`,
-        langPath: base,
+        /* Die Sprachdatei liegt als ocr/eng-lang.wasm (gzip-Inhalt): manche
+           Hoster liefern .gz/.traineddata nicht aus. Tesseract hängt den
+           festen Namen "/eng.traineddata.gz" an; durch das "?f=" landet er
+           in der Abfrage und wird ignoriert. */
+        langPath: `${base}/eng-lang.wasm?f=`,
         gzip: true,
         workerBlobURL: false,
       });

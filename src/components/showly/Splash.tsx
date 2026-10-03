@@ -1,39 +1,39 @@
-/* Vorspann beim Öffnen der App: alle Figuren auf einer Bühne, in der Mitte
- * wächst das Showly-Logo aus dem Licht. Vier Sekunden, ohne Ton.
+/* Vorspann beim Öffnen der App: das Startvideo mit allen Figuren, in der
+ * Mitte wächst das Showly-Logo aus dem Licht. Vier Sekunden, ohne Ton.
  *
  * Er kommt bei jedem Öffnen bzw. Neuladen der App, aber nicht beim Wechsel
- * zwischen Seiten. Ein Tippen schließt ihn sofort.
+ * zwischen Seiten.
  *
- * Die vier Sekunden zählen erst, wenn das Video wirklich läuft. Vorher steht
- * das erste Bild da. Startet das Video nicht (Stromsparmodus, kein Autoplay,
- * sehr langsames Netz), läuft stattdessen dieselbe Szene als Bild-Animation:
- * die Bühne zoomt langsam, das Logo fliegt aus dem Licht nach vorne. So gibt
- * es immer mindestens dreieinhalb Sekunden Bewegung. Das Video spielt stumm,
- * sonst blockieren Handys das automatische Abspielen. Wer weniger Bewegung
- * eingestellt hat, sieht kurz das Schlussbild mit Logo. */
+ * Damit das Video auch am Handy wirklich läuft:
+ * - Es wird fest stumm geschaltet (Eigenschaft und Attribut). React setzt
+ *   "muted" sonst nur als Eigenschaft, und iPhones blockieren dann das
+ *   automatische Abspielen.
+ * - Die vier Sekunden zählen erst, wenn das Video spielt.
+ * - Startet es nicht, wird die Datei ganz geladen und aus dem Speicher
+ *   abgespielt. Manche Server liefern Videos nicht stückweise aus, was
+ *   iPhones zum Abspielen brauchen.
+ * - Sperrt das Handy automatisches Abspielen ganz (Stromsparmodus), startet
+ *   ein Tippen das Video. Läuft es, schließt ein Tippen den Vorspann.
+ * Nur wenn das Video gar nicht abspielbar ist, läuft dieselbe Szene als
+ * Bild-Animation. */
 import { useEffect, useRef, useState } from "react";
 
 const VIDEO_MS = 4000;
+const RETRY_MS = 1800; // dann aus dem Speicher versuchen
+const GIVE_UP_MS = 7000; // dann Bild-Animation
 const ANIM_MS = 3600;
-const STILL_MS = 1800;
-const WAIT_MS = 2500;
 const FADE_MS = 500;
 
-/* Nur einmal pro Seitenaufruf, nicht bei jedem Seitenwechsel. Der Effekt kann
-   in der Entwicklung doppelt laufen. */
 let shownThisLoad = false;
-
-const reducedMotion = () =>
-  typeof window !== "undefined" && !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-
-type Mode = "video" | "anim" | "still";
 
 export function Splash() {
   const [phase, setPhase] = useState<"show" | "fade" | "gone">("show");
-  const [mode, setMode] = useState<Mode>("video");
+  const [anim, setAnim] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const timers = useRef<number[]>([]);
   const ended = useRef(false);
+  const playing = useRef(false);
+  const blobUrl = useRef<string | null>(null);
 
   function later(fn: () => void, ms: number) {
     timers.current.push(window.setTimeout(fn, ms));
@@ -49,12 +49,33 @@ export function Splash() {
     setPhase("fade");
     window.setTimeout(() => setPhase("gone"), FADE_MS);
   }
-  function fallback() {
-    if (ended.current) return;
-    clearAll();
-    video.current?.pause();
-    setMode("anim");
-    later(close, ANIM_MS);
+  function tryPlay() {
+    const v = video.current;
+    if (!v) return;
+    v.muted = true;
+    v.defaultMuted = true;
+    v.setAttribute("muted", "");
+    v.setAttribute("playsinline", "");
+    v.setAttribute("webkit-playsinline", "");
+    v.play().catch(() => {});
+  }
+  /* Ganze Datei laden und aus dem Speicher abspielen */
+  async function fromMemory() {
+    const v = video.current;
+    if (!v || playing.current || ended.current || blobUrl.current) return;
+    const src = v.canPlayType('video/mp4; codecs="avc1.4D401E"') ? "/splash.mp4" : "/splash.webm";
+    try {
+      const res = await fetch(src);
+      if (!res.ok) return;
+      const url = URL.createObjectURL(await res.blob());
+      blobUrl.current = url;
+      if (playing.current || ended.current) return;
+      v.src = url;
+      v.load();
+      tryPlay();
+    } catch {
+      /* bleibt beim Standbild, Tippen startet */
+    }
   }
 
   useEffect(() => {
@@ -63,43 +84,53 @@ export function Splash() {
       return;
     }
     shownThisLoad = true;
-    if (reducedMotion()) {
-      setMode("still");
-      later(close, STILL_MS);
-      return clearAll;
-    }
-    const v = video.current;
-    v?.play().catch(fallback);
-    /* Läuft das Video nach kurzer Zeit noch nicht, die Bild-Animation zeigen */
+    tryPlay();
+    later(fromMemory, RETRY_MS);
     later(() => {
-      if (!v || v.paused || v.currentTime === 0) fallback();
-    }, WAIT_MS);
-    return clearAll;
+      if (!playing.current && !ended.current) {
+        setAnim(true);
+        clearAll();
+        later(close, ANIM_MS);
+      }
+    }, GIVE_UP_MS);
+    return () => {
+      clearAll();
+      if (blobUrl.current) URL.revokeObjectURL(blobUrl.current);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function onPlaying() {
-    if (mode !== "video" || ended.current) return;
+    if (playing.current || ended.current) return;
+    playing.current = true;
     clearAll();
     /* Ab jetzt zählen die vier Sekunden; "ended" schließt meist schon vorher */
-    later(close, VIDEO_MS + 400);
+    later(close, VIDEO_MS + 500);
+  }
+
+  function onTap() {
+    /* Läuft das Video noch nicht, startet ein Tippen es (erlaubt das Handy
+       immer). Sonst schließt das Tippen den Vorspann. */
+    if (!playing.current && !anim && video.current) {
+      tryPlay();
+      return;
+    }
+    close();
   }
 
   if (phase === "gone") return null;
   return (
-    <div className={"splash" + (phase === "fade" ? " out" : "")} onClick={close} role="presentation" aria-hidden="true">
+    <div className={"splash" + (phase === "fade" ? " out" : "")} onClick={onTap} role="presentation" aria-hidden="true">
       <div className="splash-backdrop" />
-      <div className={"splash-stage" + (mode === "anim" ? " anim" : "")}>
-        {mode === "still" && <img className="splash-video" src="/splash-still.webp" alt="" />}
-        {mode === "anim" && (
+      <div className={"splash-stage" + (anim ? " anim" : "")}>
+        {anim ? (
           <>
             <img className="splash-video" src="/splash-poster.webp" alt="" />
             <div className="splash-logo">
               <img src="/logo-showly@2x.png" alt="" />
             </div>
           </>
-        )}
-        {mode === "video" && (
+        ) : (
           <video
             ref={video}
             className="splash-video"
@@ -108,14 +139,13 @@ export function Splash() {
             muted
             playsInline
             preload="auto"
+            disablePictureInPicture
             onPlaying={onPlaying}
             onEnded={close}
-            onError={fallback}
           >
             {/* MP4 zuerst: Safari und fast alle Handys. WebM für Browser ohne H.264. */}
             <source src="/splash.mp4" type="video/mp4" />
-            {/* Schlägt auch die letzte Quelle fehl, sofort die Bild-Animation */}
-            <source src="/splash.webm" type="video/webm" onError={fallback} />
+            <source src="/splash.webm" type="video/webm" />
           </video>
         )}
       </div>

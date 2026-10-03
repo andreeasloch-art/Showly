@@ -134,6 +134,17 @@ export function saveAccount(a: Omit<Account, "pwHash"> & { pw: string }) {
   saveJSON("accounts", next);
 }
 
+/** Eine Person, ein Profil (AGB § 3 Abs. 5), im Übungsmodus ohne Datenbank:
+ *  Gibt es für diese E-Mail oder diesen vollen Namen schon ein Anbieterprofil?
+ *  Mit Datenbank übernimmt das die Ausweisprüfung (lib/identity.server.ts). */
+export function localProfileExists(email: string, real: string): boolean {
+  const e = email.trim().toLowerCase();
+  const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ");
+  const n = norm(real);
+  if (loadJSON<Account[]>("accounts", []).some((x) => x.email === e && x.providerId !== undefined)) return true;
+  return loadJSON<{ real?: unknown }[]>("artists", []).some((a) => typeof a?.real === "string" && norm(a.real) === n);
+}
+
 export function findAccount(email: string, pw: string): Account | null {
   const list = loadJSON<Account[]>("accounts", []);
   const e = email.trim().toLowerCase();

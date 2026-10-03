@@ -27,6 +27,7 @@
 <h3>5. Anbieterprofile, Ausweisprüfung und Auszahlung</h3>
 <p><b>Profil:</b> Künstlername, bürgerlicher Name, Kategorie, Ort, Einsatzradius, Beschreibung, Preise, Pakete, Figuren, Angabe privat/gewerblich, Bestätigungen (Volljährigkeit, Regeln, Steuerhinweis). Öffentlich sichtbar sind Künstlername, Kategorie, Ort, Texte, Preise und die Angabe privat/gewerblich. Ein Geburtsdatum fragen wir nicht ab. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO; die Angabe privat/gewerblich ist gesetzlich vorgeschrieben (Art. 6 Abs. 1 lit. c DSGVO, Art. 30 Digital Services Act).</p>
 <p><b>Ausweisprüfung:</b> Vor der Freischaltung prüft <b>Stripe Identity</b> (Stripe Payments Europe Ltd., Dublin; Stripe, Inc., USA) deinen Ausweis und ein Selfie per Gesichtsabgleich. Das sind biometrische Daten (Art. 9 DSGVO); die Prüfung startet nur mit deiner ausdrücklichen Einwilligung (Art. 9 Abs. 2 lit. a DSGVO), die du jederzeit widerrufen kannst. Showly speichert nur das Ergebnis (geprüft ja/nein). Nach bestandener Prüfung und beim Löschen deines Kontos veranlassen wir bei Stripe die Löschung der Ausweisbilder und des Selfies. Stripe kann Daten nach eigenen gesetzlichen Pflichten länger aufbewahren.</p>
+<p><b>Eine Person, ein Profil:</b> Damit niemand mehrere Anbieterprofile unter verschiedenen Konten führt (AGB § 3 Abs. 5), bildet Showly nach bestandener Ausweisprüfung aus Vorname, Nachname und Geburtsdatum einen Prüfwert (HMAC-SHA256 mit geheimem Schlüssel) und speichert nur diesen. Name und Geburtsdatum selbst speichern wir dafür nicht; aus dem Prüfwert lassen sie sich nicht zurückgewinnen. Gehört derselbe Prüfwert schon zu einem anderen Konto, wird das neue Profil nicht freigeschaltet und unser Team geht dem nach. Rechtsgrundlage ist unser berechtigtes Interesse an einem verlässlichen Marktplatz ohne Mehrfach- und Umgehungskonten (Art. 6 Abs. 1 lit. f DSGVO). Der Prüfwert wird mit dem Konto gelöscht; nur bei einer Sperre bewahren wir ihn ohne Verknüpfung zum Konto auf, solange die Sperre gilt.</p>
 <p><b>Auszahlung:</b> Bankdaten und die gesetzlich vorgeschriebene Identitätsprüfung für Auszahlungen erfasst <b>Stripe Connect</b> direkt in einem Fenster von Stripe. Showly speichert nur die Kontokennung von Stripe, nicht deine IBAN.</p>
 <p><b>Meldung an das Finanzamt:</b> Nach dem Plattformen-Steuertransparenzgesetz müssen wir bestimmte Angaben zu Anbietenden und deren Einnahmen an das Bundeszentralamt für Steuern melden (Art. 6 Abs. 1 lit. c DSGVO).</p>
 
@@ -64,6 +65,7 @@
 <tr><td>Zähler gegen Missbrauch (gehasht)</td><td>2 Tage</td></tr>
 <tr><td>Einwilligungsentscheidung</td><td>12 Monate, dann fragen wir erneut</td></tr>
 <tr><td>Ergebnis der Ausweisprüfung</td><td>bis zur Löschung des Kontos</td></tr>
+<tr><td>Prüfwert „eine Person, ein Profil“</td><td>bis zur Löschung des Kontos; bei einer Sperre so lange, wie sie gilt</td></tr>
 </table>
 
 <h3>13. Empfänger im Überblick</h3>

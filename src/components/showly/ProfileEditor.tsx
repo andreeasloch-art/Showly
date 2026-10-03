@@ -64,7 +64,7 @@ const COPY = {
     listHint: "Mehrere Einträge mit Komma trennen.",
     figsH: "Charaktere",
     figsP:
-      "Die Figuren, die du spielst. Kunden wählen beim Buchen, wer kommen soll. Ein Bild je Charakter hilft bei der Wahl.",
+      "Die Figuren, die du spielst. Kunden wählen beim Buchen, wer kommen soll. Ein Bild je Charakter hilft bei der Wahl. Alle deine Figuren und Acts gehören in dieses eine Profil, ein zweites Profil ist nicht möglich.",
     figAdd: "Charakter hinzufügen",
     figPh: "Name des Charakters",
     figImg: "Bild",
@@ -139,7 +139,7 @@ const COPY = {
     listHint: "Separate entries with commas.",
     figsH: "Characters",
     figsP:
-      "The characters you perform. Clients choose who should come when booking. A photo per character helps.",
+      "The characters you perform. Clients choose who should come when booking. A photo per character helps. All your characters and acts belong in this one profile; a second profile is not possible.",
     figAdd: "Add character",
     figPh: "Character name",
     figImg: "Photo",
@@ -214,7 +214,7 @@ const COPY = {
     listHint: "Separa las entradas con comas.",
     figsH: "Personajes",
     figsP:
-      "Los personajes que interpretas. Los clientes eligen al reservar. Una foto por personaje ayuda.",
+      "Los personajes que interpretas. Los clientes eligen al reservar. Una foto por personaje ayuda. Todos tus personajes y actuaciones van en este único perfil; no es posible un segundo perfil.",
     figAdd: "Añadir personaje",
     figPh: "Nombre del personaje",
     figImg: "Foto",

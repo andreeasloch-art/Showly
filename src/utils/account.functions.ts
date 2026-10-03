@@ -70,6 +70,11 @@ export const deleteMyAccount = createServerFn({ method: "POST" }).handler(
         }
       }
 
+      /* Prüfwert "eine Person, ein Profil" löschen, damit sich die Person
+         später neu anmelden kann. Gesperrte Personen bleiben gesperrt; deren
+         Eintrag verliert nur die Verknüpfung zum Konto (on delete set null). */
+      await admin.from("identity_fingerprints").delete().eq("owner", userId).eq("blocked", false);
+
       /* Hochgeladene Fotos und Videos aus dem Speicher löschen; die
          Einträge in public.media verschwinden mit dem Profil (cascade). */
       try {

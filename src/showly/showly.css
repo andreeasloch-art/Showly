@@ -6443,6 +6443,13 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .join26-seg:has(> :nth-child(3)) .join26-seg-btn{height:auto;min-height:48px;padding:8px 6px;text-align:center;font-size:13.5px}
 @media (max-width:560px){.join26-seg:has(> :nth-child(3)) .join26-seg-btn{flex-direction:column;gap:4px;font-size:12.5px}}
 .join26-sweets{margin-top:0}
+/* Eine Person, ein Profil */
+.join26-one{display:flex;gap:12px;align-items:flex-start;margin:14px 0 4px;padding:14px 16px;border-radius:14px;background:var(--h-soft, #f6f1ff);border:1px solid var(--h-line, #e8e3f2);text-align:left}
+.join26-one > svg{flex:0 0 auto;width:22px;height:22px;margin-top:2px;color:var(--h-violet, #6B3BE8)}
+.join26-one b{display:block;font:600 15.5px/1.3 var(--font-head);color:var(--ink)}
+.join26-one p{margin:4px 0 0;font-size:14px;line-height:1.5;color:var(--ink2)}
+.join26-one .home-btn{margin-top:12px;text-decoration:none}
+.join26-one.have{background:#fff8e6;border-color:#f3d48a}
 /* Häkchen und Auswahl im Registrierungsformular: die allgemeinen Feldregeln
    des Formulars (Block, volle Breite) gelten hier nicht */
 .join26 .join26-form .reg-check{display:flex;margin:14px 0 0;font:400 14px/1.45 var(--font-body);color:var(--h-ink2, #3a3350)}

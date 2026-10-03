@@ -11,7 +11,7 @@ import { defaultPackages, pwScore } from "@/showly/figures";
 import { Footer } from "@/components/showly/Footer";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS, travelOption } from "@/showly/travel";
-import { saveArtistProfile, saveAccount } from "@/showly/persist";
+import { localProfileExists, saveArtistProfile, saveAccount } from "@/showly/persist";
 import { isBackendConfigured } from "@/lib/supabase";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
@@ -135,6 +135,12 @@ function Become() {
         sweetsCake: "Torten & Süßes anbieten",
         sweetsDeco: "Deko anbieten",
         loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt.",
+        oneH: "Ein Profil für alle deine Acts",
+        oneP: "Jede Person hat bei Showly genau ein Profil. Alle Figuren, Rollen und Acts, die du anbietest, trägst du in diesem einen Profil ein, auch später jederzeit. Ein zweites Konto derselben Person erkennt die Ausweisprüfung, es wird nicht freigeschaltet.",
+        haveH: "Du hast schon ein Profil",
+        haveP: "Neue Figuren und Acts fügst du in deinem bestehenden Profil hinzu. Ein zweites Profil ist nicht möglich.",
+        haveBtn: "Zu meinem Profil",
+        dupLocal: "Für diese Person gibt es schon ein Profil. Melde dich mit deinem Konto an und trag neue Acts dort ein.",
       },
       en: {
         rules:
@@ -151,6 +157,12 @@ function Become() {
         sweetsCake: "Offer cakes & sweets",
         sweetsDeco: "Offer decor",
         loginNext: "Almost done: sign in now and your profile will be created.",
+        oneH: "One profile for all your acts",
+        oneP: "Every person has exactly one profile on Showly. Add all the characters, roles and acts you offer to this one profile, now or any time later. A second account of the same person is detected by the identity check and will not be activated.",
+        haveH: "You already have a profile",
+        haveP: "Add new characters and acts to your existing profile. A second profile is not possible.",
+        haveBtn: "Go to my profile",
+        dupLocal: "There is already a profile for this person. Sign in with your account and add new acts there.",
       },
       es: {
         rules:
@@ -167,6 +179,12 @@ function Become() {
         sweetsCake: "Ofrecer tartas y dulces",
         sweetsDeco: "Ofrecer decoración",
         loginNext: "Casi listo: inicia sesión y se creará tu perfil.",
+        oneH: "Un perfil para todas tus actuaciones",
+        oneP: "En Showly cada persona tiene un solo perfil. Todos los personajes, papeles y actuaciones que ofreces van en ese perfil, ahora o más adelante. La verificación de identidad detecta una segunda cuenta de la misma persona y no se activa.",
+        haveH: "Ya tienes un perfil",
+        haveP: "Añade nuevos personajes y actuaciones en tu perfil actual. No es posible un segundo perfil.",
+        haveBtn: "Ir a mi perfil",
+        dupLocal: "Ya existe un perfil para esta persona. Inicia sesión con tu cuenta y añade allí nuevas actuaciones.",
       },
     }[(lang as "de" | "en" | "es") ?? "de"] ?? null;
   const planner = role === "planner";
@@ -202,8 +220,13 @@ function Become() {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  /* Eine Person, ein Profil (AGB § 3 Abs. 5): Wer schon ein Anbieterprofil
+     hat, ergänzt dort weitere Figuren und Acts statt ein zweites anzulegen. */
+  const hasProfile = session?.providerId !== undefined && session.role !== "customer";
+
   function submit() {
     if (form.hp) return;
+    if (hasProfile) return toast(RG!.haveP);
     const real = `${form.first} ${form.last}`.trim();
     if (!real || !form.loc.trim()) return toast(t("toast.regNeed"));
     if (!okText(form.desc)) return;
@@ -292,6 +315,7 @@ function Become() {
       setTimeout(() => navigate({ to: "/dashboard" }), 800);
       return;
     }
+    if (localProfileExists(form.email, real)) return toast(RG!.dupLocal);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ARTISTS.push(prof as any);
     saveArtistProfile(prof);
@@ -585,6 +609,28 @@ function Become() {
                 <span>{RG!.sweets}</span>
               </button>
             </div>
+            {role !== "sweets" &&
+              (hasProfile ? (
+                <div className="join26-one have" role="status">
+                  <Icon name="shield" />
+                  <div>
+                    <b>{RG!.haveH}</b>
+                    <p>{RG!.haveP}</p>
+                    <Link to="/dashboard" className="home-btn primary">
+                      {RG!.haveBtn}
+                      <Icon name="arrow" />
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="join26-one">
+                  <Icon name="mask" />
+                  <div>
+                    <b>{RG!.oneH}</b>
+                    <p>{RG!.oneP}</p>
+                  </div>
+                </div>
+              ))}
             {role === "sweets" ? (
               <div className="join26-sweets">
                 <h3>{RG!.sweetsH}</h3>
@@ -599,7 +645,7 @@ function Become() {
                 </Link>
                 <TaxNotice compact />
               </div>
-            ) : (
+            ) : hasProfile ? null : (
             <>
             <div className="form-grid">
               <div className="input-group">

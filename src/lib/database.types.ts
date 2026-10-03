@@ -361,6 +361,8 @@ export type Database = {
         created_at: string;
       }>;
       verifications: Table<VerificationRow>;
+      /** Prüfwert aus der Ausweisprüfung, nur für den Server (0008) */
+      identity_fingerprints: Table<{ hash: string; owner: string | null; blocked: boolean; created_at: string }>;
       reports: Table<ReportRow>;
       blocks: Table<{ blocker: string; blocked: string; created_at: string }>;
       penalties: Table<PenaltyRow>;

@@ -11,6 +11,11 @@
  *  3. Showly fragt danach nur ab, ob der Vorgang bestanden wurde, und schreibt
  *     ein Ja oder Nein in die Datenbank.
  *
+ *  4. Eine Person, ein Profil: Vor dem Freischalten gleicht der Server einen
+ *     Prüfwert aus Name und Geburtsdatum ab (lib/identity.server.ts). Hat
+ *     dieselbe Person schon ein anderes Konto mit Profil, bleibt das neue
+ *     Profil verborgen und das Team bekommt einen Hinweis.
+ *
  *  Das Prüfsiegel am Profil setzt allein der Server mit dem Dienstschlüssel.
  *  Über die Zugriffsregeln kann es niemand selbst vergeben.
  */
@@ -18,17 +23,21 @@ import { createServerFn } from "@tanstack/react-start";
 import Stripe from "stripe";
 import { createStripeClient, getStripeErrorMessage } from "@/lib/stripe.server";
 import { adminClient, requireRole, requireUser } from "@/lib/supabase.server";
+import { claimIdentity, identityFingerprint } from "@/lib/identity.server";
 import type { VerificationStatus } from "@/lib/database.types";
 
 /* Die Umgebung bestimmt der Server, nicht der Aufrufer. Vorher kam sie aus dem
    Browser, damit konnte man wählen, gegen welches Stripe-Konto gearbeitet wird. */
 function environment(): "sandbox" | "live" {
-  return process.env["STRIPE_LIVE_API_KEY"] && process.env["NODE_ENV"] === "production"
+  return process.env["STRIPE_LIVE_API_KEY"] &&
+    process.env["NODE_ENV"] === "production"
     ? "live"
     : "sandbox";
 }
 
-function mapStatus(s: Stripe.Identity.VerificationSession["status"]): VerificationStatus {
+function mapStatus(
+  s: Stripe.Identity.VerificationSession["status"],
+): VerificationStatus {
   switch (s) {
     case "verified":
       return "verified";
@@ -51,8 +60,7 @@ export const startIdentityCheck = createServerFn({ method: "POST" })
     if (d?.consent !== true) throw new Error("Einwilligung fehlt");
     return { consent: true as const };
   })
-  .handler(
-  async (): Promise<{ clientSecret: string } | { error: string }> => {
+  .handler(async (): Promise<{ clientSecret: string } | { error: string }> => {
     try {
       const { user } = await requireRole("artist", "planner");
       const stripe = createStripeClient(environment());
@@ -82,13 +90,13 @@ export const startIdentityCheck = createServerFn({ method: "POST" })
         { onConflict: "provider_session_id" },
       );
 
-      if (!session.client_secret) return { error: "Kein Sitzungsschlüssel erhalten" };
+      if (!session.client_secret)
+        return { error: "Kein Sitzungsschlüssel erhalten" };
       return { clientSecret: session.client_secret };
     } catch (error) {
       return { error: getStripeErrorMessage(error) };
     }
-  },
-);
+  });
 
 /** Schritt 2: Ergebnis abholen und, wenn bestanden, das Profil freischalten. */
 export const refreshIdentityCheck = createServerFn({ method: "POST" }).handler(
@@ -98,43 +106,116 @@ export const refreshIdentityCheck = createServerFn({ method: "POST" }).handler(
 
     const { data: row } = await db
       .from("verifications")
-      .select("provider_session_id, status")
+      .select("provider_session_id, status, failure_code")
       .eq("profile_id", user.id)
       .order("created_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (!row?.provider_session_id) return { status: "none" };
+    /* Abgeschlossen: nicht erneut abfragen. Nach dem Löschen bei Stripe
+       wären Name und Geburtsdatum für den Abgleich auch nicht mehr da. */
+    if (row.status === "verified" || row.failure_code === DUPLICATE)
+      return row.failure_code
+        ? { status: row.status, reason: row.failure_code }
+        : { status: row.status };
 
     try {
       const stripe = createStripeClient(environment());
       const session = await stripe.identity.verificationSessions.retrieve(
         row.provider_session_id,
+        {
+          expand: ["verified_outputs"],
+        },
       );
-      const status = mapStatus(session.status);
-      const reason = session.last_error?.code ?? null;
+      let status = mapStatus(session.status);
+      let reason: string | null = session.last_error?.code ?? null;
+
+      if (status === "verified") {
+        const out = session.verified_outputs;
+        const hash = out
+          ? identityFingerprint({
+              first: out.first_name,
+              last: out.last_name,
+              dob: out.dob,
+            })
+          : null;
+        /* Ohne Name oder Geburtsdatum (sollte bei bestandener Prüfung nicht
+           vorkommen) gibt es nichts abzugleichen; dann zählt nur das Ergebnis. */
+        if (hash && (await claimIdentity(user.id, hash)) === "duplicate") {
+          status = "failed";
+          reason = DUPLICATE;
+          await reportDuplicate(user.id);
+        }
+      }
 
       await db
         .from("verifications")
-        .update({ status, failure_code: reason, updated_at: new Date().toISOString() })
+        .update({
+          status,
+          failure_code: reason,
+          updated_at: new Date().toISOString(),
+        })
         .eq("provider_session_id", row.provider_session_id);
 
       /* Nur hier wird das Siegel gesetzt. Der Browser kann das nicht. */
       if (status === "verified") {
         /* Mit bestandener Prüfung wird das Profil auch sichtbar und buchbar */
-        await db.from("artists").update({ verified: true, published: true }).eq("owner", user.id);
+        await db
+          .from("artists")
+          .update({ verified: true, published: true })
+          .eq("owner", user.id);
+      } else if (reason === DUPLICATE) {
+        await db
+          .from("artists")
+          .update({ verified: false, published: false })
+          .eq("owner", user.id);
+      }
+      if (status === "verified" || reason === DUPLICATE) {
         /* Ausweisbilder und Selfie bei Stripe löschen lassen (Redaction).
            Showly braucht nur das Ergebnis; so wird das Versprechen im
            Hinweistext tatsächlich eingelöst. */
-        await stripe.identity.verificationSessions.redact(row.provider_session_id).catch(() => null);
+        await stripe.identity.verificationSessions
+          .redact(row.provider_session_id)
+          .catch(() => null);
       }
 
       return reason ? { status, reason } : { status };
     } catch (error) {
-      return { status: row.status as VerificationStatus, reason: getStripeErrorMessage(error) };
+      return {
+        status: row.status as VerificationStatus,
+        reason: getStripeErrorMessage(error),
+      };
     }
   },
 );
+
+/** Kennung für "diese Person hat schon ein Profil" in verifications.failure_code */
+const DUPLICATE = "duplicate";
+
+/** Das Team erfährt von dem zweiten Konto über die Hilfe-Anfragen und kann
+ *  antworten (etwa wenn jemand sein altes Konto wirklich nicht mehr nutzt). */
+async function reportDuplicate(uid: string) {
+  const db = adminClient();
+  const { data: p } = await db
+    .from("profiles")
+    .select("email, display_name")
+    .eq("id", uid)
+    .maybeSingle();
+  await db
+    .from("support_tickets")
+    .insert({
+      profile: uid,
+      email: p?.email || "unbekannt",
+      name: p?.display_name ?? null,
+      topic: "account",
+      body: "Automatischer Hinweis: Die Ausweisprüfung dieses Kontos gehört zu einer Person, die schon ein anderes Showly-Konto mit Profil hat (oder gesperrt ist). Das neue Profil bleibt verborgen. Bitte klären, welches Konto bleiben soll.",
+    })
+    .then(
+      () => null,
+      () => null,
+    );
+}
 
 /** Aktueller Stand für die Anzeige im Portal. */
 export const getIdentityStatus = createServerFn({ method: "GET" }).handler(

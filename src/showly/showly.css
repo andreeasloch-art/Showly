@@ -6538,3 +6538,6 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .pw-demo-note{font-size:12.5px;color:var(--sh-muted);margin:10px 0 0}
 .pw-demo-none{font-size:13.5px;color:var(--sh-muted);border:1px dashed var(--sh-border);border-radius:12px;padding:12px;margin:14px 0 0}
 
+/* Animation liegt über ihrem ersten Bild und erscheint, sobald sie geladen ist */
+.splash-anim{opacity:0}
+.splash-anim.on{opacity:1}

@@ -102,7 +102,17 @@ html body .home-trust li:nth-child(3) svg{color:var(--lg-mint-d)}
 html body .home-chip svg{color:var(--lg-magenta)}
 
 /* Abschnitte abwechselnd in hellen Logotönen */
-html body .home-more{background:var(--lg-koralle-l)}
+/* "Mehr für dein Event": heller Grund mit sanften Logofarben, die wie im
+   Kopfbereich langsam treiben, statt einer flachen Pfirsichfläche */
+html body .home-more{position:relative;isolation:isolate;overflow:hidden;background:#fff}
+html body .home-more::before{
+  content:"";position:absolute;inset:-30%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(24% 34% at 16% 30%,rgba(184,174,252,.45),transparent 70%),
+    radial-gradient(22% 30% at 84% 26%,rgba(252,86,145,.22),transparent 70%),
+    radial-gradient(26% 34% at 60% 82%,rgba(74,236,181,.20),transparent 70%);
+  animation:band-drift 30s ease-in-out infinite alternate-reverse;
+}
 html body .home-browse{background:#fff}
 html body .home-facts{background:var(--lg-mint-l)}
 html body .home-how{background:var(--lg-flieder-l)}
@@ -110,7 +120,17 @@ html body .home-step-num{background:var(--lg-knopf)!important;color:#fff!importa
 html body .home-step:nth-child(2) .home-step-num{background:linear-gradient(120deg,#8530D0,#B4178F)!important}
 html body .home-step:nth-child(3) .home-step-num{background:linear-gradient(120deg,#B4178F,#D23A6E)!important}
 html body .home-step:nth-child(4) .home-step-num{background:linear-gradient(120deg,#B5461A,#D2306E)!important}
-html body .home-join-card{background:var(--grad-deep)!important}
+/* "Du bist selbst Künstler?": im Verlauf des Logos (Violett, Lila, Magenta,
+   Pink) statt Dunkelblau. Alle Töne sind dunkel genug für weiße Schrift. */
+html body .home-join-card{
+  background:
+    radial-gradient(60% 80% at 100% 0%,rgba(255,151,106,.45),transparent 60%),
+    radial-gradient(55% 75% at 0% 100%,rgba(74,236,181,.22),transparent 60%),
+    linear-gradient(120deg,#5B2BE0 0%,#8530D0 38%,#B4178F 72%,#C72A6E 100%)!important;
+  box-shadow:0 24px 60px -24px rgba(133,48,208,.55);
+}
+html body .home-join-card .home-eyebrow.on-dark{color:#FFE3F1}
+html body .home-join-text p{color:rgba(255,255,255,.9)}
 
 /* Kategorieleiste */
 html body .cat-chip.on{background:var(--lg-knopf)!important;color:#fff!important;border-color:transparent!important}
@@ -300,7 +320,7 @@ html body .act-card.lit .act-card-media::before{animation:card-lit 1.4s var(--ea
 /* --- Weniger Bewegung --------------------------------------------------- */
 @media (prefers-reduced-motion:reduce){
   ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
-  html body .home-hero::after,.grad-art-wrap::after{animation:none}
+  html body .home-hero::after,html body .home-more::before,.grad-art-wrap::after{animation:none}
   html body .act-card.lit .act-card-media::before{animation:none}
   html body .modal-overlay>.modal{animation:none}
   html body button:active:not(:disabled){transform:none}

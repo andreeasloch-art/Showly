@@ -16,6 +16,7 @@ import {
   useSweetsCopy,
 } from "@/components/showly/Sweets";
 import { BakerEditor } from "@/components/showly/BakerEditor";
+import { ProfileVideos } from "@/components/showly/MediaView";
 import { AddOnShelf, suggestForBaker } from "@/components/showly/AddOns";
 import {
   BAKERS,
@@ -174,7 +175,8 @@ function BakerProfile() {
   const editing = mine && !!bearbeiten;
   const offers = sweetsOf(b.id);
   const cheapest = fromPrice(b.id);
-  const photos = b.photos || [];
+  const media = b.photos || [];
+  const photos = media.filter((m) => m.kind !== "video");
   const thumbs = [photos[1], photos[2]];
   const others = BAKERS.filter((x) => x.id !== b.id)
     .sort((x, y) => Number(y.specialties.some((c) => b.specialties.includes(c))) - Number(x.specialties.some((c) => b.specialties.includes(c))))
@@ -219,6 +221,8 @@ function BakerProfile() {
                 />
               ))}
             </div>
+
+            <ProfileVideos items={media} title="Videos" />
 
             <div className="bk-layout">
               <div className="bk-body">

@@ -36,7 +36,8 @@ export function hasPackages(a?: Artist | null) {
 
 /* Erstes eigenes Foto des Künstlers, sofern hochgeladen und geladen */
 function ownPhotoUrl(a: Artist): string | null {
-  const first = (a["photos"] as { id: string }[] | undefined)?.[0];
+  /* Titelbild ist das erste Foto; Videos zählen dafür nicht */
+  const first = (a["photos"] as { id: string; kind?: string }[] | undefined)?.find((m) => m.kind !== "video");
   return first ? mediaUrlSync(first.id) : null;
 }
 

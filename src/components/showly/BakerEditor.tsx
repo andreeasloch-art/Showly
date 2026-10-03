@@ -8,6 +8,7 @@ import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 import { deleteMedia, type MediaRef } from "@/showly/media";
 import { ImagePick, useImageStore } from "@/components/showly/ImagePick";
+import { MediaThumb } from "@/components/showly/MediaView";
 import { KindBadge, SweetCard, catName } from "@/components/showly/Sweets";
 import {
   SWEET_CATS,
@@ -33,9 +34,9 @@ const TEXT = {
   de: {
     kindH: "Anbieterart",
     kindP: "Wurde bei der Anmeldung festgelegt. Für eine Änderung schreib uns.",
-    photosH: "Fotos",
-    photosP: "Das erste Foto ist dein Titelbild. Zeig deine schönsten Torten.",
-    upload: "Fotos hochladen",
+    photosH: "Fotos & Videos",
+    photosP: "Das erste Foto ist dein Titelbild. Zeig deine schönsten Torten, gern auch im Video (bis 60 Sekunden, läuft ohne Ton). Jede Datei wird vor dem Speichern automatisch geprüft: Telefonnummern, E-Mail-Adressen, Webseiten, Social-Media-Namen und QR-Codes sind nicht erlaubt.",
+    upload: "Fotos oder Videos hochladen",
     cover: "Titelbild",
     makeCover: "Als Titelbild",
     remove: "Entfernen",
@@ -81,9 +82,9 @@ const TEXT = {
   en: {
     kindH: "Provider type",
     kindP: "Set at sign-up. Contact us to change it.",
-    photosH: "Photos",
-    photosP: "The first photo is your cover. Show your best cakes.",
-    upload: "Upload photos",
+    photosH: "Photos & videos",
+    photosP: "The first photo is your cover. Show your best cakes, videos welcome too (up to 60 seconds, played without sound). Every file is checked automatically before it is saved: phone numbers, email addresses, websites, social media handles and QR codes are not allowed.",
+    upload: "Upload photos or videos",
     cover: "Cover",
     makeCover: "Make cover",
     remove: "Remove",
@@ -129,9 +130,9 @@ const TEXT = {
   es: {
     kindH: "Tipo de proveedor",
     kindP: "Se fijó al registrarte. Escríbenos para cambiarlo.",
-    photosH: "Fotos",
-    photosP: "La primera foto es tu portada. Muestra tus mejores tartas.",
-    upload: "Subir fotos",
+    photosH: "Fotos y vídeos",
+    photosP: "La primera foto es tu portada. Muestra tus mejores tartas, también en vídeo (hasta 60 segundos, sin sonido). Cada archivo se comprueba automáticamente antes de guardarlo: no se permiten teléfonos, correos, webs, perfiles de redes sociales ni códigos QR.",
+    upload: "Subir fotos o vídeos",
     cover: "Portada",
     makeCover: "Usar de portada",
     remove: "Quitar",
@@ -226,13 +227,23 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
     setDraft((d) => ({ ...d, contact: { ...d.contact, [k]: v } }));
   const int = (v: string, max: number) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
 
+  /* Das Titelbild muss ein Foto sein: steht ein Video vorn, rückt das erste Foto nach vorn */
+  function coverFirst(list: MediaRef[]): MediaRef[] {
+    if (!list.length || list[0]!.kind !== "video") return list;
+    const k = list.findIndex((m) => m.kind !== "video");
+    if (k < 0) return list;
+    const next = list.slice();
+    const [m] = next.splice(k, 1);
+    return [m!, ...next];
+  }
+
   async function addPhotos(files: FileList | null) {
     const room = MAX_PHOTOS - draft.photos.length;
     if (!files?.length || room <= 0) return;
     setBusy(true);
-    const refs = await store(files, room);
+    const refs = await store(files, room, true);
     setBusy(false);
-    setDraft((d) => ({ ...d, photos: [...d.photos, ...refs] }));
+    setDraft((d) => ({ ...d, photos: coverFirst([...d.photos, ...refs]) }));
   }
 
   function save() {
@@ -317,11 +328,17 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
           </div>
           <div className="pe-photos">
             {draft.photos.map((m, i) => (
-              <figure className={"pe-photo" + (i === 0 ? " cover" : "")} key={m.id}>
-                <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
-                {i === 0 && <span className="pe-photo-tag">{X.cover}</span>}
+              <figure className={"pe-photo" + (i === 0 && m.kind !== "video" ? " cover" : "")} key={m.id}>
+                {m.kind === "video" ? (
+                  <span className="pe-photo-img pe-photo-video">
+                    <MediaThumb item={m} />
+                  </span>
+                ) : (
+                  <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
+                )}
+                {i === 0 && m.kind !== "video" && <span className="pe-photo-tag">{X.cover}</span>}
                 <figcaption>
-                  {i > 0 && (
+                  {i > 0 && m.kind !== "video" && (
                     <button
                       type="button"
                       onClick={() =>
@@ -334,7 +351,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
                   <button
                     type="button"
                     className="danger"
-                    onClick={() => set("photos", draft.photos.filter((_, k) => k !== i))}
+                    onClick={() => set("photos", coverFirst(draft.photos.filter((_, k) => k !== i)))}
                   >
                     <Icon name="trash" /> {X.remove}
                   </button>
@@ -343,8 +360,8 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
             ))}
             {draft.photos.length < MAX_PHOTOS && (
               <button type="button" className="pe-photo-add" onClick={() => input.current?.click()} disabled={busy}>
-                <Icon name="plus" />
-                <span>{X.upload}</span>
+                <Icon name={store.label ? "shield" : "plus"} />
+                <span>{store.label ?? X.upload}</span>
                 <small>
                   {draft.photos.length}/{MAX_PHOTOS}
                 </small>
@@ -353,7 +370,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
             <input
               ref={input}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               multiple
               hidden
               onChange={(e) => {

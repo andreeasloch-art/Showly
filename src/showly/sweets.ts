@@ -353,7 +353,7 @@ export function sweetBg(s: Sweet): CSSProperties {
 }
 
 export function bakerBg(b: Baker): CSSProperties {
-  const first = b.photos?.[0];
+  const first = b.photos?.find((m) => m.kind !== "video");
   const u = first ? mediaUrlSync(first.id) : null;
   if (u) return bg(u);
   return bg(`/sweets/${b.coverImg || 1}.webp`);

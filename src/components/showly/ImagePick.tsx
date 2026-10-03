@@ -1,9 +1,11 @@
 /* Bilder hochladen für Anbieterprofile und Angebote (Torten, Deko).
  *
- * Die Dateien landen im Browser-Speicher (IndexedDB), die Adresse wird
- * gleich vorgeladen, damit Vorschau und Karten das Bild sofort zeigen. */
+ * Jede Datei wird zuerst auf Kontaktdaten geprüft und landet dann im
+ * Browser-Speicher (IndexedDB); die Adresse wird gleich vorgeladen, damit
+ * Vorschau und Karten das Bild sofort zeigen. */
 import { useRef, useState } from "react";
-import { MediaError, preloadMedia, putMedia, type MediaRef } from "@/showly/media";
+import type { MediaRef } from "@/showly/media";
+import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 
@@ -13,25 +15,14 @@ const TEXT = {
   es: { add: "Subir foto", change: "Cambiar foto", remove: "Quitar", busy: "Cargando …", errType: "Elige una imagen (JPG, PNG o WebP).", errStore: "No se pudo guardar la imagen." },
 } as const;
 
+/* Jede Datei wird vor dem Speichern auf Kontaktdaten geprüft
+   (useCheckedUpload). `store.label` sagt, was gerade passiert. */
 export function useImageStore() {
   const { lang, toast } = useShowly();
-  const T = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
-  return async function store(files: FileList | File[] | null, max = 8): Promise<MediaRef[]> {
-    const out: MediaRef[] = [];
-    for (const f of Array.from(files || []).slice(0, max)) {
-      if (!f.type.startsWith("image/")) {
-        toast(T.errType);
-        continue;
-      }
-      try {
-        out.push(await putMedia(f));
-      } catch (e) {
-        toast(e instanceof MediaError && e.reason === "type" ? T.errType : T.errStore);
-      }
-    }
-    await preloadMedia(out.map((m) => m.id));
-    return out;
-  };
+  const up = useCheckedUpload(lang, toast);
+  const store = (files: FileList | File[] | null, max = 8, video = false): Promise<MediaRef[]> =>
+    up.upload(Array.from(files || []).slice(0, max), { video });
+  return Object.assign(store, { label: up.label });
 }
 
 /** Ein einzelnes Bild mit Vorschau. `fallback` zeigt ein Standardbild. */
@@ -69,7 +60,7 @@ export function ImagePick({
       >
         <span className="img-pick-lbl">
           <Icon name="camera" />
-          {busy ? T.busy : value ? T.change : T.add}
+          {busy ? (store.label ?? T.busy) : value ? T.change : T.add}
         </span>
       </button>
       {value && (

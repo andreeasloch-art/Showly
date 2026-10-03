@@ -511,3 +511,21 @@ html body a.shelf-name:hover{color:var(--lg-violett,#6D3EEA)}
    in Listen zwei ganze Zeilen, im Profil des Anbieters der volle Text. */
 html body .sweet-card .sweet-desc{flex-shrink:0}
 html body .bk-offers .sweet-desc{display:block;-webkit-line-clamp:unset;overflow:visible}
+
+/* Videos im Profil (MediaView: ProfileVideos). Querformat-Kacheln in einer
+   wischbaren Reihe, stumm; ein Tippen startet und hält an. */
+html body .profile-videos{display:grid;gap:12px;margin:22px 0 4px}
+html body .profile-videos h2{font:700 20px/1.2 'Outfit',system-ui,sans-serif;margin:0;color:var(--lg-ink,#1A0E3D)}
+html body .profile-videos-row{display:grid;grid-auto-flow:column;grid-auto-columns:min(78%,360px);gap:12px;overflow-x:auto;
+  scroll-snap-type:x mandatory;padding-bottom:6px;-webkit-overflow-scrolling:touch}
+html body .profile-video{position:relative;aspect-ratio:16/10;border-radius:18px;overflow:hidden;border:0;padding:0;
+  background:#1A0E3D;cursor:pointer;scroll-snap-align:start;box-shadow:0 10px 28px -14px rgba(72,50,253,.45)}
+html body .profile-video video{width:100%;height:100%;object-fit:cover;display:block}
+html body .profile-video-play{position:absolute;inset:0;display:grid;place-items:center;color:#fff;
+  background:linear-gradient(180deg,rgba(26,14,61,0) 40%,rgba(26,14,61,.45))}
+html body .profile-video-play svg{width:54px;height:54px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.35))}
+html body .profile-video:focus-visible{outline:3px solid var(--lg-violett,#6D3EEA);outline-offset:3px}
+/* Video-Kacheln in der Profilbearbeitung */
+html body .pe-photo-video{display:block;overflow:hidden;background:#1A0E3D}
+html body .pe-photo-video .media-cell{width:100%;height:100%;margin:0;border-radius:inherit}
+html body .pe-photo-video video{width:100%;height:100%;object-fit:cover}

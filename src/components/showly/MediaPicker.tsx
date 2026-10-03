@@ -1,5 +1,6 @@
 /* Auswahl von Fotos und Videos für Bewertungen und Beiträge.
- * Bilder werden beim Ablegen verkleinert, Videos nur auf Größe geprüft. */
+ * Jede Datei wird vor dem Speichern auf Kontaktdaten geprüft (mediaCheck);
+ * Bilder werden beim Ablegen verkleinert, Videos auf Größe und Länge geprüft. */
 import { useRef, useState } from "react";
 import { Icon } from "@/showly/ui";
 import {
@@ -11,11 +12,12 @@ import {
   type MediaRef,
 } from "@/showly/media";
 import { MediaThumb } from "./MediaView";
+import { checkMedia, mediaCheckMessage } from "@/showly/mediaCheck";
 
 const TEXT = {
   de: {
     add: "Fotos oder Video hinzufügen",
-    busy: "Wird vorbereitet …",
+    busy: "Wird geprüft …",
     remove: "Entfernen",
     hint: `Bis zu ${MAX_FILES_PER_POST} Dateien, Video bis ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB`,
     errType: "Nur Bilder und Videos sind möglich.",
@@ -25,7 +27,7 @@ const TEXT = {
   },
   en: {
     add: "Add photos or video",
-    busy: "Preparing …",
+    busy: "Checking …",
     remove: "Remove",
     hint: `Up to ${MAX_FILES_PER_POST} files, video up to ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB`,
     errType: "Only images and videos are supported.",
@@ -35,7 +37,7 @@ const TEXT = {
   },
   es: {
     add: "Añadir fotos o vídeo",
-    busy: "Preparando …",
+    busy: "Comprobando …",
     remove: "Quitar",
     hint: `Hasta ${MAX_FILES_PER_POST} archivos, vídeo hasta ${Math.round(MAX_VIDEO_BYTES / 1024 / 1024)} MB`,
     errType: "Solo se admiten imágenes y vídeos.",
@@ -70,6 +72,11 @@ export function MediaPicker({
     setBusy(true);
     const added: MediaRef[] = [];
     for (const file of Array.from(files).slice(0, room)) {
+      const check = await checkMedia(file);
+      if (!check.ok) {
+        setErr(mediaCheckMessage(check, file.name, lang));
+        continue;
+      }
       try {
         added.push(await putMedia(file));
       } catch (e) {

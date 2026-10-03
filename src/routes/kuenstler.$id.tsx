@@ -16,6 +16,8 @@ import { Footer } from "@/components/showly/Footer";
 import { BookingModeNote } from "@/components/showly/BookingModeNote";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ReviewComposer, UserReviewList } from "@/components/showly/Reviews";
+import { ProfileVideos } from "@/components/showly/MediaView";
+import type { MediaRef } from "@/showly/media";
 
 export const Route = createFileRoute("/kuenstler/$id")({
   head: ({ params }) => seoHead("/kuenstler/$id", `/kuenstler/${params.id}`),
@@ -79,7 +81,9 @@ function Detail() {
   const base = curPkg ? curPkg.price : hourly * h;
   /* Endpreis für den Kunden, ohne Aufschlag */
   const total = base;
-  const photos = ((a["photos"] as { id: string }[] | undefined) || []).slice(0, 3);
+  const media = (a["photos"] as MediaRef[] | undefined) || [];
+  /* Galerie oben nur mit Fotos; Videos stehen darunter in eigener Reihe */
+  const photos = media.filter((m) => m.kind !== "video").slice(0, 3);
   const figImages = (a["figureImages"] as Record<string, { id: string }> | undefined) || {};
   const figs = figuresOf(a);
   const km = radiusOf(a);
@@ -150,6 +154,8 @@ function Detail() {
               </div>
             ) : null}
           </div>
+
+          <ProfileVideos items={media} title={lang === "en" ? "Videos" : lang === "es" ? "Vídeos" : "Videos"} />
 
           <header className="detail-head">
             <div className="detail-head-row">

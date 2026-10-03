@@ -5,7 +5,9 @@ import type { Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 import { figName, figureList, figuresOf, realName } from "@/showly/figures";
-import { MediaError, deleteMedia, preloadMedia, putMedia, type MediaRef } from "@/showly/media";
+import { deleteMedia, type MediaRef } from "@/showly/media";
+import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
+import { MediaThumb } from "@/components/showly/MediaView";
 import { updateArtistProfile } from "@/showly/persist";
 import { isInstant } from "@/showly/booking";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
@@ -38,9 +40,9 @@ const COPY = {
     notYet: "Wird mit der Ausweisprüfung bestätigt",
     verified: "Ausweis geprüft",
     unverified: "Prüfung ausstehend",
-    photosH: "Bilder",
-    photosP: "Das erste Bild ist dein Titelbild. Bis zu 8 Bilder, am besten im Querformat.",
-    upload: "Bilder hochladen",
+    photosH: "Fotos & Videos",
+    photosP: "Das erste Foto ist dein Titelbild. Bis zu 8 Dateien, Videos bis 60 Sekunden; sie laufen im Profil ohne Ton. Jede Datei wird vor dem Speichern automatisch geprüft: Telefonnummern, E-Mail-Adressen, Webseiten, Social-Media-Namen und QR-Codes sind nicht erlaubt.",
+    upload: "Fotos oder Videos hochladen",
     cover: "Titelbild",
     makeCover: "Als Titelbild",
     remove: "Entfernen",
@@ -113,9 +115,9 @@ const COPY = {
     notYet: "Confirmed with the ID check",
     verified: "ID verified",
     unverified: "Check pending",
-    photosH: "Photos",
-    photosP: "The first photo is your cover. Up to 8 photos, landscape works best.",
-    upload: "Upload photos",
+    photosH: "Photos & videos",
+    photosP: "The first photo is your cover. Up to 8 files, videos up to 60 seconds; they play without sound on your profile. Every file is checked automatically before it is saved: phone numbers, email addresses, websites, social media handles and QR codes are not allowed.",
+    upload: "Upload photos or videos",
     cover: "Cover",
     makeCover: "Make cover",
     remove: "Remove",
@@ -188,9 +190,9 @@ const COPY = {
     notYet: "Se confirma con la verificación",
     verified: "Identidad verificada",
     unverified: "Verificación pendiente",
-    photosH: "Fotos",
-    photosP: "La primera foto es la portada. Hasta 8 fotos, mejor en horizontal.",
-    upload: "Subir fotos",
+    photosH: "Fotos y vídeos",
+    photosP: "La primera foto es la portada. Hasta 8 archivos, vídeos de hasta 60 segundos; en tu perfil se reproducen sin sonido. Cada archivo se comprueba automáticamente antes de guardarlo: no se permiten teléfonos, correos, webs, perfiles de redes sociales ni códigos QR.",
+    upload: "Subir fotos o vídeos",
     cover: "Portada",
     makeCover: "Usar de portada",
     remove: "Quitar",
@@ -342,6 +344,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
   const [saved, setSaved] = useState<Draft>(draft);
   const [figInput, setFigInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const up = useCheckedUpload(lang, toast);
   const photoInput = useRef<HTMLInputElement>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
@@ -358,21 +361,10 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
 
   /* Datei(en) in den Browser-Speicher legen und die Adresse sofort
      verfügbar machen, damit Vorschau und Karte das Bild gleich zeigen. */
-  async function store(files: FileList | File[]): Promise<MediaRef[]> {
-    const out: MediaRef[] = [];
-    for (const f of Array.from(files)) {
-      if (!f.type.startsWith("image/")) {
-        toast(C.errType);
-        continue;
-      }
-      try {
-        out.push(await putMedia(f));
-      } catch (e) {
-        toast(e instanceof MediaError && e.reason === "type" ? C.errType : C.errStore);
-      }
-    }
-    await preloadMedia(out.map((m) => m.id));
-    return out;
+  /* Datei(en) prüfen, in den Browser-Speicher legen und die Adresse sofort
+     verfügbar machen, damit Vorschau und Karte das Bild gleich zeigen. */
+  function store(files: FileList | File[], video = false): Promise<MediaRef[]> {
+    return up.upload(Array.from(files), { video });
   }
 
   async function addPhotos(files: FileList | null) {
@@ -380,10 +372,20 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
     const room = MAX_PHOTOS - draft.photos.length;
     if (room <= 0) return toast(C.errMax);
     setBusy(true);
-    const refs = await store(Array.from(files).slice(0, room));
+    const refs = await store(Array.from(files).slice(0, room), true);
     setBusy(false);
     if (files.length > room) toast(C.errMax);
-    setDraft((d) => ({ ...d, photos: [...d.photos, ...refs] }));
+    setDraft((d) => ({ ...d, photos: coverFirst([...d.photos, ...refs]) }));
+  }
+
+  /* Das Titelbild muss ein Foto sein: steht ein Video vorn, rückt das erste Foto nach vorn */
+  function coverFirst(list: MediaRef[]): MediaRef[] {
+    if (!list.length || list[0]!.kind !== "video") return list;
+    const k = list.findIndex((m) => m.kind !== "video");
+    if (k < 0) return list;
+    const next = list.slice();
+    const [m] = next.splice(k, 1);
+    return [m!, ...next];
   }
 
   function makeCover(i: number) {
@@ -394,7 +396,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
     });
   }
   function removePhoto(i: number) {
-    setDraft((d) => ({ ...d, photos: d.photos.filter((_, k) => k !== i) }));
+    setDraft((d) => ({ ...d, photos: coverFirst(d.photos.filter((_, k) => k !== i)) }));
   }
 
   function addFigure(name: string) {
@@ -518,11 +520,17 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
           </div>
           <div className="pe-photos">
             {draft.photos.map((m, i) => (
-              <figure className={"pe-photo" + (i === 0 ? " cover" : "")} key={m.id}>
-                <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
-                {i === 0 && <span className="pe-photo-tag">{C.cover}</span>}
+              <figure className={"pe-photo" + (i === 0 && m.kind !== "video" ? " cover" : "")} key={m.id}>
+                {m.kind === "video" ? (
+                  <span className="pe-photo-img pe-photo-video">
+                    <MediaThumb item={m} />
+                  </span>
+                ) : (
+                  <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
+                )}
+                {i === 0 && m.kind !== "video" && <span className="pe-photo-tag">{C.cover}</span>}
                 <figcaption>
-                  {i > 0 && (
+                  {i > 0 && m.kind !== "video" && (
                     <button type="button" onClick={() => makeCover(i)}>
                       <Icon name="star" /> {C.makeCover}
                     </button>
@@ -538,10 +546,10 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
                 type="button"
                 className="pe-photo-add"
                 onClick={() => photoInput.current?.click()}
-                disabled={busy}
+                disabled={busy || up.busy}
               >
-                <Icon name="plus" />
-                <span>{C.upload}</span>
+                <Icon name={up.busy ? "shield" : "plus"} />
+                <span>{up.label ?? C.upload}</span>
                 <small>
                   {draft.photos.length}/{MAX_PHOTOS}
                 </small>
@@ -550,7 +558,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
             <input
               ref={photoInput}
               type="file"
-              accept="image/*"
+              accept="image/*,video/*"
               multiple
               hidden
               onChange={(e) => {

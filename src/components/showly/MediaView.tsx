@@ -166,3 +166,60 @@ function CarouselSlide({ item }: { item: MediaRef }) {
     </div>
   );
 }
+
+/* Videos im Profil einer Anbieterin oder eines Anbieters.
+ * Sie laufen immer ohne Ton: Gesprochene Telefonnummern oder Adressen kann
+ * die automatische Prüfung nicht erkennen, deshalb gibt es keinen Ton und
+ * keinen Regler dafür. Tippen startet und hält an. */
+export function ProfileVideos({ items, title }: { items: MediaRef[]; title: string }) {
+  const videos = items.filter((m) => m.kind === "video");
+  if (!videos.length) return null;
+  return (
+    <section className="profile-videos">
+      <h2>{title}</h2>
+      <div className="profile-videos-row">
+        {videos.map((m) => (
+          <SilentVideo key={m.id} item={m} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function SilentVideo({ item }: { item: MediaRef }) {
+  const url = useMediaUrl(item.id);
+  const [playing, setPlaying] = useState(false);
+  if (!url) return <div className="profile-video media-loading" aria-hidden="true" />;
+  return (
+    <button
+      type="button"
+      className={"profile-video" + (playing ? " on" : "")}
+      aria-label={playing ? "Video anhalten" : "Video abspielen"}
+      onClick={(e) => {
+        const v = e.currentTarget.querySelector("video");
+        if (!v) return;
+        v.muted = true;
+        if (v.paused) void v.play().catch(() => {});
+        else v.pause();
+      }}
+    >
+      <video
+        src={url}
+        muted
+        playsInline
+        loop
+        preload="metadata"
+        onPlay={() => setPlaying(true)}
+        onPause={() => setPlaying(false)}
+        onVolumeChange={(e) => {
+          e.currentTarget.muted = true;
+        }}
+      />
+      {!playing && (
+        <span className="profile-video-play" aria-hidden="true">
+          <Icon name="play" />
+        </span>
+      )}
+    </button>
+  );
+}

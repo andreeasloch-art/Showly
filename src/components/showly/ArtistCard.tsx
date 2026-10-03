@@ -67,7 +67,9 @@ export function ArtistCard({ a }: { a: Artist }) {
               {L(a.name)}
             </Link>
           </h3>
-          {a.reviews > 0 ? (
+          {/* Bewertung nur, wenn es echte gibt. "Neu" stand vorher auf jeder
+              Karte und sagte deshalb nichts. */}
+          {a.reviews > 0 && (
             <span className="act-card-rating">
               <span className="star" aria-hidden="true">
                 ★
@@ -75,8 +77,6 @@ export function ArtistCard({ a }: { a: Artist }) {
               {num(a.rating)}
               <span className="act-card-count">({a.reviews})</span>
             </span>
-          ) : (
-            <span className="act-card-rating new">{t("card.new")}</span>
           )}
         </div>
 
@@ -87,12 +87,7 @@ export function ArtistCard({ a }: { a: Artist }) {
           <span>{L(a.loc)}</span>
         </div>
 
-        {/* Eigene Zeile: die Sparte und der Ort sollen nicht abgeschnitten
-            werden, nur weil die Anfahrt dazukommt. */}
-        <div className="act-card-travel">
-          <Icon name="radius" />
-          <span>{travelShort(radiusOf(a), lang)}</span>
-        </div>
+        {/* Der Umkreis steht im Profil; auf der Karte reichen Sparte und Ort */}
 
         <div className="act-card-row act-card-foot">
           <span className="act-card-price">

@@ -32,6 +32,7 @@ const COPY = {
     cities: "Städte",
     joinEyebrow: "Für Künstler",
     moreEyebrow: "Mehr für dein Event",
+    more: (n: number) => `${n} weitere zeigen`,
     moreH: "Alles für dein Event an einem Ort",
     moreP: "Kostüme, Deko und Torten gleich mit dazu.",
     tiles: [
@@ -49,6 +50,7 @@ const COPY = {
     cities: "Cities",
     joinEyebrow: "For artists",
     moreEyebrow: "More for your event",
+    more: (n: number) => `Show ${n} more`,
     moreH: "Everything for your event in one place",
     moreP: "Add costumes, decor and cakes too.",
     tiles: [
@@ -66,6 +68,7 @@ const COPY = {
     cities: "Ciudades",
     joinEyebrow: "Para artistas",
     moreEyebrow: "Más para tu evento",
+    more: (n: number) => `Ver ${n} más`,
     moreH: "Todo para tu evento en un solo lugar",
     moreP: "Añade también disfraces, decoración y tartas.",
     tiles: [
@@ -84,6 +87,8 @@ function Home() {
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [date, setDate] = useState("");
+  /* Erst zwölf Profile, der Rest auf Wunsch: die Seite wird kürzer */
+  const [shown, setShown] = useState(12);
 
   const list = useMemo(
     () =>
@@ -104,6 +109,7 @@ function Home() {
     [cat, query, city, L, catLabel, standing],
   );
   const filtered = cat !== "all" || query || city;
+  useEffect(() => setShown(12), [cat, query, city]);
 
   /* Kennzahlen aus den echten Daten. Vorher standen hier feste Werte wie
      "2.400+ Künstler" und "18.700+ Events", bei 25 Profilen auf der Seite.
@@ -181,10 +187,8 @@ function Home() {
         <StageLight />
         <div className="home-hero-inner">
           <div className="home-hero-copy">
-            <div className="home-pill rise" style={{ ["--d" as string]: "0ms" }}>
-              <span className="home-pill-dot" aria-hidden="true" />
-              {C.pill(facts.verified)}
-            </div>
+            {/* Die Plakette oben wiederholte die drei Versprechen unter der
+                Suche und ist deshalb entfallen. */}
 
             <h1 className="home-h1 h1-lockup">
               <span className="rise" style={{ ["--d" as string]: "60ms" }}>
@@ -331,7 +335,7 @@ function Home() {
 
         <div className="act-grid reveal-stagger">
           {list.length ? (
-            list.map((a) => <ArtistCard a={a} key={a.id} />)
+            list.slice(0, shown).map((a) => <ArtistCard a={a} key={a.id} />)
           ) : (
             <div className="empty-state">
               <div className="ic">
@@ -345,6 +349,13 @@ function Home() {
             </div>
           )}
         </div>
+        {list.length > shown && (
+          <div className="home-more-btn">
+            <button className="btn-secondary" onClick={() => setShown((n) => n + 12)}>
+              {C.more(Math.min(12, list.length - shown))}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Nur echte Profile; solange es keine gibt, keine Zahlen */}

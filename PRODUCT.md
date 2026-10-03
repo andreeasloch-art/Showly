@@ -49,7 +49,7 @@ One place to book everything for an event: entertainment, planning, costumes and
 ## Evidence on Hand
 
 - No real customers, reviews, ratings, press or booking numbers exist yet. Never invent reviews, ratings, "Testsieger"/"Nummer 1" claims, booking counts or testimonials.
-- Category illustrations are self-generated (`public/acts`, `scripts/acts`), as are the stage image and grain texture (`scripts/brand`). Shop images in `public/shop`.
+- Profile images of the example acts (`public/acts/N.webp`) are stylized 3D figures generated for Showly with Higgsfield (gpt_image_2_5), on a stage in the logo colors; no real people, no film characters. The older vector drawings came from `scripts/acts`. Self-generated as well: the stage image and grain texture (`scripts/brand`). Shop images in `public/shop`.
 
 ## Product Principles
 

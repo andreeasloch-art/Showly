@@ -6537,3 +6537,17 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .pw-demo-small{font-size:12.5px!important;color:#5b5368}
 .pw-demo-note{font-size:12.5px;color:var(--sh-muted);margin:10px 0 0}
 .pw-demo-none{font-size:13.5px;color:var(--sh-muted);border:1px dashed var(--sh-border);border-radius:12px;padding:12px;margin:14px 0 0}
+
+/* Ersatz-Animation, wenn das Startvideo nicht abspielt (Splash.tsx): die
+   Bühne zoomt langsam heran, das Logo fliegt dort, wo es auch im Video
+   erscheint, aus dem Licht nach vorne. */
+.splash-stage.anim{animation:splash-zoom 3.6s ease-out both}
+.splash-stage.anim .splash-logo{position:absolute;left:50%;top:38.5%;width:54%;translate:-50% -50%;
+  animation:splash-fly 1.4s cubic-bezier(.16,.84,.3,1) .2s both}
+.splash-stage.anim .splash-logo img{display:block;width:100%;height:auto;filter:drop-shadow(0 0 18px rgba(255,255,255,.85))}
+@keyframes splash-zoom{from{transform:translate(-50%,-50%) scale(1.08)}to{transform:translate(-50%,-50%) scale(1)}}
+@keyframes splash-fly{
+  0%{opacity:0;transform:scale(.15);filter:blur(10px)}
+  35%{opacity:1}
+  100%{opacity:1;transform:scale(1);filter:blur(0)}}
+@media (prefers-reduced-motion:reduce){.splash-stage.anim,.splash-stage.anim .splash-logo{animation:none}}

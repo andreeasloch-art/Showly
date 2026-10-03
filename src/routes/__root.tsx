@@ -17,6 +17,7 @@ import { CartDrawer } from "@/components/showly/CartDrawer";
 import { Splash } from "@/components/showly/Splash";
 import { ErrorReporter } from "@/components/showly/ErrorReporter";
 import { ConsentBanner } from "@/components/showly/ConsentBanner";
+import { CardLights } from "@/components/showly/Motion";
 
 import { Toast, TabBar } from "@/components/showly/Chrome";
 import { SeoLang } from "@/components/showly/SeoLang";
@@ -169,6 +170,7 @@ function RootComponent() {
         <Splash />
         <ErrorReporter />
         <ConsentBanner />
+        <CardLights />
       </ShowlyProvider>
     </QueryClientProvider>
   );

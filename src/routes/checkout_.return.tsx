@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Celebrate } from "@/components/showly/Motion";
 import { useEffect, useRef, useState } from "react";
 import { clearPending, getPending } from "@/showly/pending";
 import { activateSpotlight } from "@/showly/spotlight";
@@ -179,6 +180,7 @@ function CheckoutReturn() {
       <div className="checkout-page">
         <h1 className="checkout-title">{T.title}</h1>
         <p className="checkout-msg">{msg || T.checking}</p>
+        {msg && msg !== T.failed && msg !== T.noInfo && <Celebrate />}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
           <button className="btn-primary" onClick={() => navigate({ to: "/dashboard" })}>
             {T.dash}

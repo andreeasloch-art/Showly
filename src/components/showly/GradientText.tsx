@@ -38,6 +38,15 @@ export function GradientText({ text, className = "" }: { text: string; className
   if (art)
     return (
       <>
+        {/* Die Hülle trägt den Glanz, der über das gezeichnete Wort läuft */}
+        <span
+          className="grad-art-wrap"
+          ref={(el) => {
+            /* Absolute Adresse setzen: eine url() in einer CSS-Variable würde
+               sonst relativ zur Stylesheet-Datei aufgelöst */
+            if (el) el.style.setProperty("--art", `url('${new URL(art.src, document.baseURI).href}')`);
+          }}
+        >
         <img
           className={"grad-art " + className}
           src={art.src}
@@ -50,6 +59,7 @@ export function GradientText({ text, className = "" }: { text: string; className
           }}
           decoding="async"
         />
+        </span>
         {/* Das Leerzeichen trennt die beiden Zeilen, sonst liest eine
             Vorlesehilfe "deinenKünstler" in einem Wort. */}
         <span className="sr-only">{" " + text}</span>

@@ -9,6 +9,9 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
+    /* Seitenwechsel gleiten wie in einer App (View Transitions). Browser
+       ohne Unterstützung wechseln wie bisher sofort. */
+    defaultViewTransition: true,
     defaultPreloadStaleTime: 0,
   });
 

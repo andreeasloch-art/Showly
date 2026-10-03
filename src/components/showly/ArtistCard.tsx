@@ -52,7 +52,18 @@ export function ArtistCard({ a }: { a: Artist }) {
       <div className="act-card-body">
         <div className="act-card-row">
           <h3 className="act-card-name">
-            <Link className="act-card-link" to="/kuenstler/$id" params={{ id: String(a.id) }}>
+            <Link
+              className="act-card-link"
+              to="/kuenstler/$id"
+              params={{ id: String(a.id) }}
+              onClick={(e) => {
+                /* Nur das angetippte Bild bekommt den Übergangsnamen, den auch
+                   das Profilbild trägt: es wächst flüssig in die Profilseite.
+                   Hätten alle Karten einen Namen, flackerten alle mit. */
+                const img = e.currentTarget.closest(".act-card")?.querySelector<HTMLElement>(".act-card-img");
+                if (img) img.style.viewTransitionName = `act-${a.id}`;
+              }}
+            >
               {L(a.name)}
             </Link>
           </h3>

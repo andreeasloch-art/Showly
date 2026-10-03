@@ -7,6 +7,7 @@
  * Ist ein Zahlungsanbieter hinterlegt, rechnet der Server die Beträge selbst
  * nach (siehe createCartCheckout). Ohne Zahlungsanbieter wird verbindlich
  * reserviert und die Zahlung folgt nach Bestätigung. */
+import { Celebrate } from "@/components/showly/Motion";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useShowly, type CartSnapshot } from "@/showly/store";
@@ -338,6 +339,7 @@ export function CartCheckout() {
       <div className="page active ui26 co-page">
         <div className="co-wrap">
           <div className="co-done">
+            <Celebrate />
             <span className="co-done-ic">
               <Icon name="check" />
             </span>

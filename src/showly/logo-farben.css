@@ -173,3 +173,135 @@ html body .footer-links a:hover{color:var(--lg-mint)}
 @media (prefers-reduced-motion:reduce){
   html body .home-pill-dot::after{animation:none}
 }
+
+/* ==========================================================================
+   BEWEGUNG
+   Drei Ideen, ein Ganzes:
+   1. Wie eine App: Seitenwechsel gleiten, das Kartenbild wächst ins Profil,
+      Knöpfe geben nach, Fenster kommen am Handy als Blatt von unten.
+   2. Lebendes Farbband: die Logofarben fließen langsam durch den Kopfbereich,
+      über die Knöpfe und als Glanz über die Karten.
+   3. Bühnenlicht: Scheinwerfer folgen Maus oder Finger, Karten werden beim
+      Hereinscrollen angestrahlt, zum Abschluss Konfetti (Motion.tsx).
+   Alles ist ohne Bewegung vollständig sichtbar; die Bewegung kommt nur dazu.
+   ========================================================================== */
+:root{--ease-out:cubic-bezier(.16,1,.3,1)}
+
+/* --- 1. Wie eine App ----------------------------------------------------- */
+/* Seitenwechsel: die alte Seite tritt zurück, die neue gleitet herein */
+::view-transition-old(root){animation:vt-out .22s cubic-bezier(.4,0,1,1) both}
+::view-transition-new(root){animation:vt-in .38s var(--ease-out) both}
+@keyframes vt-out{to{opacity:0;transform:scale(.985)}}
+@keyframes vt-in{from{opacity:0;transform:translateY(18px)}}
+/* Kopfzeile und Menüleiste bleiben beim Wechsel stehen */
+html body nav:has(> .nav-inner){view-transition-name:site-nav}
+html body .tabbar{view-transition-name:site-tabbar}
+/* Das Kartenbild wächst ins Profil (gleicher Name auf beiden Seiten) */
+::view-transition-group(*){animation-duration:.48s;animation-timing-function:var(--ease-out)}
+::view-transition-old(site-nav),::view-transition-new(site-nav),
+::view-transition-old(site-tabbar),::view-transition-new(site-tabbar){animation:none}
+/* Die alte Einblendung der Seite doppelt sich sonst mit dem Übergang */
+@supports (view-transition-name:none){html body .page.active{animation:none}}
+
+/* Knöpfe und Karten geben beim Antippen spürbar nach */
+html body button,html body .btn-primary,html body .btn-secondary,html body .home-btn,html body .cat-chip,html body .home-chip,html body .action-btn{
+  transition:transform .14s var(--ease-out),background-position .6s var(--ease-out),box-shadow .2s,background-color .2s,color .2s;
+}
+html body button:active:not(:disabled),html body .btn-primary:active,html body .home-btn:active,
+html body .cat-chip:active,html body .home-chip:active,html body .action-btn:active{transform:scale(.96)}
+html body .act-card:active .act-card-media{transform:scale(.98)}
+
+/* Fenster am Handy: Blatt von unten mit Griff */
+@media(max-width:640px){
+  html body .modal-overlay{align-items:flex-end;padding:0;animation:sheet-dim .3s ease both}
+  html body .modal-overlay>.modal{border-radius:26px 26px 0 0;max-height:90vh;max-width:none;
+    animation:sheet-up .42s var(--ease-out) both;padding-top:10px;position:relative}
+  html body .modal-overlay>.modal::before{content:"";display:block;width:42px;height:5px;border-radius:9px;background:#D9D4E6;margin:0 auto 6px}
+}
+@keyframes sheet-up{from{transform:translateY(100%)}}
+@keyframes sheet-dim{from{background:rgba(23,18,38,0)}}
+
+/* --- 2. Lebendes Farbband ----------------------------------------------- */
+/* Die Farbfelder im Kopfbereich liegen auf eigener Ebene und treiben langsam.
+   Nur transform wird bewegt, das bleibt auch auf älteren Handys flüssig. */
+html body .home-hero{isolation:isolate;overflow:hidden}
+html body .home-hero::after{
+  content:"";position:absolute;inset:-25%;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(28% 32% at 22% 24%,rgba(72,50,253,.30),transparent 70%),
+    radial-gradient(26% 30% at 78% 20%,rgba(237,49,197,.24),transparent 70%),
+    radial-gradient(30% 34% at 72% 78%,rgba(255,151,106,.30),transparent 70%),
+    radial-gradient(26% 30% at 24% 80%,rgba(74,236,181,.26),transparent 70%);
+  animation:band-drift 26s ease-in-out infinite alternate;
+}
+@keyframes band-drift{
+  0%{transform:translate3d(0,0,0) rotate(0deg) scale(1)}
+  50%{transform:translate3d(4%,-3%,0) rotate(8deg) scale(1.06)}
+  100%{transform:translate3d(-4%,3%,0) rotate(-6deg) scale(1.02)}
+}
+/* Knöpfe: der Verlauf wandert beim Darüberfahren weiter, wie das Band im Logo */
+html body .btn-primary,html body .search-btn,html body .book-cta,html body .home-btn.primary,
+html body .prod-btn.solid,html body .konto-go,html body .m-cta button{
+  background:linear-gradient(120deg,#4832FD 0%,#6D3EEA 30%,#B4178F 60%,#6D3EEA 80%,#4832FD 100%)!important;
+  background-size:220% 100%!important;background-position:0% 50%!important;
+}
+html body .btn-primary:hover,html body .search-btn:hover,html body .book-cta:hover,html body .home-btn.primary:hover,
+html body .prod-btn.solid:hover,html body .konto-go:hover,html body .m-cta button:hover{background-position:100% 50%!important}
+/* Glanz über die Karten beim Darüberfahren oder Antippen */
+html body .act-card-media::after{
+  content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.38) 45%,rgba(237,49,197,.18) 52%,rgba(74,236,181,.14) 58%,transparent 70%);
+  transform:translateX(-120%);transition:transform .9s var(--ease-out);
+}
+html body .act-card:hover .act-card-media::after,html body .act-card:active .act-card-media::after{transform:translateX(120%)}
+/* Das gezeichnete Wort in der Überschrift schimmert von Zeit zu Zeit */
+.grad-art-wrap{position:relative;display:inline-block;vertical-align:top}
+.grad-art-wrap::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  -webkit-mask:var(--art) center/100% 100% no-repeat;mask:var(--art) center/100% 100% no-repeat;
+  background:linear-gradient(105deg,transparent 35%,rgba(255,255,255,.75) 48%,transparent 60%) no-repeat;
+  background-size:250% 100%;background-position:120% 0;
+  animation:word-shine 6.5s var(--ease-out) 1.2s infinite;
+}
+.grad-art-wrap .grad-art{display:block;max-width:none}
+/* In der zweizeiligen Überschrift misst das Wort die Breite der ersten Zeile */
+.h1-lockup .grad-art-wrap{display:block}
+@keyframes word-shine{0%{background-position:120% 0}22%,100%{background-position:-60% 0}}
+
+/* --- 3. Bühnenlicht ----------------------------------------------------- */
+.stage-light{position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;--lx:62%;--ly:42%;--al:-20deg;--ar:20deg}
+.stage-light .beam{
+  position:absolute;top:-8%;width:46%;height:150%;transform-origin:50% 0;
+  -webkit-mask:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 55%,transparent 92%);mask:linear-gradient(180deg,#000 0%,rgba(0,0,0,.55) 55%,transparent 92%);
+  clip-path:polygon(46% 0,54% 0,100% 100%,0 100%);mix-blend-mode:screen;opacity:.55;
+}
+.stage-light .beam.l{left:-11%;transform:rotate(var(--al));background:linear-gradient(180deg,rgba(184,174,252,.95),rgba(72,50,253,.25))}
+.stage-light .beam.r{right:-11%;transform:rotate(var(--ar));background:linear-gradient(180deg,rgba(252,86,145,.85),rgba(237,49,197,.2))}
+.stage-light .spot{
+  position:absolute;width:520px;height:340px;left:var(--lx);top:var(--ly);transform:translate(-50%,-50%);
+  background:radial-gradient(closest-side,rgba(255,255,255,.75),rgba(255,247,240,.35) 55%,transparent);
+  mix-blend-mode:soft-light;
+}
+.stage-light.still .beam{opacity:.35}
+html body .home-hero>.home-hero-inner{position:relative;z-index:1}
+
+/* Karten werden beim Hereinscrollen einmal angestrahlt */
+html body .act-card-media::before{
+  content:"";position:absolute;inset:-10% 10% 20%;z-index:2;pointer-events:none;opacity:0;
+  background:radial-gradient(60% 70% at 50% 0%,rgba(255,255,255,.55),rgba(255,236,250,.18) 55%,transparent 75%);
+  clip-path:polygon(38% 0,62% 0,100% 100%,0 100%);mix-blend-mode:screen;
+}
+html body .act-card.lit .act-card-media::before{animation:card-lit 1.4s var(--ease-out) both}
+@keyframes card-lit{0%{opacity:0;transform:translateY(-14%) scaleX(.6)}35%{opacity:1}100%{opacity:0;transform:none}}
+
+/* Konfetti zum Abschluss */
+.celebrate{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:3000}
+
+/* --- Weniger Bewegung --------------------------------------------------- */
+@media (prefers-reduced-motion:reduce){
+  ::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}
+  html body .home-hero::after,.grad-art-wrap::after{animation:none}
+  html body .act-card.lit .act-card-media::before{animation:none}
+  html body .modal-overlay>.modal{animation:none}
+  html body button:active:not(:disabled){transform:none}
+}

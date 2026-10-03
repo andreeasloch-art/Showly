@@ -137,7 +137,7 @@ function Detail() {
           <div className={"gallery" + (photos.length >= 2 ? "" : " single")}>
             {/* Der Ausschnitt sitzt etwas hoeher, sonst schneidet das breite
                 Format den Kopf der Figur ab. */}
-            <div className="gallery-main" style={bgOf(a, "center 32%")}>
+            <div className="gallery-main" style={{ ...bgOf(a, "center 32%"), viewTransitionName: `act-${a.id}` }}>
               <Face a={a} />
             </div>
             {photos.length >= 2 ? (

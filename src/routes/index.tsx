@@ -14,6 +14,7 @@ import { SpotlightBanner } from "@/components/showly/SpotlightBanner";
 import { CountUp } from "@/components/showly/ImageWall";
 import { ActOfWeek } from "@/components/showly/ActOfWeek";
 import { HeroReel } from "@/components/showly/HeroReel";
+import { StageLight } from "@/components/showly/Motion";
 
 export const Route = createFileRoute("/")({
   head: () => seoHead("/", "/"),
@@ -177,6 +178,7 @@ function Home() {
     <div className="page active home ui26">
       <section className="home-hero">
         <HeroReel />
+        <StageLight />
         <div className="home-hero-inner">
           <div className="home-hero-copy">
             <div className="home-pill rise" style={{ ["--d" as string]: "0ms" }}>

@@ -440,10 +440,28 @@ export function AddOnShelf({
           const b = bakerOf(s.bakerId);
           return (
             <article className="shelf-card" key={"s" + s.id}>
-              <span className="shelf-img" style={sweetBg(s)}>
+              {/* Bild und Name führen zum Profil des Anbieters mit diesem
+                  Angebot, der Knopf darunter fragt direkt an. */}
+              <Link
+                className="shelf-img"
+                style={sweetBg(s)}
+                to="/torten/$id"
+                params={{ id: String(s.bakerId) }}
+                search={{ angebot: s.id }}
+                onClick={onLeave}
+                aria-label={String(L(s.name))}
+              >
                 <span className="shelf-tag cake">{X.cake}</span>
-              </span>
-              <b className="shelf-name">{L(s.name)}</b>
+              </Link>
+              <Link
+                className="shelf-name"
+                to="/torten/$id"
+                params={{ id: String(s.bakerId) }}
+                search={{ angebot: s.id }}
+                onClick={onLeave}
+              >
+                {L(s.name)}
+              </Link>
               <span className="shelf-price">
                 <SweetPrice s={s} />
                 {b && <small> · {b.city}</small>}

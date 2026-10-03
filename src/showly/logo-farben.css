@@ -491,3 +491,23 @@ html body .act-card-meta{margin-top:2px}
   html body .home-step-num{width:38px!important;height:38px!important;font-size:16px!important;margin-bottom:10px}
   html body .home-more{padding-top:28px}
 }
+
+/* Angebotskarten (Torten & Süßes): ganze Karte führt zum Profil, Namen
+   dürfen umbrechen, Anbieterzeile und Knopf bleiben einzeln klickbar. Im
+   Profil leuchtet das angesteuerte Angebot kurz auf. */
+html body .sweet-card .sweet-card-link{white-space:normal;overflow:visible}
+html body .sweet-card .prod-for{position:relative;z-index:2}
+html body .sweet-card:has(.sweet-card-link) .act-card-img{transition:transform .35s ease}
+html body .sweet-card:has(.sweet-card-link):hover .act-card-img{transform:scale(1.03)}
+html body .sweet-card.flash{animation:offer-flash 2.6s ease-out}
+@keyframes offer-flash{
+  0%,30%{box-shadow:0 0 0 3px var(--lg-magenta,#ED31C5),0 12px 36px rgba(237,49,197,.35);border-radius:22px}
+  100%{box-shadow:0 0 0 0 transparent;border-radius:22px}}
+@media (prefers-reduced-motion:reduce){html body .sweet-card.flash{animation:none;outline:3px solid #ED31C5;outline-offset:4px}}
+html body a.shelf-img{display:block}
+html body a.shelf-name{text-decoration:none}
+html body a.shelf-name:hover{color:var(--lg-violett,#6D3EEA)}
+/* Beschreibung nicht zusammendrücken (sonst blieb eine halbe Zeile stehen):
+   in Listen zwei ganze Zeilen, im Profil des Anbieters der volle Text. */
+html body .sweet-card .sweet-desc{flex-shrink:0}
+html body .bk-offers .sweet-desc{display:block;-webkit-line-clamp:unset;overflow:visible}

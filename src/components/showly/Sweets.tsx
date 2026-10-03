@@ -361,7 +361,25 @@ export function SweetCard({
         )}
       </div>
       <div className="act-card-body">
-        <h3 className="act-card-name prod-name">{L(s.name)}</h3>
+        <h3 className="act-card-name prod-name">
+          {/* Die ganze Karte führt zum Profil des Anbieters, auch bei Angeboten
+              zum Direktbuchen: dort sieht man, wer es anbietet, alle Infos und
+              die übrigen Angebote. Das Angebot selbst wird dort angesteuert.
+              Der Verweis spannt sich per ::after über die Karte; Anbieterzeile
+              und Knopf liegen darüber. Im Profil selbst bleibt es Text. */}
+          {showBaker && b ? (
+            <Link
+              className="act-card-link sweet-card-link"
+              to="/torten/$id"
+              params={{ id: String(b.id) }}
+              search={{ angebot: s.id }}
+            >
+              {L(s.name)}
+            </Link>
+          ) : (
+            L(s.name)
+          )}
+        </h3>
         {showBaker && b && (
           <Link className="prod-for sweet-baker" to="/torten/$id" params={{ id: String(b.id) }}>
             <Icon name={b.kind === "private" ? "heart" : "crown"} />

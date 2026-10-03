@@ -29,10 +29,16 @@ import {
 } from "@/showly/sweets";
 
 export const Route = createFileRoute("/torten/$id")({
-  validateSearch: (search: Record<string, unknown>): { bearbeiten?: boolean } =>
-    search["bearbeiten"] === true || search["bearbeiten"] === "1" || search["bearbeiten"] === 1
-      ? { bearbeiten: true }
-      : {},
+  /* bearbeiten: eigenes Profil im Bearbeiten-Modus öffnen.
+     angebot: von einer Angebotskarte gekommen; das Angebot wird angesteuert
+     und kurz hervorgehoben. */
+  validateSearch: (search: Record<string, unknown>): { bearbeiten?: boolean; angebot?: number } => {
+    const out: { bearbeiten?: boolean; angebot?: number } = {};
+    if (search["bearbeiten"] === true || search["bearbeiten"] === "1" || search["bearbeiten"] === 1) out.bearbeiten = true;
+    const a = Number(search["angebot"]);
+    if (Number.isInteger(a) && a > 0) out.angebot = a;
+    return out;
+  },
   head: ({ params }) => seoHead("/torten/$id", `/torten/${params.id}`),
   component: BakerProfile,
 });
@@ -111,7 +117,7 @@ const COPY = {
 
 function BakerProfile() {
   const { id } = Route.useParams();
-  const { bearbeiten } = Route.useSearch();
+  const { bearbeiten, angebot } = Route.useSearch();
   const { L, fmt, num, lang, hydrated } = useShowly();
   const S = useSweetsCopy();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
@@ -123,6 +129,25 @@ function BakerProfile() {
   useEffect(() => {
     setMine(myBakerIds().includes(Number(id)));
   }, [id]);
+
+  /* Kommt man über eine Angebotskarte, steht das Angebot mitten im Bild und
+     leuchtet kurz auf. Profil, Infos und die übrigen Angebote bleiben drum
+     herum sichtbar. */
+  useEffect(() => {
+    if (!angebot) return;
+    let el: HTMLElement | null = null;
+    const t = window.setTimeout(() => {
+      el = document.getElementById("sweet-" + angebot);
+      if (!el) return;
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      el.classList.add("flash");
+    }, 250);
+    const t2 = window.setTimeout(() => el?.classList.remove("flash"), 2850);
+    return () => {
+      window.clearTimeout(t);
+      window.clearTimeout(t2);
+    };
+  }, [angebot, id, hydrated]);
 
   const b = bakerOf(Number(id));
   /* Selbst angelegte Profile liegen im Browser und sind erst nach dem Laden da */

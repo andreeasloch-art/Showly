@@ -8,7 +8,7 @@ import { InstallApp } from "@/components/showly/InstallApp";
    Benutzernamen feststehen, nur hier austauschen. */
 const SOCIAL = [
   { name: "Instagram", icon: "instagram", url: "https://www.instagram.com/__showly__/" },
-  { name: "Facebook", icon: "facebook", url: "https://www.facebook.com/showly" },
+  { name: "Facebook", icon: "facebook", url: "https://www.facebook.com/profile.php?id=61595200046446" },
   { name: "TikTok", icon: "tiktok", url: "https://www.tiktok.com/@showly938" },
   { name: "X (Twitter)", icon: "twitter", url: "https://x.com/__showly__" },
 ] as const;

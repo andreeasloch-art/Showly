@@ -36,7 +36,7 @@ Das legt die Ordner `ios/` und `android/` an.
 
 ### 4. Icons & Splash-Screen für native Apps generieren
 
-Quellbilder liegen unter `assets/icon.png` und `assets/splash.png`. Ersetze sie bei Bedarf durch deine eigenen Designs (mindestens 1024×1024 für das Icon, 1280×1280 oder größer für den Splash).
+Quellbilder liegen unter `assets/icon.png` und `assets/splash.png`. Das Icon ist das 3D-Showly-S auf weißem Grund (`assets/icon.png`, für Android zusätzlich `icon-foreground.png` und `icon-background.png`). Fertige Store-Dateien liegen in `store/`: `app-store-icon-1024.png` (App Store Connect, 1024 × 1024, ohne Transparenz) und `google-play-icon-512.png` (Play Console, 512 × 512). Ersetze sie bei Bedarf durch deine eigenen Designs (mindestens 1024×1024 für das Icon, 1280×1280 oder größer für den Splash).
 
 ```bash
 bun cap:assets

@@ -181,7 +181,8 @@ export function InstallApp({ compact = false, stores = false }: { compact?: bool
   return (
     <>
       {stores && <div className="store-row">{badge("apple")}{badge("google")}</div>}
-      {!installed && (
+      {/* In der Fußzeile nur die beiden Store-Knöpfe, ohne den Balken */}
+      {!installed && !stores && (
       <button type="button" className={"install-app" + (compact ? " compact" : "")} onClick={() => void install()}>
         <img src="/icons/icon-96.webp" alt="" width={40} height={40} />
         <span>

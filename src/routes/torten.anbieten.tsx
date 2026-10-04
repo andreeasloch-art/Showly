@@ -23,6 +23,7 @@ import {
 import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 import { isBackendConfigured } from "@/lib/supabase";
+import { AccountStep } from "@/components/showly/AccountStep";
 
 export const Route = createFileRoute("/torten/anbieten")({
   head: () => seoHead("/torten/anbieten", "/torten/anbieten"),
@@ -66,7 +67,7 @@ const COPY = {
     need: "Bitte Name, Stadt und mindestens eine Spezialität angeben.",
     needOffer: "Bitte für das erste Angebot Name und Preis angeben.",
     needLegal: "Bitte die Anmeldung, die Nutzungsbedingungen und den Steuerhinweis bestätigen.",
-    loginNext: "Fast geschafft: Melde dich jetzt an, dann wird dein Profil angelegt. Sichtbar wird es, sobald wir es freigeschaltet haben.",
+    loginNext: "Konto bestätigt. Dein Profil wird angelegt und ist sichtbar, sobald wir es freigeschaltet haben.",
     review: "Profil angelegt. Wir prüfen es und schalten es in der Regel innerhalb von 2 Werktagen frei.",
     done: "Dein Profil ist angelegt. Hier kannst du es weiter bearbeiten.",
     note: "Dein Profil wird vorerst nur in diesem Browser gespeichert. Die Prüfung durch Showly folgt, bevor es öffentlich erscheint.",
@@ -107,7 +108,7 @@ const COPY = {
     need: "Please add a name, city and at least one speciality.",
     needOffer: "Please add a name and price for your first offer.",
     needLegal: "Please confirm the registration, the terms and the tax notice.",
-    loginNext: "Almost done: sign in now and your profile will be created. It goes live once we have approved it.",
+    loginNext: "Account confirmed. Your profile is being created and goes live once we have approved it.",
     review: "Profile created. We review it and usually approve it within 2 business days.",
     done: "Your profile is ready. You can keep editing it here.",
     note: "For now your profile is only saved in this browser. Showly reviews it before it goes public.",
@@ -148,7 +149,7 @@ const COPY = {
     need: "Indica nombre, ciudad y al menos una especialidad.",
     needOffer: "Indica nombre y precio de tu primera oferta.",
     needLegal: "Confirma el registro, las condiciones y el aviso fiscal.",
-    loginNext: "Casi listo: inicia sesión y se creará tu perfil. Será visible cuando lo aprobemos.",
+    loginNext: "Cuenta confirmada. Tu perfil se está creando y será visible cuando lo aprobemos.",
     review: "Perfil creado. Lo revisamos y normalmente lo aprobamos en 2 días laborables.",
     done: "Tu perfil está listo. Aquí puedes seguir editándolo.",
     note: "Por ahora tu perfil solo se guarda en este navegador. Showly lo revisa antes de publicarlo.",
@@ -178,6 +179,8 @@ function Onboard() {
   const [terms, setTerms] = useState(false);
   const [taxOk, setTaxOk] = useState(false);
   const [privOk, setPrivOk] = useState(false);
+  /* Ohne Konto: hier per SMS-Code oder E-Mail bestätigen (AccountStep) */
+  const [acct, setAcct] = useState(false);
   const P = usePrivacyCopy();
   const isPrivate = kind === "private";
   const int = (v: string, max: number) => Math.min(max, Math.max(0, Math.floor(Number(v) || 0)));
@@ -228,8 +231,7 @@ function Onboard() {
       };
       void queueBakerSignup(signup).then((id) => {
         if (!session?.backend) {
-          toast(C.loginNext);
-          setTimeout(() => navigate({ to: "/anmelden" }), 800);
+          setAcct(true);
           return;
         }
         if (id) {
@@ -422,6 +424,17 @@ function Onboard() {
             <p className="pe-note">
               <Icon name="lock" /> {C.note}
             </p>
+            {acct && (
+              <AccountStep
+                next="/torten"
+                onClose={() => setAcct(false)}
+                onDone={() => {
+                  setAcct(false);
+                  toast(C.loginNext);
+                  setTimeout(() => navigate({ to: "/dashboard" }), 800);
+                }}
+              />
+            )}
             <button className="home-btn primary ob-submit" onClick={submit}>
               {C.submit}
               <Icon name="arrow" />

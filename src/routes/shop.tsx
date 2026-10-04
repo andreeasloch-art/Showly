@@ -1,3 +1,5 @@
+import { AccountStep } from "@/components/showly/AccountStep";
+import { isBackendConfigured } from "@/lib/supabase";
 import { seoHead } from "@/showly/seo";
 import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { DemoBadge } from "@/components/showly/DemoBadge";
@@ -514,6 +516,7 @@ function DecoOffer({
   const [business, setBusiness] = useState<boolean | null>(null);
   const [taxOk, setTaxOk] = useState(false);
   const [privOk, setPrivOk] = useState(false);
+  const [acct, setAcct] = useState(false);
   const P = usePrivacyCopy();
 
   useEffect(() => {
@@ -534,24 +537,11 @@ function DecoOffer({
     if (business === null || !taxOk) return toast(F.needStatus);
     if (!privOk) return toast(P.need);
     if (!okText(name, desc)) return;
-    /* Mit Datenbank: Angebot auf dem Server, sichtbar nach Freischaltung */
-    if (session?.backend) {
-      void saveDecoCloud({
-        vendor: vendor.trim().slice(0, 80),
-        business,
-        name: name.trim().slice(0, 100),
-        desc: desc.trim().slice(0, 600),
-        cat,
-        occ,
-        buy: b || r * 5,
-        rent: r,
-      }).then(async (res) => {
-        if ("error" in res) return toast(res.error);
-        await refreshCloud();
-        toast(F.done);
-        onDone(res.id);
-      });
-      return;
+    /* Mit Datenbank: Angebot auf dem Server, sichtbar nach Freischaltung.
+       Ohne Konto zuerst hier bestätigen, per SMS-Code oder E-Mail. */
+    if (isBackendConfigured()) {
+      if (!session?.backend) return setAcct(true);
+      return saveCloud();
     }
     const item = saveDecoItem({
       vendor: vendor.trim().slice(0, 80),
@@ -565,6 +555,28 @@ function DecoOffer({
     });
     toast(F.done);
     onDone(item.id);
+  }
+
+  function saveCloud() {
+    const b = price(buy);
+    const r = price(rent);
+    {
+      void saveDecoCloud({
+        vendor: vendor.trim().slice(0, 80),
+        business: !!business,
+        name: name.trim().slice(0, 100),
+        desc: desc.trim().slice(0, 600),
+        cat,
+        occ,
+        buy: b || r * 5,
+        rent: r,
+      }).then(async (res) => {
+        if ("error" in res) return toast(res.error);
+        await refreshCloud();
+        toast(F.done);
+        onDone(res.id);
+      });
+    }
   }
 
   return (
@@ -647,6 +659,16 @@ function DecoOffer({
           <TaxNotice compact />
           <TaxAck checked={taxOk} onChange={setTaxOk} />
           <PrivacyAck checked={privOk} onChange={setPrivOk} id="deco-privacy" />
+          {acct && (
+            <AccountStep
+              next="/shop"
+              onClose={() => setAcct(false)}
+              onDone={() => {
+                setAcct(false);
+                saveCloud();
+              }}
+            />
+          )}
           <p className="pe-note">
             <Icon name="lock" /> {F.note}
           </p>

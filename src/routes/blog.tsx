@@ -8,6 +8,7 @@
  *
  * Es gibt keine erfundenen Beispielbeiträge. Solange niemand etwas geteilt
  * hat, lädt die Seite dazu ein, den ersten Beitrag zu schreiben. */
+import { AccountStep } from "@/components/showly/AccountStep";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { seoHead } from "@/showly/seo";
@@ -60,6 +61,7 @@ const TEXT = {
     needText: "Schreib ein paar Sätze zu deinem Event.",
     needName: "Bitte trag einen Namen ein.",
     posted: "Dein Beitrag ist online.",
+    loginToComment: "Zum Kommentieren bitte anmelden.",
     emptyH: "Noch keine Beiträge",
     emptyP: "Sei die erste Person, die ein Event zeigt. Fotos, Videos oder ein paar Sätze reichen.",
     emptyBtn: "Ersten Beitrag erstellen",
@@ -102,6 +104,7 @@ const TEXT = {
     needText: "Write a few sentences about your event.",
     needName: "Please enter a name.",
     posted: "Your post is live.",
+    loginToComment: "Please sign in to comment.",
     emptyH: "No posts yet",
     emptyP: "Be the first to show an event. Photos, videos or a few lines are enough.",
     emptyBtn: "Create the first post",
@@ -144,6 +147,7 @@ const TEXT = {
     needText: "Escribe unas frases sobre vuestro evento.",
     needName: "Introduce un nombre.",
     posted: "Tu publicación está en línea.",
+    loginToComment: "Inicia sesión para comentar.",
     emptyH: "Todavía no hay publicaciones",
     emptyP: "Sé la primera persona en mostrar un evento. Bastan fotos, vídeos o unas frases.",
     emptyBtn: "Crear la primera publicación",
@@ -249,7 +253,7 @@ function BlogPage() {
   const shown = useMemo(() => {
     /* Gemeldete Beiträge und Beiträge blockierter Personen ausblenden */
     let list = posts.filter((p) => !isHidden(mod, "post", p.id, p.author));
-    if (mine && me) list = list.filter((p) => p.author === me);
+    if (mine) list = list.filter((p) => p.mine ?? (!!me && p.author === me));
     if (actFilter !== null) list = list.filter((p) => (p.artistIds || []).includes(actFilter));
     return list;
   }, [posts, mine, me, actFilter, mod]);
@@ -446,6 +450,9 @@ function Composer({
   );
   const [media, setMedia] = useState<MediaRef[]>([]);
   const [err, setErr] = useState("");
+  /* Mit Datenbank braucht ein Beitrag ein Konto (SMS-Code oder E-Mail) */
+  const [acct, setAcct] = useState(false);
+  const [busy, setBusy] = useState(false);
   const textRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -460,11 +467,13 @@ function Composer({
     };
   }, [onClose]);
 
-  function publish() {
+  async function publish() {
+    if (busy) return;
     if (!name.trim()) return setErr(T.needName);
     if (text.trim().length < 10) return setErr(T.needText);
     if (!okText(name, text)) return;
-    addPost({
+    setBusy(true);
+    const res = await addPost({
       author: name.trim(),
       text: text.trim(),
       media,
@@ -473,6 +482,9 @@ function Composer({
       ...(session?.role ? { authorRole: session.role } : {}),
       ...(city.trim() ? { city: city.trim() } : {}),
     });
+    setBusy(false);
+    if ("needLogin" in res) return setAcct(true);
+    if ("error" in res) return setErr(res.error);
     rememberName(name.trim());
     toast(T.posted);
     onClose();
@@ -486,7 +498,7 @@ function Composer({
             <Icon name="close" />
           </button>
           <h2 id="compose-h">{T.composeH}</h2>
-          <button className="feed26-share-btn" onClick={publish}>
+          <button className="feed26-share-btn" onClick={() => void publish()}>
             {T.post}
           </button>
         </header>
@@ -530,7 +542,17 @@ function Composer({
             />
           </div>
           {err && <p className="picker-err">{err}</p>}
-          <button className="home-btn primary wide" onClick={publish}>
+          {acct && (
+            <AccountStep
+              next="/blog"
+              onClose={() => setAcct(false)}
+              onDone={() => {
+                setAcct(false);
+                void publish();
+              }}
+            />
+          )}
+          <button className="home-btn primary wide" onClick={() => void publish()}>
             <Icon name="send" /> {T.post}
           </button>
         </div>
@@ -560,7 +582,7 @@ function PostCard({
   localeKey: string;
 }) {
   const okText = useContactCheck();
-  const { L, catLabel } = useShowly();
+  const { L, catLabel, toast } = useShowly();
   const navigate = useNavigate();
   const [draft, setDraft] = useState("");
   const [showAll, setShowAll] = useState(false);
@@ -580,7 +602,7 @@ function PostCard({
     navigate({ to: "/kuenstler/$id", params: { id: String(id) } });
 
   function likeByTap() {
-    if (!post.liked) toggleLike(post.id);
+    if (!post.liked) void toggleLike(post.id);
     setBurst((b) => b + 1);
   }
 
@@ -588,9 +610,14 @@ function PostCard({
     const author = me.trim() || "Gast";
     if (draft.trim().length < 2) return;
     if (!okText(draft)) return;
-    addComment(post.id, author, draft.trim());
-    setDraft("");
-    setShowAll(true);
+    void addComment(post.id, author, draft.trim()).then((r) => {
+      if ("error" in r) toast(r.error);
+      else if ("needLogin" in r) toast(T.loginToComment);
+      else {
+        setDraft("");
+        setShowAll(true);
+      }
+    });
   }
 
   const mod = useModeration();
@@ -630,8 +657,8 @@ function PostCard({
             {when(post.dateISO, localeKey)}
           </div>
         </div>
-        {post.author === me && me ? (
-          <button className="ig-icon-btn" onClick={() => removePost(post.id)} aria-label={T.del}>
+        {(post.mine ?? (post.author === me && !!me)) ? (
+          <button className="ig-icon-btn" onClick={() => void removePost(post.id)} aria-label={T.del}>
             <Icon name="trash" />
           </button>
         ) : (
@@ -658,7 +685,7 @@ function PostCard({
       <div className="ig-actions">
         <button
           className={"ig-icon-btn heart" + (post.liked ? " on" : "")}
-          onClick={() => toggleLike(post.id)}
+          onClick={() => void toggleLike(post.id)}
           aria-label={T.like}
           aria-pressed={post.liked}
         >

@@ -110,6 +110,8 @@ export interface Decision {
   voucher?: boolean;
   /** geplante Auszahlung anlegen bzw. streichen */
   payout?: "create" | "cancel";
+  /** gezahlten Betrag vollständig erstatten (AGB § 8 Abs. 1, § 9 Abs. 1 und 4) */
+  refund?: true;
   /** Ergebnis für die Anzeige */
   result: "ok" | "free" | "penalty" | "proof" | "late";
 }
@@ -140,7 +142,7 @@ export function decide(
     case "respond": {
       if (role !== "artist") return { error: "Nur der Künstler kann antworten" };
       if (b.status !== "requested") return { error: "Anfrage ist nicht mehr offen" };
-      if (!action.accept) return { booking: { status: "declined" }, result: "ok" };
+      if (!action.accept) return { booking: { status: "declined" }, ...(b.paid ? { refund: true as const } : {}), result: "ok" };
       return {
         booking: { status: b.paid ? "confirmed" : "pending" },
         ...(b.paid ? { payout: "create" as const } : {}),
@@ -153,7 +155,8 @@ export function decide(
       if (!OPEN.has(b.status) && b.status !== "requested") return { error: "Buchung ist nicht mehr offen" };
       if (now >= start) return { error: "Termin hat schon begonnen" };
       const booking = { status: "declined", cancelled_by: "artist", cancelled_at: iso };
-      if (b.status === "requested" || !late) return { booking, payout: "cancel", result: "free" };
+      const refund = b.paid ? { refund: true as const } : {};
+      if (b.status === "requested" || !late) return { booking, payout: "cancel", ...refund, result: "free" };
       const status = action.emergency ? "proof" : "due";
       return {
         booking,
@@ -165,6 +168,7 @@ export function decide(
           ...(status === "due" ? { due_at: iso } : {}),
         },
         voucher: status === "due",
+        ...refund,
         result: action.emergency ? "proof" : "penalty",
       };
     }
@@ -177,7 +181,7 @@ export function decide(
       return {
         booking: { status: "cancelled", cancelled_by: "customer", cancelled_at: iso },
         /* Bei später Stornierung bleibt die Gage geschuldet (§ 8 Abs. 2) */
-        ...(lateCancel ? {} : { payout: "cancel" as const }),
+        ...(lateCancel ? {} : { payout: "cancel" as const, ...(b.paid ? { refund: true as const } : {}) }),
         result: lateCancel ? "late" : "free",
       };
     }
@@ -191,6 +195,7 @@ export function decide(
       return {
         booking: { status: "noshow" },
         payout: "cancel",
+        ...(b.paid ? { refund: true as const } : {}),
         newPenalty: {
           reason: "noshow",
           status: "hearing",

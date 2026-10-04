@@ -1,6 +1,7 @@
 /* Auswahl von Fotos und Videos für Bewertungen und Beiträge.
  * Jede Datei wird vor dem Speichern auf Kontaktdaten geprüft (mediaCheck);
  * Bilder werden beim Ablegen verkleinert, Videos auf Größe und Länge geprüft. */
+import { cloudUser, uploadToCloud } from "@/showly/cloudMedia";
 import { useRef, useState } from "react";
 import { Icon } from "@/showly/ui";
 import {
@@ -78,7 +79,20 @@ export function MediaPicker({
         continue;
       }
       try {
-        added.push(await putMedia(file));
+        let ref = await putMedia(file);
+        /* Mit Datenbank und Anmeldung: auf den Server, damit alle die Datei
+           sehen können, sobald das Team sie freigegeben hat */
+        const uid = await cloudUser();
+        if (uid) {
+          try {
+            ref = await uploadToCloud(ref, check, uid);
+          } catch {
+            void deleteMedia(ref.id);
+            setErr(T.errStore);
+            continue;
+          }
+        }
+        added.push(ref);
       } catch (e) {
         const reason = e instanceof MediaError ? e.reason : "store";
         setErr(reason === "type" ? T.errType : reason === "size" ? T.errSize : T.errStore);

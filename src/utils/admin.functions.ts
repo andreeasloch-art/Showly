@@ -428,49 +428,12 @@ export const adminAct = createServerFn({ method: "POST" })
 
         /* Erstattung an den Kunden über Stripe */
         case "refunds": {
-          const { data: b } = await a
-            .from("bookings")
-            .select("*")
-            .eq("id", data.id)
-            .maybeSingle();
-          if (!b || !b.paid) return { error: "Keine bezahlte Buchung" };
-          const left = b.amount_cents - b.refunded_cents;
-          const cents = Math.min(
-            left,
-            Math.max(1, Math.round(data.cents ?? left)),
-          );
-          if (left <= 0) return { error: "Schon vollständig erstattet" };
-          const session = String(b.stripe_session_id || "").split(":")[0];
-          if (!session)
-            return { error: "Keine Stripe-Zahlung zu dieser Buchung" };
-          try {
-            const stripe = createStripeClient(data.environment);
-            const s = await stripe.checkout.sessions.retrieve(session);
-            const pi =
-              typeof s.payment_intent === "string"
-                ? s.payment_intent
-                : s.payment_intent?.id;
-            if (!pi) return { error: "Zahlung bei Stripe nicht gefunden" };
-            await stripe.refunds.create({
-              payment_intent: pi,
-              amount: cents,
-              metadata: { booking_id: String(b.id) },
-            });
-          } catch (e) {
-            return { error: getStripeErrorMessage(e) };
-          }
-          await a
-            .from("bookings")
-            .update({
-              refunded_cents: b.refunded_cents + cents,
-              refunded_at: now,
-            })
-            .eq("id", b.id);
-          const to = await emailOf(b.customer);
-          if (to)
-            await sendMail(to, "Erstattung deiner Showly-Buchung", [
-              `Wir haben ${(cents / 100).toFixed(2).replace(".", ",")} € erstattet. Je nach Bank dauert die Gutschrift einige Tage.`,
-            ]);
+          const { refundBooking } = await import("@/lib/money.server");
+          const r = await refundBooking(data.id, {
+            env: data.environment,
+            ...(data.cents !== undefined ? { cents: data.cents } : {}),
+          });
+          if ("error" in r) return r;
           return { ok: true };
         }
       }
@@ -521,3 +484,12 @@ export const adminExport = createServerFn({ method: "POST" }).handler(
     };
   },
 );
+
+/* ------------------------------------------------------------------ */
+/** Tägliche Aufgaben sofort ausführen: verfallene Anfragen, Erinnerungen,
+ *  fällige Auszahlungen, Löschfristen (lib/daily.server.ts) */
+export const adminRunDaily = createServerFn({ method: "POST" }).handler(async () => {
+  if (!(await guard())) return DENIED;
+  const { runDaily } = await import("@/lib/daily.server");
+  return { ok: true as const, result: await runDaily() };
+});

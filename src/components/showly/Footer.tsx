@@ -52,7 +52,7 @@ export function Footer() {
             <div className="footer-apps">
               <div className="footer-col-title">{t("foot.apps")}</div>
               <p className="footer-apps-p">{t("foot.appsP")}</p>
-              <InstallApp compact />
+              <InstallApp compact stores />
             </div>
           </div>
           <div>

@@ -230,12 +230,23 @@ export const respondSweet = createServerFn({ method: "POST" })
     if (!ctx) return { error: "Bitte melde dich an" };
     if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
     const admin = adminClient();
-    const { data: r } = await admin.from("sweet_requests").select("id, baker_owner, status").eq("id", data.requestId).maybeSingle();
+    const { data: r } = await admin.from("sweet_requests").select("id, baker_owner, status, customer, day").eq("id", data.requestId).maybeSingle();
     if (!r || r.baker_owner !== ctx.user.id) return { error: "Keine Berechtigung" };
     if (r.status !== "sent") return { error: "Anfrage ist nicht mehr offen" };
     await admin
       .from("sweet_requests")
       .update(data.accept ? { status: "confirmed", ...(data.priceCents ? { price_cents: data.priceCents } : {}) } : { status: "declined" })
       .eq("id", r.id);
+    const { notify } = await import("@/lib/notify.server");
+    const when = String(r.day).split("-").reverse().join(".");
+    await notify(
+      r.customer,
+      data.accept ? "Deine Torten-Anfrage wurde angenommen" : "Deine Torten-Anfrage wurde abgelehnt",
+      [
+        data.accept
+          ? `Für den ${when} gibt es ein Angebot. Preis und Details findest du in der App.`
+          : `Für den ${when} hat es leider nicht geklappt. Schau gern nach einem anderen Anbieter.`,
+      ],
+    ).catch(() => false);
     return { ok: true };
   });

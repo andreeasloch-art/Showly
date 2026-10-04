@@ -117,6 +117,27 @@ export const sendMessage = createServerFn({ method: "POST" })
         body: data.body,
       });
     if (error) return { error: "Nachricht konnte nicht gesendet werden" };
+    /* Die andere Seite per Mail informieren (höchstens alle 30 Minuten) */
+    try {
+      const admin = adminClient();
+      let to: string | null = null;
+      if ("bookingId" in data.ref) {
+        const { data: b } = await admin.from("bookings").select("customer, artist_id").eq("id", data.ref.bookingId).maybeSingle();
+        if (b) {
+          const { ownerOfArtist } = await import("@/lib/notify.server");
+          to = role === "customer" ? await ownerOfArtist(b.artist_id) : b.customer;
+        }
+      } else {
+        const { data: s } = await admin.from("sweet_requests").select("customer, baker_owner").eq("id", data.ref.sweetId).maybeSingle();
+        if (s) to = role === "customer" ? s.baker_owner : s.customer;
+      }
+      if (to && to !== uid) {
+        const { notifyMessage } = await import("@/lib/notify.server");
+        await notifyMessage(to, "bookingId" in data.ref ? `b${data.ref.bookingId}` : `s${data.ref.sweetId}`);
+      }
+    } catch {
+      /* Mail ist Zusatz; die Nachricht ist gespeichert */
+    }
     return { ok: true };
   });
 

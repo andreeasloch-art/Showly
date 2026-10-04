@@ -262,6 +262,10 @@ export const recordCart = createServerFn({ method: "POST" })
       const { data: ins, error } = await admin.from("bookings").insert(row).select("id").single();
       if (error || !ins) continue;
       bookingIds.push(ins.id);
+      {
+        const { notifyNewBooking } = await import("@/lib/notify.server");
+        await notifyNewBooking({ id: ins.id, artist_id: terms.artist_id, day: b.dateISO, slot: b.slot, status }).catch(() => false);
+      }
       await admin.from("booking_codes").insert({ booking_id: ins.id, code: newCheckinCode() });
       if (status === "confirmed" && terms.artist_id) {
         const { count } = await admin
@@ -310,7 +314,11 @@ export const recordCart = createServerFn({ method: "POST" })
         })
         .select("id")
         .single();
-      if (ins) sweetIds.push(ins.id);
+      if (ins) {
+        sweetIds.push(ins.id);
+        const { notifyNewSweet } = await import("@/lib/notify.server");
+        await notifyNewSweet(bakerOwner.get(r.bakerId) ?? null, r.dateISO, direct).catch(() => false);
+      }
     }
 
     let orderId: number | null = null;
@@ -336,6 +344,13 @@ export const recordCart = createServerFn({ method: "POST" })
         .select("id")
         .single();
       orderId = ins?.id ?? null;
+      if (ins && paid) {
+        const { notify } = await import("@/lib/notify.server");
+        for (const owner of providerOwners)
+          await notify(owner, "Neue Bestellung im Showly-Shop", [
+            "Es gibt eine neue, bezahlte Bestellung für deine Artikel. Bitte verschick sie zeitnah; alle Angaben stehen in der App.",
+          ]).catch(() => false);
+      }
     }
     return { ok: true, bookingIds, sweetIds, orderId };
   });
@@ -394,6 +409,33 @@ export const bookingAction = createServerFn({ method: "POST" })
       );
     }
     if (d.penalty && pen) await admin.from("penalties").update(d.penalty as Partial<PenaltyRow>).eq("id", pen.id);
+    /* Erstattung sofort über Stripe. Klappt das nicht, sieht die Verwaltung
+       die Buchung unter "Erstattungen" und kann es per Klick nachholen. */
+    if (d.refund) {
+      const { refundBooking } = await import("@/lib/money.server");
+      const reason =
+        data.action.kind === "cancelCustomer"
+          ? "kostenlose Stornierung"
+          : data.action.kind === "reportNoShow"
+            ? "Nichterscheinen gemeldet"
+            : "Absage durch die anbietende Person";
+      await refundBooking(b.id, { reason }).catch(() => null);
+    }
+    {
+      const { notifyBookingChange } = await import("@/lib/notify.server");
+      const k = data.action.kind;
+      const change =
+        k === "respond"
+          ? data.action.accept
+            ? "accepted"
+            : "declined"
+          : k === "cancelArtist"
+            ? "cancelledByArtist"
+            : k === "cancelCustomer"
+              ? "cancelledByCustomer"
+              : null;
+      if (change) await notifyBookingChange(change, b).catch(() => false);
+    }
     if (d.voucher && b.customer) await issueVoucher(admin, b.id, b.customer, VOUCHER_EUR, voucherCode, voucherValidUntil);
     if (d.payout === "cancel") await admin.from("payouts").update({ status: "cancelled" }).eq("booking_id", b.id).neq("status", "paid");
     if (d.payout === "create" && b.artist_id) {
@@ -447,6 +489,13 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
   for (const b of open || []) {
     if (requestLapsed(b)) {
       await admin.from("bookings").update({ status: "declined" }).eq("id", b.id).eq("status", "requested");
+      /* Nicht rechtzeitig bestätigt: Geld zurück (AGB § 5 Abs. 3) */
+      if (b.paid) {
+        const { refundBooking } = await import("@/lib/money.server");
+        await refundBooking(b.id, { reason: "Anfrage nicht rechtzeitig bestätigt" }).catch(() => null);
+      }
+      const { notifyBookingChange } = await import("@/lib/notify.server");
+      await notifyBookingChange("declined", b).catch(() => false);
       if (b.artist_id && b.slot)
         await admin.from("availability").delete().eq("artist_id", b.artist_id).eq("day", b.day).eq("slot", b.slot);
     }

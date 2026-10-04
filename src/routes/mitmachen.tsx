@@ -14,6 +14,8 @@ import { DEFAULT_RADIUS_KM, RADIUS_OPTIONS, travelOption } from "@/showly/travel
 import { localProfileExists, saveArtistProfile, saveAccount } from "@/showly/persist";
 import { isBackendConfigured } from "@/lib/supabase";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { AccountStep } from "@/components/showly/AccountStep";
+import { loginId } from "@/showly/phone";
 
 export const Route = createFileRoute("/mitmachen")({
   head: () => seoHead("/mitmachen", "/mitmachen"),
@@ -117,6 +119,11 @@ function Become() {
   const [taxOk, setTaxOk] = useState(false);
   const [adult, setAdult] = useState(false);
   const [privOk, setPrivOk] = useState(false);
+  /* Konto per E-Mail oder Handynummer (Übungsmodus), mit Datenbank per
+     Einmal-Code im letzten Schritt (AccountStep) */
+  const [via, setVia] = useState<"mail" | "phone">("mail");
+  const [acct, setAcct] = useState(false);
+  const cloud = isBackendConfigured();
   const P = usePrivacyCopy();
   const RG =
     {
@@ -141,6 +148,12 @@ function Become() {
         haveP: "Neue Figuren und Acts fügst du in deinem bestehenden Profil hinzu. Ein zweites Profil ist nicht möglich.",
         haveBtn: "Zu meinem Profil",
         dupLocal: "Für diese Person gibt es schon ein Profil. Melde dich mit deinem Konto an und trag neue Acts dort ein.",
+        viaMail: "E-Mail",
+        viaPhone: "Handynummer",
+        phone: "Handynummer",
+        phonePh: "0151 23456789",
+        badPhone: "Bitte eine gültige Handynummer eingeben, etwa 0151 23456789.",
+        cloudAcct: "Dein Konto bestätigst du im letzten Schritt mit einem Code per SMS an deine Handynummer oder per E-Mail. Ein Passwort brauchst du nicht.",
       },
       en: {
         rules:
@@ -163,6 +176,12 @@ function Become() {
         haveP: "Add new characters and acts to your existing profile. A second profile is not possible.",
         haveBtn: "Go to my profile",
         dupLocal: "There is already a profile for this person. Sign in with your account and add new acts there.",
+        viaMail: "Email",
+        viaPhone: "Mobile number",
+        phone: "Mobile number",
+        phonePh: "+49 151 23456789",
+        badPhone: "Please enter a valid mobile number, e.g. +49 151 23456789.",
+        cloudAcct: "In the last step you confirm your account with a code sent by text message to your mobile number or by email. No password needed.",
       },
       es: {
         rules:
@@ -185,6 +204,12 @@ function Become() {
         haveP: "Añade nuevos personajes y actuaciones en tu perfil actual. No es posible un segundo perfil.",
         haveBtn: "Ir a mi perfil",
         dupLocal: "Ya existe un perfil para esta persona. Inicia sesión con tu cuenta y añade allí nuevas actuaciones.",
+        viaMail: "Correo",
+        viaPhone: "Móvil",
+        phone: "Número de móvil",
+        phonePh: "600 123 456",
+        badPhone: "Introduce un móvil válido, p. ej. 600 123 456.",
+        cloudAcct: "En el último paso confirmas tu cuenta con un código por SMS a tu móvil o por correo. No necesitas contraseña.",
       },
     }[(lang as "de" | "en" | "es") ?? "de"] ?? null;
   const planner = role === "planner";
@@ -232,9 +257,13 @@ function Become() {
     if (!okText(form.desc)) return;
     if (business === null || !rulesOk || !taxOk) return toast(RG!.need);
     if (!privOk) return toast(P.need);
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email))
-      return toast(t("sec.badEmail"));
-    if (pw.score < 2) return toast(t("sec.weakPw"));
+    /* Ohne Datenbank: Zugang über E-Mail oder Handynummer plus Passwort */
+    const login = cloud ? "" : loginId(form.email, lang);
+    if (!cloud) {
+      if (!login || (via === "mail") !== login.includes("@"))
+        return toast(via === "mail" ? t("sec.badEmail") : RG!.badPhone);
+      if (pw.score < 2) return toast(t("sec.weakPw"));
+    }
     const cat = form.cat;
     if (!CATS.some((c) => c.id === cat)) return toast(t("sec.badCat"));
     /* Datensparsamkeit: kein Geburtsdatum, nur die Bestätigung der
@@ -307,20 +336,21 @@ function Become() {
         taxAck: true,
       });
       if (!session?.backend) {
-        toast(RG!.loginNext);
-        setTimeout(() => navigate({ to: "/anmelden" }), 800);
+        /* Konto direkt hier bestätigen, per SMS-Code oder E-Mail. Danach legt
+           der Store das gemerkte Profil an (pendingArtist). */
+        setAcct(true);
         return;
       }
       toast(t("toast.registered"));
       setTimeout(() => navigate({ to: "/dashboard" }), 800);
       return;
     }
-    if (localProfileExists(form.email, real)) return toast(RG!.dupLocal);
+    if (localProfileExists(login!, real)) return toast(RG!.dupLocal);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ARTISTS.push(prof as any);
     saveArtistProfile(prof);
     saveAccount({
-      email: form.email,
+      email: login!,
       pw: form.pw,
       name: real,
       role: planner ? "planner" : "artist",
@@ -328,7 +358,7 @@ function Become() {
     });
     setSession({
       name: real,
-      email: form.email,
+      email: login!,
       role: planner ? "planner" : "artist",
       providerId: id,
     });
@@ -669,14 +699,40 @@ function Become() {
                 />
               </div>
             </div>
+            {cloud ? (
+              !session?.backend && (
+                <p className="join26-acct">
+                  <Icon name="lock" /> {RG!.cloudAcct}
+                </p>
+              )
+            ) : (
+            <>
+            <div className="konto-tabs join26-via" role="tablist">
+              {(["mail", "phone"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  role="tab"
+                  aria-selected={via === v}
+                  className={"konto-tab" + (via === v ? " on" : "")}
+                  onClick={() => {
+                    setVia(v);
+                    set("email", "");
+                  }}
+                >
+                  {v === "mail" ? RG!.viaMail : RG!.viaPhone}
+                </button>
+              ))}
+            </div>
             <div className="input-group">
-              <label htmlFor="reg-email">{t("reg.email")}</label>
+              <label htmlFor="reg-email">{via === "mail" ? t("reg.email") : RG!.phone}</label>
               <input
                 id="reg-email"
-                type="email"
+                type={via === "mail" ? "email" : "tel"}
+                inputMode={via === "mail" ? "email" : "tel"}
                 maxLength={254}
-                autoComplete="email"
-                placeholder="maria@mail.com"
+                autoComplete={via === "mail" ? "email" : "tel"}
+                placeholder={via === "mail" ? "maria@mail.com" : RG!.phonePh}
                 value={form.email}
                 onChange={(e) => set("email", e.target.value)}
               />
@@ -706,6 +762,8 @@ function Become() {
                   : ""}
               </div>
             </div>
+            </>
+            )}
             <label className="reg-check">
               <input id="reg-adult" type="checkbox" checked={adult} onChange={(e) => setAdult(e.target.checked)} />
               <span>{RG!.adult}</span>
@@ -840,6 +898,16 @@ function Become() {
             <TaxNotice compact />
             <TaxAck checked={taxOk} onChange={setTaxOk} />
             <PrivacyAck checked={privOk} onChange={setPrivOk} id="reg-privacy" />
+            {acct && (
+              <AccountStep
+                onClose={() => setAcct(false)}
+                onDone={() => {
+                  setAcct(false);
+                  toast(t("toast.registered"));
+                  setTimeout(() => navigate({ to: "/dashboard" }), 800);
+                }}
+              />
+            )}
             <button className="home-btn primary wide" onClick={submit}>
               {planner ? t("reg.btnP") : t("reg.btn")}
               <Icon name="arrow" />

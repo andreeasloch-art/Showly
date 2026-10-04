@@ -3060,6 +3060,8 @@ footer{background:#190A3C}
 .store-badge:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.7)}
 .store-badge:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .store-mark{width:24px;height:24px;flex:none}
+button.store-badge{cursor:pointer;font:inherit}
+.footer-apps .store-row{margin-bottom:4px}
 .store-text{display:flex;flex-direction:column;line-height:1.15;text-align:left}
 .store-text small{font-size:10.5px;letter-spacing:.02em;color:rgba(255,255,255,.8)}
 .store-text strong{font-size:16px;font-weight:600;letter-spacing:-.01em;color:#fff}
@@ -6548,3 +6550,22 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 /* Animation liegt über ihrem ersten Bild und erscheint, sobald sie geladen ist */
 .splash-anim{opacity:0}
 .splash-anim.on{opacity:1}
+/* Konto bestätigen per SMS-Code oder E-Mail (AccountStep) */
+.acct-step{position:relative;width:100%;max-width:420px;margin:auto;padding:26px 22px 20px;border-radius:22px;background:#fff;color:var(--ink);box-shadow:0 20px 60px rgba(21,16,42,.25)}
+.acct-step h2{margin:0 0 8px;font:700 21px/1.25 var(--font-head)}
+.acct-p{margin:0 0 18px;font-size:14.5px;line-height:1.5;color:var(--ink2)}
+.acct-x{position:absolute;top:12px;right:12px;width:40px;height:40px;display:grid;place-items:center;border:0;border-radius:50%;background:#f5f2fb;color:var(--ink);cursor:pointer}
+.acct-x svg{width:18px;height:18px}
+.acct-go{width:100%;min-height:48px;margin-top:6px}
+.acct-code{font-size:22px !important;letter-spacing:.35em;text-align:center}
+.acct-row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:12px}
+.acct-row .konto-link{background:none;border:0;padding:6px 0;font:inherit;font-size:13.5px;cursor:pointer}
+.acct-small{margin:14px 0 0;font-size:13.5px;color:var(--ink2);text-align:center}
+.acct-note{display:flex;gap:8px;align-items:flex-start;margin:16px 0 0;padding-top:14px;border-top:1px solid #eee8f7;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.acct-note svg{flex:none;width:15px;height:15px;margin-top:1px}
+.join26-acct{display:flex;gap:10px;align-items:flex-start;margin:4px 0 14px;padding:12px 14px;border-radius:12px;background:#f7f5fc;font-size:14px;line-height:1.5;color:var(--ink2)}
+.join26-acct svg{flex:none;width:17px;height:17px;margin-top:2px;color:#6B3BE8}
+.join26-via{margin-bottom:12px}
+.admin26-daily{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;padding:16px;border-radius:16px;background:#f7f5fc;border:1px solid #eae6f3}
+.admin26-daily span{font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.admin26-daily .dash26-mini{align-self:flex-start;margin-top:4px}

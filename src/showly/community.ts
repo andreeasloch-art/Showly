@@ -7,7 +7,17 @@
  * (siehe media.ts). Änderungen werden gemeldet, damit offene Ansichten
  * sich sofort aktualisieren. */
 import { loadJSON, saveJSON } from "./persist";
-import { deleteMedia, type MediaRef } from "./media";
+import { deleteMedia, preloadMedia, type MediaRef } from "./media";
+import { cloudUser } from "./cloudMedia";
+
+/* Mit Datenbank (und Anmeldung beim Schreiben) liegen Bewertungen und
+ * Beiträge auf dem Server (utils/community.functions.ts) und alle sehen sie.
+ * Ihre Kennungen beginnen mit "db:". Ohne Datenbank bleibt alles wie bisher
+ * im Browser (Übungsbetrieb). */
+export const isCloudItem = (id: string) => id.startsWith("db:");
+const dbId = (id: string) => Number(id.slice(3));
+
+export type CommunityResult = { ok: true } | { error: string } | { needLogin: true };
 
 export interface UserReview {
   id: string;
@@ -18,6 +28,8 @@ export interface UserReview {
   dateISO: string;
   eventDate?: string;
   media: MediaRef[];
+  /** Nur bei Einträgen aus der Datenbank: von der angemeldeten Person */
+  mine?: boolean;
 }
 
 export interface PostComment {
@@ -25,6 +37,7 @@ export interface PostComment {
   author: string;
   text: string;
   dateISO: string;
+  mine?: boolean;
 }
 
 export interface Post {
@@ -42,6 +55,7 @@ export interface Post {
   likes: number;
   liked: boolean;
   comments: PostComment[];
+  mine?: boolean;
 }
 
 const REVIEW_KEY = "reviews.user";
@@ -49,6 +63,11 @@ const POST_KEY = "posts";
 
 let reviews: UserReview[] = [];
 let posts: Post[] = [];
+let cloudReviews: UserReview[] = [];
+let cloudPosts: Post[] = [];
+/* Zusammengeführte Listen; neue Liste nur bei Änderung (useSyncExternalStore) */
+let allReviews: UserReview[] = [];
+let allPosts: Post[] = [];
 let loaded = false;
 
 const listeners = new Set<() => void>();
@@ -69,16 +88,69 @@ function ensure() {
         : [],
   }));
   loaded = true;
+  merge();
+}
+
+function merge() {
+  allReviews = [...cloudReviews, ...reviews];
+  allPosts = [...cloudPosts, ...posts].sort((a, b) => (a.dateISO < b.dateISO ? 1 : -1));
 }
 
 function publish() {
   saveJSON(REVIEW_KEY, reviews);
   saveJSON(POST_KEY, posts);
+  merge();
   listeners.forEach((fn) => fn());
 }
 
+let syncing: Promise<void> | null = null;
+
+/** Bewertungen und Beiträge vom Server holen (nur mit Datenbank) */
+export function syncCommunity(): Promise<void> {
+  if (typeof window === "undefined") return Promise.resolve();
+  if (syncing) return syncing;
+  syncing = (async () => {
+    const { isBackendConfigured } = await import("@/lib/supabase");
+    if (!isBackendConfigured()) return;
+    const { listCommunity } = await import("@/utils/community.functions");
+    const r = await listCommunity().catch(() => null);
+    if (!r) return;
+    ensure();
+    cloudReviews = r.reviews.map((x) => ({ ...x, id: "db:" + x.id, media: x.media as MediaRef[] }));
+    cloudPosts = r.posts.map((x) => ({
+      ...x,
+      id: "db:" + x.id,
+      media: x.media as MediaRef[],
+      comments: x.comments.map((c) => ({ ...c, id: "db:" + c.id })),
+    }));
+    void preloadMedia(
+      [...cloudReviews, ...cloudPosts].flatMap((x) => x.media.filter((m) => m.kind === "image").map((m) => m.id)),
+    );
+    merge();
+    listeners.forEach((fn) => fn());
+  })().finally(() => {
+    syncing = null;
+  });
+  return syncing;
+}
+
+/** Mit Datenbank: angemeldet? Ohne Datenbank: null (dann örtlich speichern) */
+async function cloudMode(): Promise<"off" | "user" | "anon"> {
+  const { isBackendConfigured } = await import("@/lib/supabase");
+  if (!isBackendConfigured()) return "off";
+  return (await cloudUser()) ? "user" : "anon";
+}
+
+const cloudMedia = (m: MediaRef[]) => m.filter((x) => x.id.startsWith("c:"));
+
+let firstSync = false;
+
 export function subscribe(fn: () => void) {
   ensure();
+  if (!firstSync) {
+    firstSync = true;
+    void syncCommunity();
+  }
   listeners.add(fn);
   return () => listeners.delete(fn);
 }
@@ -91,23 +163,47 @@ function newId(prefix: string) {
 
 export function getReviews(artistId: number): UserReview[] {
   ensure();
-  return reviews.filter((r) => r.artistId === artistId);
+  return allReviews.filter((r) => r.artistId === artistId);
 }
 
 /** Momentaufnahme für useSyncExternalStore: gleiche Liste, gleiche Kennung. */
 export function reviewsSnapshot(): UserReview[] {
   ensure();
-  return reviews;
+  return allReviews;
 }
 
-export function addReview(r: Omit<UserReview, "id" | "dateISO">) {
+export async function addReview(r: Omit<UserReview, "id" | "dateISO">): Promise<CommunityResult> {
   ensure();
+  const mode = await cloudMode();
+  if (mode === "anon") return { needLogin: true };
+  if (mode === "user") {
+    const { addReviewCloud } = await import("@/utils/community.functions");
+    const res = await addReviewCloud({
+      data: {
+        artistId: r.artistId,
+        name: r.author,
+        rating: r.rating,
+        text: r.text,
+        ...(r.eventDate ? { eventDate: r.eventDate } : {}),
+        media: cloudMedia(r.media),
+      },
+    }).catch(() => ({ error: "Keine Verbindung" }));
+    if ("error" in res) return res;
+    await syncCommunity();
+    return { ok: true };
+  }
   reviews = [{ ...r, id: newId("r"), dateISO: new Date().toISOString() }, ...reviews];
   publish();
+  return { ok: true };
 }
 
-export function removeReview(id: string) {
+export async function removeReview(id: string) {
   ensure();
+  if (isCloudItem(id)) {
+    const { deleteReviewCloud } = await import("@/utils/community.functions");
+    await deleteReviewCloud({ data: { id: dbId(id) } }).catch(() => null);
+    return syncCommunity();
+  }
   const gone = reviews.find((r) => r.id === id);
   gone?.media.forEach((m) => void deleteMedia(m.id));
   reviews = reviews.filter((r) => r.id !== id);
@@ -118,36 +214,83 @@ export function removeReview(id: string) {
 
 export function postsSnapshot(): Post[] {
   ensure();
-  return posts;
+  return allPosts;
 }
 
-export function addPost(p: Omit<Post, "id" | "dateISO" | "likes" | "liked" | "comments">) {
+export async function addPost(
+  p: Omit<Post, "id" | "dateISO" | "likes" | "liked" | "comments">,
+): Promise<CommunityResult> {
   ensure();
+  const mode = await cloudMode();
+  if (mode === "anon") return { needLogin: true };
+  if (mode === "user") {
+    const { addPostCloud } = await import("@/utils/community.functions");
+    const res = await addPostCloud({
+      data: {
+        name: p.author,
+        text: p.text,
+        ...(p.city ? { city: p.city } : {}),
+        artistIds: p.artistIds,
+        media: cloudMedia(p.media),
+      },
+    }).catch(() => ({ error: "Keine Verbindung" }));
+    if ("error" in res) return res;
+    await syncCommunity();
+    return { ok: true };
+  }
   posts = [
     { ...p, id: newId("p"), dateISO: new Date().toISOString(), likes: 0, liked: false, comments: [] },
     ...posts,
   ];
   publish();
+  return { ok: true };
 }
 
-export function removePost(id: string) {
+export async function removePost(id: string) {
   ensure();
+  if (isCloudItem(id)) {
+    const { deletePostCloud } = await import("@/utils/community.functions");
+    await deletePostCloud({ data: { id: dbId(id) } }).catch(() => null);
+    return syncCommunity();
+  }
   const gone = posts.find((p) => p.id === id);
   gone?.media.forEach((m) => void deleteMedia(m.id));
   posts = posts.filter((p) => p.id !== id);
   publish();
 }
 
-export function toggleLike(id: string) {
+export async function toggleLike(id: string) {
   ensure();
+  if (isCloudItem(id)) {
+    if ((await cloudMode()) !== "user") return;
+    /* Sofort anzeigen, dann mit dem Server abgleichen */
+    cloudPosts = cloudPosts.map((p) =>
+      p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p,
+    );
+    merge();
+    listeners.forEach((fn) => fn());
+    const { toggleLikeCloud } = await import("@/utils/community.functions");
+    await toggleLikeCloud({ data: { id: dbId(id) } }).catch(() => null);
+    return syncCommunity();
+  }
   posts = posts.map((p) =>
     p.id === id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p,
   );
   publish();
 }
 
-export function addComment(postId: string, author: string, text: string) {
+export async function addComment(postId: string, author: string, text: string): Promise<CommunityResult> {
   ensure();
+  if (isCloudItem(postId)) {
+    if ((await cloudMode()) !== "user") return { needLogin: true };
+    const { addCommentCloud } = await import("@/utils/community.functions");
+    const res = await addCommentCloud({ data: { postId: dbId(postId), name: author, text } }).catch(() => ({
+      error: "Keine Verbindung",
+    }));
+    if ("error" in res) return res;
+    await syncCommunity();
+    return { ok: true };
+  }
   posts = posts.map((p) =>
     p.id === postId
       ? {
@@ -160,6 +303,7 @@ export function addComment(postId: string, author: string, text: string) {
       : p,
   );
   publish();
+  return { ok: true };
 }
 
 /** Beim Löschen des Kontos: alle Beiträge, Kommentare und Bewertungen

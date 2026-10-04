@@ -14,6 +14,7 @@ import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { authRedirectTo, isBackendConfigured, supabase } from "@/lib/supabase";
+import { normalizePhone } from "@/showly/phone";
 
 export const Route = createFileRoute("/anmelden")({
   head: () => seoHead("/anmelden", "/anmelden"),
@@ -126,7 +127,6 @@ const COPY = {
 } as const;
 
 const MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-const PHONE = /^\+[1-9]\d{7,14}$/;
 
 function SignInPage() {
   const { lang, toast } = useShowly();
@@ -179,7 +179,7 @@ function SignInPage() {
     setErr("");
     const value = target.trim();
     if (mode === "mail" && !MAIL.test(value)) return setErr(T.errMail);
-    if (mode === "phone" && !PHONE.test(value.replace(/[\s/-]/g, ""))) return setErr(T.errPhone);
+    if (mode === "phone" && !normalizePhone(value, lang)) return setErr(T.errPhone);
 
     setBusy(true);
     const sb = supabase();
@@ -189,7 +189,7 @@ function SignInPage() {
             email: value,
             options: { emailRedirectTo: authRedirectTo("/dashboard") },
           })
-        : await sb.auth.signInWithOtp({ phone: value.replace(/[\s/-]/g, "") });
+        : await sb.auth.signInWithOtp({ phone: normalizePhone(value, lang)! });
 
     setBusy(false);
     if (error) return setErr(error.message);
@@ -216,7 +216,7 @@ function SignInPage() {
     const { error } = await supabase().auth.verifyOtp(
       mode === "mail"
         ? { email: value, token: code.trim(), type: "email" }
-        : { phone: value.replace(/[\s/-]/g, ""), token: code.trim(), type: "sms" },
+        : { phone: normalizePhone(value, lang)!, token: code.trim(), type: "sms" },
     );
     setBusy(false);
     if (error) return setErr(T.errCode);

@@ -11,7 +11,7 @@ import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { isBackendConfigured } from "@/lib/supabase";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { adminAct, adminExport, adminList, adminOverview, type AdminSection } from "@/utils/admin.functions";
+import { adminAct, adminExport, adminList, adminOverview, adminRunDaily, type AdminSection } from "@/utils/admin.functions";
 import { AdminMedia } from "@/components/showly/AdminMedia";
 
 export const Route = createFileRoute("/admin")({
@@ -155,6 +155,27 @@ function AdminPage() {
                 <span>{String(label)}</span>
               </button>
             ))}
+            <div className="admin26-daily">
+              <b>Tägliche Aufgaben</b>
+              <span>
+                Verfallene Anfragen erstatten, Erinnerungen verschicken, fällige Auszahlungen überweisen,
+                Löschfristen einhalten. Läuft automatisch, wenn ein Zeitplan eingerichtet ist (EINRICHTUNG.md).
+              </span>
+              <button
+                type="button"
+                className="dash26-mini"
+                onClick={async () => {
+                  const r = await adminRunDaily().catch(() => null);
+                  if (!r || "error" in r) return toast(r ? r.error : "Hat nicht geklappt");
+                  const x = r.result;
+                  toast(
+                    `Erledigt: ${x.lapsed} verfallen, ${x.reminded} erinnert, ${x.payouts.paid + x.payouts.held} ausgezahlt, ${x.payouts.failed} fehlgeschlagen`,
+                  );
+                }}
+              >
+                Jetzt ausführen
+              </button>
+            </div>
           </div>
         )}
 

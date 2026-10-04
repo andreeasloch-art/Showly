@@ -108,8 +108,8 @@ export function UserReviewList({ artistId }: { artistId: number }) {
   const list = useUserReviews(artistId).filter((r) => !isHidden(mod, "review", r.id, r.author));
   /* Löschen darf nur, wer die Bewertung geschrieben hat. Vorher stand der
      Knopf unter jeder Bewertung, auch der Künstler hätte sie entfernen können. */
-  const mine = (r: { author: string }) =>
-    !!session && r.author.trim().toLowerCase() === session.name.trim().toLowerCase();
+  const mine = (r: { author: string; mine?: boolean }) =>
+    r.mine ?? (!!session && r.author.trim().toLowerCase() === session.name.trim().toLowerCase());
   if (!list.length) return null;
 
   return (
@@ -140,7 +140,7 @@ export function UserReviewList({ artistId }: { artistId: number }) {
             </>
           )}
           {mine(r) && (
-            <button className="rev-del" onClick={() => removeReview(r.id)}>
+            <button className="rev-del" onClick={() => void removeReview(r.id)}>
               <Icon name="trash" /> {T.del}
             </button>
           )}
@@ -174,12 +174,15 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
     if (session?.name) setName((n) => n || session.name);
   }, [session?.name]);
 
-  function send() {
+  const [busy, setBusy] = useState(false);
+
+  async function send() {
     if (!name.trim()) return setErr(T.needName);
     if (text.trim().length < 12) return setErr(T.needText);
     if (!pub) return setErr(T.needPublish);
     if (!okText(name, text)) return;
-    addReview({
+    setBusy(true);
+    const res = await addReview({
       artistId,
       author: name.trim(),
       rating,
@@ -187,6 +190,9 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
       media,
       ...(when ? { eventDate: when } : {}),
     });
+    setBusy(false);
+    if ("error" in res) return setErr(res.error);
+    if ("needLogin" in res) return setErr(T.onlyBooked);
     setText("");
     setMedia([]);
     setWhen("");
@@ -262,7 +268,7 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
       {err && <p className="picker-err">{err}</p>}
 
       <div className="rev-form-foot">
-        <button className="btn-primary" onClick={send}>
+        <button className="btn-primary" onClick={() => void send()} disabled={busy}>
           {T.send}
         </button>
         <button className="btn-secondary" onClick={() => setOpen(false)}>

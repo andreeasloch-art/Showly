@@ -1268,7 +1268,22 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!hydrated || !isBackendConfigured()) return;
     void hydrateDbArtists()
-      .then((n) => n && setAvail((a) => ({ ...a })))
+      .then(async (n) => {
+        if (!n) return;
+        /* Gesperrte und gebuchte Zeitfenster der echten Profile */
+        const ids = ARTISTS.filter((x) => (x as { fromDb?: boolean }).fromDb).map((x) => x.id);
+        const { listAvailability } = await import("@/utils/community.functions");
+        const server = await listAvailability({ data: { artistIds: ids } }).catch(() => ({}));
+        setAvail((a) => {
+          const next = { ...a };
+          for (const [id, days] of Object.entries(server)) {
+            const forP = { ...(next[Number(id)] || {}) };
+            for (const [day, slots] of Object.entries(days)) forP[day] = [...new Set([...(forP[day] || []), ...slots])];
+            next[Number(id)] = forP;
+          }
+          return next;
+        });
+      })
       .catch(() => 0);
     void hydrateDbProviders()
       .then(() => setAvail((a) => ({ ...a })))
@@ -1365,14 +1380,34 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [avail],
   );
 
-  const toggleBlock = useCallback((providerId: number, iso: string, slot: string) => {
-    setAvail((a) => {
-      const forP = { ...(a[providerId] || {}) };
-      const cur = forP[iso] || [];
-      forP[iso] = cur.includes(slot) ? cur.filter((s) => s !== slot) : [...cur, slot];
-      return { ...a, [providerId]: forP };
-    });
-  }, []);
+  const toggleBlock = useCallback(
+    (providerId: number, iso: string, slot: string) => {
+      const was = (avail[providerId]?.[iso] || []).includes(slot);
+      const flip = (a: Avail) => {
+        const forP = { ...(a[providerId] || {}) };
+        const cur = forP[iso] || [];
+        forP[iso] = cur.includes(slot) ? cur.filter((s) => s !== slot) : [...cur, slot];
+        return { ...a, [providerId]: forP };
+      };
+      setAvail(flip);
+      /* Echtes Profil: Sperre auf dem Server, damit Kunden sie sehen.
+         Schlägt das fehl (etwa schon gebucht), wird zurückgedreht. */
+      const db = ARTISTS.find((x) => x.id === providerId) as { fromDb?: boolean } | undefined;
+      if (db?.fromDb && session?.backend)
+        void import("@/utils/community.functions")
+          .then(({ setBlockCloud }) =>
+            setBlockCloud({ data: { artistId: providerId, day: iso, slot, blocked: !was } }),
+          )
+          .then((r) => {
+            if ("error" in r) {
+              setAvail(flip);
+              toast(r.error);
+            }
+          })
+          .catch(() => setAvail(flip));
+    },
+    [avail, session, toast],
+  );
 
   const mediaV = useSyncExternalStore(subscribeMedia, mediaVersion, () => 0);
 

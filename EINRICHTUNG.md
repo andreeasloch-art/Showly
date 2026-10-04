@@ -103,6 +103,13 @@ etwa Twilio oder MessageBird. Beachte: Jede SMS kostet Geld, in Deutschland
 grob sieben bis zehn Cent. Ohne diesen Schritt bleibt der Telefon-Reiter zwar
 sichtbar, meldet aber einen Fehler.
 
+Mit der Handynummer kann man sich nicht nur anmelden, sondern auch
+**registrieren**: Künstler und Planer (Mitmachen), Torten- und
+Deko-Anbieter sowie Blog-Autoren bestätigen ihr Konto im letzten Schritt
+mit einem SMS-Code (oder per E-Mail-Code). Eine Nummer gehört zu genau einem
+Konto. Wer sich nur per Handynummer anmeldet, hat keine E-Mail-Adresse und
+bekommt deshalb keine Benachrichtigungs-Mails; alles steht im Dashboard.
+
 ## 5. Ausweisprüfung bei Stripe
 
 1. Im Stripe-Dashboard unter **Identity** die Prüfung freischalten. Stripe
@@ -201,6 +208,47 @@ mit, wie oft eine Aktion ausgelöst wird, und lehnen darüber hinaus ab
 
 ---
 
+## 13. Tägliche Aufgaben: Auszahlungen, Erinnerungen, Löschfristen
+
+Migrationen `0008_eine_person_ein_profil.sql` und
+`0009_gemeinschaft_benachrichtigung.sql` sind in Lovable Cloud eingespielt
+(Stand 04.10.2026).
+
+Einmal am Tag muss der Server Folgendes erledigen
+(`src/lib/daily.server.ts`):
+
+- unbeantwortete Anfragen verfallen lassen und das Geld erstatten
+- Erinnerungen an offene Anfragen verschicken
+- fällige Auszahlungen an Anbieter überweisen
+
+Dafür:
+
+1. In Lovable unter Secrets `CRON_SECRET` anlegen, einen langen Zufallswert
+   (mindestens 16 Zeichen).
+2. Einen Zeitplan einrichten, der täglich, etwa um 6 Uhr, Folgendes aufruft:
+   `POST https://<deine-domain>/api/taeglich` mit dem Kopf
+   `Authorization: Bearer <CRON_SECRET>`. Geeignet sind pg_cron mit pg_net
+   in Supabase oder ein kostenloser Dienst wie cron-job.org.
+3. Ohne Zeitplan: In der Verwaltung unter Übersicht → „Tägliche Aufgaben“ auf
+   „Jetzt ausführen“ tippen.
+
+Auszahlungen gehen per Stripe-Transfer auf das Connect-Konto der
+anbietenden Person, 5 Werktage nach dem Termin. Den Sicherheitseinbehalt
+der ersten Buchungen überweist der Server nach Ablauf seiner Frist. Keine
+Auszahlung gibt es bei Storno, Nichterscheinen, Erstattung oder einer
+offenen Meldung. Erstattungen laufen sofort und automatisch, wenn die AGB es
+vorsehen, also bei kostenloser Stornierung, Absage durch den Künstler,
+Ablehnung und Nichterscheinen.
+
+**Benachrichtigungen per Mail** (über Resend, Abschnitt 10) gehen raus bei:
+
+- neuer Anfrage oder Buchung
+- Zusage, Absage oder Stornierung
+- neuer Chat-Nachricht, höchstens eine Mail je Verlauf und halbe Stunde
+- Antwort auf eine Torten-Anfrage
+- neuer Shop-Bestellung
+- Erinnerung an offene Anfragen
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:
@@ -215,14 +263,16 @@ mit, wie oft eine Aktion ausgelöst wird, und lehnen darüber hinaus ab
 - Nachrichten zwischen Kunde und Anbieter (Kontaktdaten-Filter auf dem Server)
 - Hilfe-Anfragen und Fehlerprotokoll
 
+- Bewertungen, Beiträge im Event-Blog mit Likes und Kommentaren
+  (Fotos und Videos darin nach Freigabe durch das Team)
+- Kalender-Sperren, die ein Künstler selbst setzt
+- Erstattungen und Auszahlungen über Stripe (Abschnitt 13)
+
 **Noch im Browser:**
 
-- Bewertungen und Beiträge im Event-Blog
 - die Beispielprofile aus `data.js` (sie bleiben als Beispiele; Buchungen
   darauf werden gespeichert, haben aber keinen Künstler als Empfänger)
-- Fotos von Anbietern und Angeboten (brauchen einen Dateispeicher,
-  z. B. Supabase Storage); Angebote aus der Datenbank zeigen Standardbilder
-- Kalender-Sperren, die ein Künstler selbst setzt
-- Erstattungen löst der Admin-Bereich per Klick über Stripe aus; automatisch
-  bei jeder Stornierung passiert das noch nicht
-- Überweisungen an Künstler und Anbieter (Stripe-Transfers nach Plan)
+- Bilder einzelner Shop-Angebote von Deko-Anbietern (Galerie der Profile
+  liegt schon im Speicher „medien“)
+- Auszahlungen an Torten- und Deko-Anbieter laufen noch nicht automatisch
+  (nur Künstler und Planer)

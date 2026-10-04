@@ -109,3 +109,26 @@ describe("Auszahlung (§ 21)", () => {
     expect(plannedPayout({ day: "2026-09-25", amount_cents: 30000, payout_cents: 20000 }, 5).reserve_cents).toBe(0);
   });
 });
+
+describe("Erstattung (§ 8 Abs. 1, § 9 Abs. 1 und 4)", () => {
+  it("kostenlose Stornierung durch den Kunden: alles zurück", () => {
+    expect(decide({ kind: "cancelCustomer" }, "customer", base, START - 30 * H)).toMatchObject({ refund: true });
+  });
+  it("späte Stornierung durch den Kunden: keine Erstattung", () => {
+    const d = decide({ kind: "cancelCustomer" }, "customer", base, START - 5 * H);
+    expect("refund" in d && d.refund).toBeFalsy();
+  });
+  it("Absage durch den Künstler, auch spät: alles zurück", () => {
+    expect(decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 30 * H)).toMatchObject({ refund: true });
+    expect(decide({ kind: "cancelArtist", emergency: true }, "artist", base, START - 5 * H)).toMatchObject({ refund: true });
+  });
+  it("Nichterscheinen gemeldet: alles zurück", () => {
+    expect(decide({ kind: "reportNoShow" }, "customer", base, START + 2 * H)).toMatchObject({ refund: true });
+  });
+  it("Anfrage abgelehnt: bezahlt zurück, unbezahlt nichts zu erstatten", () => {
+    const req = { ...base, status: "requested" };
+    expect(decide({ kind: "respond", accept: false }, "artist", req, START - 50 * H)).toMatchObject({ refund: true });
+    const d = decide({ kind: "respond", accept: false }, "artist", { ...req, paid: false }, START - 50 * H);
+    expect("refund" in d && d.refund).toBeFalsy();
+  });
+});

@@ -193,6 +193,7 @@ export type PayoutRow = {
   payout_on: string;
   status: PayoutStatus;
   stripe_transfer_id: string | null;
+  last_error: string | null;
   created_at: string;
 }
 
@@ -301,6 +302,7 @@ export type ReviewRow = {
   body: string;
   event_date: string | null;
   media: MediaRefRow[];
+  author_name: string | null;
   created_at: string;
 }
 
@@ -310,6 +312,8 @@ export type PostRow = {
   body: string;
   city: string | null;
   media: MediaRefRow[];
+  author_name: string | null;
+  author_artist: number | null;
   created_at: string;
 }
 
@@ -358,10 +362,12 @@ export type Database = {
         post_id: number;
         author: string;
         body: string;
+        author_name: string | null;
         created_at: string;
       }>;
       verifications: Table<VerificationRow>;
       /** Prüfwert aus der Ausweisprüfung, nur für den Server (0008) */
+      notifications_sent: Table<{ key: string; created_at: string }>;
       identity_fingerprints: Table<{ hash: string; owner: string | null; blocked: boolean; created_at: string }>;
       reports: Table<ReportRow>;
       blocks: Table<{ blocker: string; blocked: string; created_at: string }>;

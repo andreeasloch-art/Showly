@@ -15,6 +15,7 @@ import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { accountExists, findAccount, saveAccount } from "@/showly/persist";
+import { loginId } from "@/showly/phone";
 import { pwScore } from "@/showly/figures";
 
 export const Route = createFileRoute("/konto")({
@@ -31,8 +32,8 @@ const COPY = {
     tabUp: "Neu hier",
     name: "Name",
     namePh: "Vor- und Nachname",
-    mail: "E-Mail",
-    mailPh: "name@beispiel.de",
+    mail: "E-Mail oder Handynummer",
+    mailPh: "name@beispiel.de oder 0151 23456789",
     pw: "Passwort",
     pwPh: "Mindestens 8 Zeichen",
     pw2: "Passwort wiederholen",
@@ -41,12 +42,12 @@ const COPY = {
     forgot: "Passwort vergessen?",
     artist: "Du bist Künstler oder Planer?",
     artistLink: "Hier entlang",
-    errMail: "Bitte eine gültige E-Mail-Adresse eingeben.",
+    errMail: "Bitte eine gültige E-Mail-Adresse oder Handynummer eingeben.",
     errName: "Bitte trag deinen Namen ein.",
     errPw: "Das Passwort braucht mindestens 8 Zeichen.",
     errPw2: "Die beiden Passwörter stimmen nicht überein.",
-    errTaken: "Zu dieser Adresse gibt es schon ein Konto. Melde dich an.",
-    errWrong: "E-Mail oder Passwort stimmt nicht.",
+    errTaken: "Zu dieser Adresse oder Nummer gibt es schon ein Konto. Melde dich an.",
+    errWrong: "Zugangsdaten oder Passwort stimmen nicht.",
     okIn: "Willkommen zurück, {n}.",
     okUp: "Konto angelegt. Schön, dass du da bist, {n}.",
     outH: "Du bist angemeldet",
@@ -64,8 +65,8 @@ const COPY = {
     tabUp: "New here",
     name: "Name",
     namePh: "First and last name",
-    mail: "Email",
-    mailPh: "name@example.com",
+    mail: "Email or mobile number",
+    mailPh: "name@example.com or +49 151 23456789",
     pw: "Password",
     pwPh: "At least 8 characters",
     pw2: "Repeat password",
@@ -74,12 +75,12 @@ const COPY = {
     forgot: "Forgot your password?",
     artist: "Are you an artist or planner?",
     artistLink: "This way",
-    errMail: "Please enter a valid email address.",
+    errMail: "Please enter a valid email address or mobile number.",
     errName: "Please enter your name.",
     errPw: "The password needs at least 8 characters.",
     errPw2: "The two passwords do not match.",
-    errTaken: "An account already exists for this address. Please sign in.",
-    errWrong: "Email or password is not correct.",
+    errTaken: "An account already exists for this address or number. Please sign in.",
+    errWrong: "Login or password is not correct.",
     okIn: "Welcome back, {n}.",
     okUp: "Account created. Good to have you, {n}.",
     outH: "You are signed in",
@@ -97,8 +98,8 @@ const COPY = {
     tabUp: "Soy nuevo",
     name: "Nombre",
     namePh: "Nombre y apellido",
-    mail: "Correo",
-    mailPh: "nombre@ejemplo.es",
+    mail: "Correo o móvil",
+    mailPh: "nombre@ejemplo.es o 600 123 456",
     pw: "Contraseña",
     pwPh: "Mínimo 8 caracteres",
     pw2: "Repite la contraseña",
@@ -107,12 +108,12 @@ const COPY = {
     forgot: "¿Has olvidado la contraseña?",
     artist: "¿Eres artista u organizador?",
     artistLink: "Por aquí",
-    errMail: "Introduce un correo válido.",
+    errMail: "Introduce un correo o un móvil válido.",
     errName: "Introduce tu nombre.",
     errPw: "La contraseña necesita al menos 8 caracteres.",
     errPw2: "Las dos contraseñas no coinciden.",
-    errTaken: "Ya existe una cuenta con este correo. Inicia sesión.",
-    errWrong: "El correo o la contraseña no es correcta.",
+    errTaken: "Ya existe una cuenta con este correo o número. Inicia sesión.",
+    errWrong: "Los datos de acceso o la contraseña no son correctos.",
     okIn: "Bienvenida de nuevo, {n}.",
     okUp: "Cuenta creada. Qué bien tenerte aquí, {n}.",
     outH: "Has iniciado sesión",
@@ -124,7 +125,6 @@ const COPY = {
   },
 } as const;
 
-const MAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 function AccountPage() {
   const { lang, session, setSession, signOut, toast } = useShowly();
@@ -141,8 +141,9 @@ function AccountPage() {
   const score = pwScore(pw).score;
 
   function signIn() {
-    if (!MAIL.test(mail)) return setErr(T.errMail);
-    const acc = findAccount(mail, pw);
+    const id = loginId(mail, lang);
+    if (!id) return setErr(T.errMail);
+    const acc = findAccount(id, pw);
     if (!acc) return setErr(T.errWrong);
     setSession({
       name: acc.name,
@@ -157,13 +158,14 @@ function AccountPage() {
 
   function signUp() {
     if (!name.trim()) return setErr(T.errName);
-    if (!MAIL.test(mail)) return setErr(T.errMail);
+    const id = loginId(mail, lang);
+    if (!id) return setErr(T.errMail);
     if (pw.length < 8) return setErr(T.errPw);
     if (pw !== pw2) return setErr(T.errPw2);
-    if (accountExists(mail)) return setErr(T.errTaken);
+    if (accountExists(id)) return setErr(T.errTaken);
 
-    saveAccount({ email: mail, pw, name: name.trim(), role: "customer" });
-    setSession({ name: name.trim(), email: mail.trim().toLowerCase(), role: "customer" });
+    saveAccount({ email: id, pw, name: name.trim(), role: "customer" });
+    setSession({ name: name.trim(), email: id, role: "customer" });
     setErr("");
     toast(T.okUp.replace("{n}", name.trim()));
     setTimeout(() => navigate({ to: "/dashboard" }), 600);
@@ -251,10 +253,11 @@ function AccountPage() {
             <label htmlFor="k-mail">{T.mail}</label>
             <input
               id="k-mail"
-              type="email"
+              type="text"
+              inputMode="email"
               value={mail}
               placeholder={T.mailPh}
-              autoComplete="email"
+              autoComplete="username"
               onChange={(e) => setMail(e.target.value)}
             />
           </div>

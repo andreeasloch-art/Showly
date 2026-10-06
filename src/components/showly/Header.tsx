@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useCanGoBack, useNavigate, useRouter, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
@@ -10,10 +10,26 @@ export function Header() {
 
   /* Kopfzeile bekommt beim Scrollen Schatten und staerkere Unschaerfe */
   useScrolled();
+  const router = useRouter();
+  const canGoBack = useCanGoBack();
+  const path = useRouterState({ select: (s) => s.location.pathname });
+  /* In der App gibt es keine Zurück-Taste des Browsers. Auf jeder Seite
+     außer der Startseite steht deshalb auf dem Handy links ein Pfeil: zurück
+     zur vorigen Seite, oder zur Startseite, wenn die Seite direkt geöffnet
+     wurde. */
+  const back = () => (canGoBack ? router.history.back() : navigate({ to: "/" }));
+  const backLbl = lang === "en" ? "Back" : lang === "es" ? "Atrás" : "Zurück";
 
   return (
     <nav>
       <div className="nav-inner">
+        {path !== "/" && (
+          <button type="button" className="nav-back" onClick={back} aria-label={backLbl}>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
+          </button>
+        )}
         <button className="logo" onClick={() => navigate({ to: "/" })} aria-label="Showly">
           <img
             src="/logo-showly@2x.png"

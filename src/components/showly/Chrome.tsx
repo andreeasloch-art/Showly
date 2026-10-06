@@ -30,19 +30,16 @@ export function TabBar() {
     },
   ] as const;
 
-  /* Auf Profil-, Torten- und Kassenseiten traegt die Buchungsleiste unten
-     den Preis und den Knopf. Zwei Leisten uebereinander nahmen ein Viertel
-     des Bildschirms; dort tritt die Menueleiste zurueck, wie in Apps ueblich. */
-  const detail =
-    path.startsWith("/kuenstler/") ||
-    path.startsWith("/checkout") ||
-    (/^\/torten\/[^/]+$/.test(path) && path !== "/torten/anbieten");
-  if (detail) return null;
+  /* Die Leiste steht auf jeder Seite, auch im Profil, damit man von überall
+     zurück zur Suche und zu den anderen Bereichen kommt. Im Profil sitzt der
+     Buchungsbalken direkt darüber. */
+  const isOn = (to: string) =>
+    to === "/" ? path === "/" || path.startsWith("/kuenstler/") : path === to || path.startsWith(to + "/");
 
   return (
     <div className="tabbar" role="navigation" aria-label="Hauptnavigation">
       {items.map((i) => (
-        <Link key={i.to} to={i.to} className={"tab" + (path === i.to || (i.to === "/torten" && path.startsWith("/torten")) ? " active on" : "")}>
+        <Link key={i.to} to={i.to} className={"tab" + (isOn(i.to) ? " active on" : "")}>
           <Icon name={i.icon} />
           <span>{i.label}</span>
         </Link>

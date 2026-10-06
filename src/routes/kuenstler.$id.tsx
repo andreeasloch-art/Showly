@@ -245,12 +245,6 @@ function Detail() {
               </div>
               <div className="stat-lbl">{t("detail.exp")}</div>
             </div>
-            {a.responseRate && (
-              <div className="stat-item">
-                <div className="stat-val">{a.responseRate}</div>
-                <div className="stat-lbl">{t("detail.rate")}</div>
-              </div>
-            )}
             <div className="stat-item">
               <div className="stat-val">{L(a.responseTime)}</div>
               <div className="stat-lbl">{t("detail.time")}</div>

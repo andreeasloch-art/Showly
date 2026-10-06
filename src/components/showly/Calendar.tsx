@@ -1,8 +1,9 @@
 /* Verfügbarkeits-Kalender – Besucher-Ansicht (Slot wählen) und
    Anbieter-Ansicht (Slots sperren/freigeben). Portiert aus dem Prototyp. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, SLOTS, isoOf, todayISO } from "@/showly/ui";
+import { SLOT_STEP_H, unavailable } from "@/showly/schedule";
 
 export interface CalSel {
   date: string | null;
@@ -24,8 +25,11 @@ export function Calendar({
   ym,
   setYm,
   id,
+  hours = SLOT_STEP_H,
 }: {
   providerId: number;
+  /** Dauer der Show, die gebucht werden soll (Besucher-Ansicht) */
+  hours?: number;
   owner?: boolean;
   sel: CalSel;
   setSel: (s: CalSel) => void;
@@ -36,8 +40,31 @@ export function Calendar({
   const { t, lang, fmtDate, bookedSlots, toggleBlock, toast } = useShowly();
   const tISO = todayISO();
 
-  const blockedOn = (iso: string) => bookedSlots(providerId, iso);
+  /* Selbst gesperrt oder Startzeit einer Buchung */
+  const explicitOn = (iso: string) =>
+    bookedSlots(providerId, iso).flatMap((e) => (e === "all" ? SLOTS : [e.split("+")[0]!]));
+  /* Besucher: was für eine Show dieser Länge samt einer Stunde Fahrtzeit
+     vor und nach anderen Buchungen nicht mehr geht (schedule.ts).
+     Anbieter: was er selbst gesperrt hat bzw. was gebucht ist. */
+  const blockedOn = (iso: string) =>
+    owner ? explicitOn(iso) : unavailable(SLOTS, hours, bookedSlots(providerId, iso));
+  /* Nur durch die Fahrtzeit nach bzw. vor einer Buchung belegt */
+  const travelOn = (iso: string) => {
+    const mine = explicitOn(iso);
+    return unavailable(SLOTS, 1, bookedSlots(providerId, iso).filter((e) => e.includes("+"))).filter(
+      (s) => !mine.includes(s),
+    );
+  };
   const freeOn = (iso: string) => SLOTS.filter((s) => !blockedOn(iso).includes(s));
+
+  /* Längere Show gewählt: passt die gewählte Zeit nicht mehr, Auswahl lösen */
+  useEffect(() => {
+    if (!owner && sel.date && sel.slot && blockedOn(sel.date).includes(sel.slot)) {
+      setSel({ date: sel.date, slot: null });
+      toast(t("cal.travelClash"));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hours]);
 
   function dayState(iso: string) {
     if (iso < tISO) return "past";
@@ -75,6 +102,7 @@ export function Calendar({
 
   function pickSlot(sl: string) {
     if (owner) {
+      if (travelOn(sel.date!).includes(sl)) return toast(t("cal.travelNote"));
       toggleBlock(providerId, sel.date!, sl);
       toast(
         blockedOn(sel.date!).includes(sl)
@@ -181,10 +209,11 @@ export function Calendar({
             <div className="slot-grid">
               {SLOTS.map((sl) => {
                 const taken = blockedOn(sel.date!).includes(sl);
+                const travel = !taken && owner && travelOn(sel.date!).includes(sl);
                 const cls = [
                   "slot",
                   owner ? "owner" : "",
-                  taken ? (owner ? "mine" : "taken") : "",
+                  taken ? (owner ? "mine" : "taken") : travel ? "taken" : "",
                   !owner && sel.slot === sl ? "on" : "",
                 ]
                   .filter(Boolean)
@@ -192,11 +221,16 @@ export function Calendar({
                 return (
                   <button className={cls} key={sl} onClick={() => pickSlot(sl)}>
                     {sl}
-                    <small>{taken ? t("cal.blocked") : t("cal.slotFree")}</small>
+                    <small>{travel ? t("cal.travel") : taken ? t("cal.blocked") : t("cal.slotFree")}</small>
                   </button>
                 );
               })}
             </div>
+            {bookedSlots(providerId, sel.date).some((e) => e.includes("+")) && (
+              <div className="mini-note" style={{ marginTop: 10 }}>
+                {t("cal.travelNote")}
+              </div>
+            )}
             {!owner && sel.slot && (
               <div className="sel-banner">
                 <Icon name="check" /> {t("cal.selected", { d: fmtDate(sel.date), s: sel.slot })}

@@ -354,14 +354,14 @@ export const listAvailability = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<Record<number, Record<string, string[]>>> => {
     if (!data.artistIds.length) return {};
     const today = new Date().toISOString().slice(0, 10);
-    const { data: rows } = await adminClient()
-      .from("availability")
-      .select("artist_id, day, slot")
-      .in("artist_id", data.artistIds)
-      .gte("day", today)
-      .eq("blocked", true)
-      .limit(5000);
+    /* Sperren und Buchungen samt Dauer, damit der Kalender die Fahrtzeit
+       zwischen zwei Shows freihalten kann (showly/schedule.ts) */
+    const { scheduleEntries } = await import("@/lib/schedule.server");
+    const map = await scheduleEntries(adminClient(), data.artistIds, today);
     const out: Record<number, Record<string, string[]>> = {};
-    for (const r of rows || []) ((out[r.artist_id] ||= {})[r.day] ||= []).push(r.slot);
+    for (const [k, entries] of map) {
+      const [id, day] = k.split("|");
+      (out[Number(id)] ||= {})[day!] = entries;
+    }
     return out;
   });

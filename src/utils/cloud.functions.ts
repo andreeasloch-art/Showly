@@ -233,10 +233,25 @@ export const recordCart = createServerFn({ method: "POST" })
     }
 
     const bookingIds: number[] = [];
+    /* Kalender der echten Künstler: Sperren und Buchungen samt Dauer */
+    const { scheduleEntries } = await import("@/lib/schedule.server");
+    const { bookingEntry, clashes, parseBusy } = await import("@/showly/schedule");
+    const sched = await scheduleEntries(
+      admin,
+      snap.bookings.map((b) => b.artistId),
+      snap.bookings.map((b) => b.dateISO).sort()[0] ?? new Date().toISOString().slice(0, 10),
+    );
     for (const [i, b] of snap.bookings.entries()) {
       const terms = await artistTerms(admin, b.artistId, b.hours, b.pkg);
       if (!terms) continue;
-      const status = !terms.instant ? "requested" : paid ? "confirmed" : "pending";
+      /* Passt die Show samt einer Stunde Fahrtzeit nicht mehr (in der
+         Zwischenzeit hat jemand anderes gebucht), wird sie nicht einfach
+         bestätigt: Der Künstler entscheidet; lehnt er ab, geht das Geld
+         automatisch zurück. */
+      const key = `${terms.artist_id}|${b.dateISO}`;
+      const tight = !!terms.artist_id && clashes(b.slot, terms.hours, parseBusy(sched.get(key) ?? []));
+      const status = !terms.instant || tight ? "requested" : paid ? "confirmed" : "pending";
+      if (terms.artist_id) sched.set(key, [...(sched.get(key) ?? []), bookingEntry(b.slot, terms.hours)]);
       const row = {
         customer: uid,
         artist_id: terms.artist_id,
@@ -390,6 +405,23 @@ export const bookingAction = createServerFn({ method: "POST" })
       business = a?.business !== false;
     }
     if (!role) return { error: "Keine Berechtigung" };
+
+    /* Zusage nur, wenn die Show samt einer Stunde Fahrtzeit neben die schon
+       zugesagten Shows passt (showly/schedule.ts). Offene Anfragen anderer
+       Kunden zählen hier nicht; über die entscheidet der Künstler danach. */
+    if (data.action.kind === "respond" && data.action.accept && b.artist_id && b.slot) {
+      const { bookingEntry, clashes, parseBusy } = await import("@/showly/schedule");
+      const { data: others } = await admin
+        .from("bookings")
+        .select("slot, hours")
+        .eq("artist_id", b.artist_id)
+        .eq("day", b.day)
+        .neq("id", b.id)
+        .in("status", ["pending", "confirmed", "completed"]);
+      const busy = parseBusy((others || []).filter((o) => o.slot).map((o) => bookingEntry(o.slot!, o.hours || 2)));
+      if (clashes(b.slot, b.hours || 2, busy))
+        return { error: "Diese Show überschneidet sich mit einer anderen Show an dem Tag (zwischen zwei Shows bleibt eine Stunde Fahrtzeit). Bitte lehne die Anfrage ab oder sprich einen anderen Termin ab." };
+    }
 
     const { data: pen } = await admin.from("penalties").select("*").eq("booking_id", b.id).maybeSingle();
     const { data: code } = await admin.from("booking_codes").select("code").eq("booking_id", b.id).maybeSingle();

@@ -192,6 +192,40 @@ export const createCartCheckout = createServerFn({ method: "POST" })
           unknown.join(", "),
       };
     }
+    /* Termine echter Künstler: noch frei, samt einer Stunde Fahrtzeit zu
+       anderen Shows (showly/schedule.ts)? Erst dann wird bezahlt. */
+    if (data.bookings.some((b) => b.artistId >= 100000)) {
+      try {
+        const { adminClient } = await import("@/lib/supabase.server");
+        const { scheduleEntries } = await import("@/lib/schedule.server");
+        const { firstClash } = await import("@/showly/schedule");
+        const days = data.bookings.map((b) => b.dateISO).sort();
+        const map = await scheduleEntries(
+          adminClient(),
+          data.bookings.map((b) => b.artistId),
+          days[0]!,
+          days[days.length - 1],
+        );
+        const real = data.bookings.filter((b) => b.artistId >= 100000);
+        const i = firstClash(
+          real.map((b) => ({ ...b, hours: Math.max(1, Math.round(b.hours) || 1) })),
+          (id, day) => map.get(`${id}|${day}`) ?? [],
+        );
+        if (i >= 0) {
+          const b = real[i]!;
+          return {
+            error:
+              lang === "en"
+                ? `The appointment on ${b.dateISO} at ${b.slot} is no longer available (one hour of travel time is kept free between shows). Please choose another time.`
+                : lang === "es"
+                  ? `La cita del ${b.dateISO} a las ${b.slot} ya no está libre (entre dos shows se deja una hora de desplazamiento). Elige otra hora.`
+                  : `Der Termin am ${b.dateISO} um ${b.slot} ist nicht mehr frei (zwischen zwei Shows bleibt eine Stunde Fahrtzeit). Bitte wähle eine andere Uhrzeit.`,
+          };
+        }
+      } catch {
+        /* Ohne Datenbank gibt es keine echten Termine zu prüfen */
+      }
+    }
     const total = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
     if (total < 50) return { error: "Amount must be at least 50 cents" };
     try {

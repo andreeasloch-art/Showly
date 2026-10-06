@@ -368,7 +368,7 @@ function Detail() {
               <Icon name="calendar" /> {t("cal.h")}
             </h2>
             <p className="detail-lead">{t("cal.sub")}</p>
-            <Calendar id="cal-detail" providerId={a.id} {...cal} />
+            <Calendar id="cal-detail" providerId={a.id} hours={h} {...cal} />
           </section>
 
           {costumes.length > 0 && (

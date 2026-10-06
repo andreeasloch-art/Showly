@@ -124,6 +124,9 @@ export const ES: Record<string, string> = {
   "cal.noSlots": "Lo sentimos, este día ya no queda nada libre.",
   "cal.allDay": "Bloquear todo el día",
   "cal.allDayOff": "Liberar el día",
+  "cal.travel": "Desplazamiento",
+  "cal.travelNote": "Después de cada show, Showly deja una hora libre para que el artista llegue a tiempo al siguiente.",
+  "cal.travelClash": "No encaja: entre dos shows el artista necesita una hora de desplazamiento. Elige otra hora o una duración más corta.",
   "cal.conflict": "Esa franja ya está ocupada. Elige otra hora, por favor.",
   "cal.selected": "Fecha elegida: {d} a las {s}",
   "cal.ownerHint":

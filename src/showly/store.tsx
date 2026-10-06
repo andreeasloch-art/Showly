@@ -35,6 +35,7 @@ import {
   voucherFromRow,
 } from "./cloudMap";
 import { hydrateDbArtists } from "./cloudArtists";
+import { bookingEntry, clashes, parseBusy, withoutBooking } from "./schedule";
 import { hydrateDbProviders, saveBakerCloud, saveSweetCloud } from "./cloudProviders";
 import type { Baker, Sweet } from "./sweets";
 import { getStripeEnvironment } from "@/lib/stripe";
@@ -238,7 +239,8 @@ interface Ctx {
   checkout: () => void;
   /** Künstlerbuchungen, die noch im Warenkorb liegen */
   cartBookings: CartBookingLine[];
-  addCartBooking: (b: Omit<CartBookingLine, "key">, opts?: { quiet?: boolean }) => void;
+  /** false, wenn der Termin samt Fahrtzeit nicht mehr frei ist */
+  addCartBooking: (b: Omit<CartBookingLine, "key">, opts?: { quiet?: boolean }) => boolean;
   updateCartBooking: (key: string, patch: Partial<Omit<CartBookingLine, "key">>) => void;
   removeCartBooking: (key: string) => void;
   /** Torten-Anfragen im Warenkorb, werden beim Abschluss verschickt */
@@ -641,23 +643,53 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
 
   const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
+  /* Passt eine Show (Dauer plus eine Stunde Fahrtzeit, schedule.ts) noch in
+     den Kalender des Künstlers und neben die anderen im Warenkorb? */
+  const fitsSchedule = useCallback(
+    (b: Omit<CartBookingLine, "key">, skipKey?: string) => {
+      const others = cartBookings
+        .filter((x) => x.key !== skipKey && x.artistId === b.artistId && x.dateISO === b.dateISO)
+        .filter((x) => !(skipKey === undefined && x.slot === b.slot))
+        .map((x) => ({ slot: x.slot, hours: x.hours, kind: "booking" as const }));
+      const busy = [...parseBusy(avail[b.artistId]?.[b.dateISO] || []), ...others];
+      return !clashes(b.slot, b.hours, busy);
+    },
+    [avail, cartBookings],
+  );
+
   const addCartBooking = useCallback(
     (b: Omit<CartBookingLine, "key">, opts?: { quiet?: boolean }) => {
+      if (!fitsSchedule(b)) {
+        toast(t("cal.travelClash"));
+        return false;
+      }
       setCartBookings((list) => [
         /* Derselbe Act zur selben Zeit ersetzt den alten Eintrag */
         ...list.filter((x) => !(x.artistId === b.artistId && x.dateISO === b.dateISO && x.slot === b.slot)),
         { ...b, key: newKey() },
       ]);
-      if (opts?.quiet) return;
+      if (opts?.quiet) return true;
       const a = findArtist(b.artistId);
       toast(t("toast.cartAdd", { name: a ? String(L(a.name)) : "" }));
       setCartOpen(true);
+      return true;
     },
-    [L, t, toast],
+    [L, t, toast, fitsSchedule],
   );
-  const updateCartBooking = useCallback((key: string, patch: Partial<Omit<CartBookingLine, "key">>) => {
-    setCartBookings((list) => list.map((x) => (x.key === key ? { ...x, ...patch } : x)));
-  }, []);
+  const updateCartBooking = useCallback(
+    (key: string, patch: Partial<Omit<CartBookingLine, "key">>) => {
+      const cur = cartBookings.find((x) => x.key === key);
+      /* Längere Show oder anderer Termin: muss samt Fahrtzeit passen */
+      if (cur && (patch.hours !== undefined || patch.slot !== undefined || patch.dateISO !== undefined)) {
+        if (!fitsSchedule({ ...cur, ...patch }, key)) {
+          toast(t("cal.travelClash"));
+          return;
+        }
+      }
+      setCartBookings((list) => list.map((x) => (x.key === key ? { ...x, ...patch } : x)));
+    },
+    [cartBookings, fitsSchedule, t, toast],
+  );
   const removeCartBooking = useCallback(
     (key: string) => {
       setCartBookings((list) => list.filter((x) => x.key !== key));
@@ -772,7 +804,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       if (b.slot) {
         setAvail((a) => {
           const forArtist = { ...(a[b.artistId] || {}) };
-          forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot!];
+          forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot!, bookingEntry(b.slot!, b.hours || 2)];
           return { ...a, [b.artistId]: forArtist };
         });
       }
@@ -823,7 +855,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         ]);
         setAvail((av) => {
           const forArtist = { ...(av[b.artistId] || {}) };
-          forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot];
+          forArtist[b.dateISO] = [...(forArtist[b.dateISO] || []), b.slot, bookingEntry(b.slot, p.hours)];
           return { ...av, [b.artistId]: forArtist };
         });
         /* Mit Datenbank plant der Server die Auszahlung */
@@ -903,16 +935,13 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
 
   /* Slot bei einer Buchung freigeben bzw. belegen */
   const shiftSlot = useCallback(
-    (artistId: number, iso: string, slot: string | undefined, add: boolean) => {
+    (artistId: number, iso: string, slot: string | undefined, add: boolean, hours = 2) => {
       if (!slot) return;
       setAvail((a) => {
         const forArtist = { ...(a[artistId] || {}) };
         const cur = forArtist[iso] || [];
-        forArtist[iso] = add
-          ? cur.includes(slot)
-            ? cur
-            : [...cur, slot]
-          : cur.filter((s) => s !== slot);
+        /* Startzeit und Dauer samt Fahrtzeit (schedule.ts) */
+        forArtist[iso] = add ? [...withoutBooking(cur, slot), slot, bookingEntry(slot, hours)] : withoutBooking(cur, slot);
         return { ...a, [artistId]: forArtist };
       });
     },
@@ -927,7 +956,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
           const next = { ...b, ...patch };
           if (next.dateISO !== b.dateISO || next.slot !== b.slot) {
             shiftSlot(b.artistId, b.dateISO, b.slot, false);
-            shiftSlot(b.artistId, next.dateISO, next.slot, true);
+            shiftSlot(b.artistId, next.dateISO, next.slot, true, next.hours || 2);
           }
           return next;
         }),
@@ -954,6 +983,20 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     (id: number, accept: boolean) => {
       const b = bookings.find((x) => x.id === id);
       if (!b || b.status !== "requested") return;
+      if (accept && b.slot) {
+        /* Zusage nur, wenn die Show samt Fahrtzeit neben die zugesagten passt */
+        const busy = bookings
+          .filter(
+            (x) =>
+              x.id !== b.id &&
+              x.artistId === b.artistId &&
+              x.dateISO === b.dateISO &&
+              x.slot &&
+              (x.status === "pending" || x.status === "confirmed" || x.status === "completed"),
+          )
+          .map((x) => ({ slot: x.slot!, hours: x.hours || 2, kind: "booking" as const }));
+        if (clashes(b.slot, b.hours || 2, busy)) return toast(t("cal.travelClash"));
+      }
       if (accept) {
         setBookings((list) =>
           list.map((x) => (x.id === id ? { ...x, status: b.paid ? "confirmed" : "pending" } : x)),
@@ -970,7 +1013,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       }
       void cloudAct(id, { kind: "respond", accept });
     },
-    [bookings, shiftSlot, L, cloudOn, cloudAct],
+    [bookings, shiftSlot, L, cloudOn, cloudAct, t, toast],
   );
 
   /* Auszahlung vormerken; bei den ersten Buchungen eines Künstlers mit

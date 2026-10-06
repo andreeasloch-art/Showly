@@ -62,7 +62,8 @@ export function BookingModal({
      zusammen mit Deko und Torten. „Jetzt bezahlen“ geht direkt dorthin. */
   function toCart(payNow: boolean) {
     if (!okText(notes)) return;
-    addCartBooking(
+    /* Passt der Termin samt Fahrtzeit nicht mehr, bleibt das Fenster offen */
+    const ok = addCartBooking(
       {
         artistId: a.id,
         dateISO: date,
@@ -77,6 +78,7 @@ export function BookingModal({
       },
       { quiet: payNow },
     );
+    if (!ok) return;
     onClose();
     if (payNow) navigate({ to: "/checkout" });
   }

@@ -26,7 +26,7 @@ const COPY = {
     cancel: "Abbrechen",
     busy: "Wird gelöscht …",
     open: "Du hast noch offene Buchungen oder Anfragen. Sag sie zuerst ab oder warte, bis sie vorbei sind, dann kannst du dein Konto löschen.",
-    failed: "Das Löschen hat nicht geklappt. Bitte versuch es noch einmal oder schreib an support@showly.de.",
+    failed: "Das Löschen hat nicht geklappt. Bitte versuch es noch einmal oder schreib an support@showly.eu.",
     done: "Dein Konto wurde gelöscht.",
   },
   en: {
@@ -45,7 +45,7 @@ const COPY = {
     cancel: "Cancel",
     busy: "Deleting …",
     open: "You still have open bookings or requests. Cancel them first or wait until they are over, then you can delete your account.",
-    failed: "Deleting didn't work. Please try again or write to support@showly.de.",
+    failed: "Deleting didn't work. Please try again or write to support@showly.eu.",
     done: "Your account has been deleted.",
   },
   es: {
@@ -64,7 +64,7 @@ const COPY = {
     cancel: "Cancelar",
     busy: "Eliminando …",
     open: "Todavía tienes reservas o solicitudes abiertas. Cancélalas primero o espera a que terminen y después podrás eliminar tu cuenta.",
-    failed: "No se ha podido eliminar. Inténtalo de nuevo o escribe a support@showly.de.",
+    failed: "No se ha podido eliminar. Inténtalo de nuevo o escribe a support@showly.eu.",
     done: "Tu cuenta se ha eliminado.",
   },
 } as const;

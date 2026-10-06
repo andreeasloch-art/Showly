@@ -185,7 +185,7 @@ Showly verschickt Mails über **Resend** (resend.com). Ohne Schlüssel wird
 nichts verschickt, der Rest läuft weiter.
 
 - `RESEND_API_KEY`: Schlüssel von Resend
-- `SHOWLY_MAIL_FROM`: Absender, z. B. `Showly <hilfe@deine-domain.de>`
+- `SHOWLY_MAIL_FROM`: Absender, z. B. `Showly <hallo@showly.eu>` (die Domain showly.eu vorher bei Resend bestätigen)
   (die Domain muss bei Resend bestätigt sein)
 
 ## 11. Datensicherung
@@ -267,12 +267,17 @@ Die App bringt alles mit, was Suchmaschinen brauchen:
 
 Schritte:
 
-1. Die App in Lovable veröffentlichen (Publish). Am besten mit eigener
-   Domain, etwa showly.de. Die Domain in Lovable unter Secrets als
-   `VITE_SITE_URL` eintragen (z. B. `https://showly.de`), dann zeigen
-   Canonical, Sitemap und Vorschaubilder darauf.
-2. Auf search.google.com/search-console eine Property anlegen:
-   - mit eigener Domain „Domain“ wählen und per DNS-Eintrag bestätigen;
+Die Domain ist **showly.eu**. Canonical, Sitemap, robots.txt und
+Vorschaubilder zeigen schon darauf.
+
+0. Schon vor dem Veröffentlichen möglich: in der Search Console eine
+   Property vom Typ „Domain“ für `showly.eu` anlegen und mit dem angezeigten
+   TXT-Eintrag beim Domain-Anbieter (DNS) bestätigen.
+1. Zum Start: In Lovable unter Project Settings → Domains `showly.eu` und
+   `www.showly.eu` verbinden (DNS-Einträge, die Lovable anzeigt, beim
+   Domain-Anbieter eintragen), dann veröffentlichen (Publish).
+2. Falls noch nicht geschehen, die Property in der Search Console anlegen:
+   - „Domain“ wählen und per DNS-Eintrag bestätigen (empfohlen);
    - sonst „URL-Präfix“ mit der veröffentlichten Adresse und Methode
      „HTML-Tag“. Den Wert hinter `content="…"` in Lovable unter Secrets als
      `VITE_GOOGLE_SITE_VERIFICATION` eintragen, neu veröffentlichen und in

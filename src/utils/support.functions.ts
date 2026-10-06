@@ -108,7 +108,7 @@ export const submitWithdrawal = createServerFn({ method: "POST" })
       .insert({ profile: uid, email: data.email, name: data.name, topic: "payment", body })
       .select("id")
       .single();
-    if (error || !row) return { error: "Der Widerruf konnte nicht gespeichert werden. Bitte schreib an kontakt@showly.de." };
+    if (error || !row) return { error: "Der Widerruf konnte nicht gespeichert werden. Bitte schreib an kontakt@showly.eu." };
     const { sendMail } = await import("@/lib/mail.server");
     const when = new Date(at).toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
     await sendMail(data.email, "Eingangsbestätigung deines Widerrufs", [

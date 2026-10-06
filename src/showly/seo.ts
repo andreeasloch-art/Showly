@@ -2,11 +2,11 @@
    Sprachvarianten werden über ?lang=de|en|es ausgeliefert. */
 import type { Lang } from "./data";
 
-/* Öffentliche Adresse. Mit eigener Domain (etwa https://showly.de) in Lovable
-   unter Secrets VITE_SITE_URL setzen; dann zeigen Canonical, Sitemap und
-   Vorschaubilder auf die Domain, unter der Google die Seite finden soll. */
+/* Öffentliche Adresse: die eigene Domain showly.eu. Canonical, Sitemap,
+   robots.txt und Vorschaubilder zeigen darauf. Nur für Tests unter einer
+   anderen Adresse in Lovable unter Secrets VITE_SITE_URL setzen. */
 export const SITE = (
-  (import.meta.env?.["VITE_SITE_URL"] as string | undefined) || "https://app-maker-magic-588.lovable.app"
+  (import.meta.env?.["VITE_SITE_URL"] as string | undefined) || "https://showly.eu"
 ).replace(/\/+$/, "");
 
 /** Vorschaubild beim Teilen (WhatsApp, Facebook, X) und für Google, 1200 × 630 */

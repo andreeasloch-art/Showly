@@ -85,6 +85,14 @@ export function ArtistCard({ a }: { a: Artist }) {
           <span>{catLabel(a.cat)}</span>
           <span aria-hidden="true">·</span>
           <span>{L(a.loc)}</span>
+          {!a.demo && (a.events ?? 0) > 0 && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span className="act-card-shows">
+                {a.events === 1 ? t("card.show1") : t("card.shows", { n: a.events ?? 0 })}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Der Umkreis steht im Profil; auf der Karte reichen Sparte und Ort */}

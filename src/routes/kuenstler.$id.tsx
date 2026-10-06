@@ -87,6 +87,9 @@ function Detail() {
   const figImages = (a["figureImages"] as Record<string, { id: string }> | undefined) || {};
   const figs = figuresOf(a);
   const km = radiusOf(a);
+  /* Gespielte Shows über Showly (echte Zählung, siehe 0011_shows_zaehlen) */
+  const shows = a.demo ? 0 : Math.max(0, Math.round(a.events ?? 0));
+  const showsLabel = shows === 1 ? t("card.show1") : t("card.shows", { n: shows });
   const real = realName(a);
   const owns = !!(session && session.providerId === a.id);
   const costumes = (a.shopIds || [])
@@ -186,6 +189,11 @@ function Detail() {
                       <strong>{t("card.new")}</strong>
                     )}
                   </span>
+                  {shows > 0 && (
+                    <span className="meta-item">
+                      <Icon name="mic" /> <strong>{showsLabel}</strong> {t("misc.viaShowly")}
+                    </span>
+                  )}
                   <span className="meta-item">
                     <Icon name="pin" /> {L(a.loc)}
                   </span>
@@ -225,12 +233,12 @@ function Detail() {
           </header>
 
           <div className="stats-grid">
-            {(a.events ?? 0) > 0 && (
-              <div className="stat-item">
-                <div className="stat-val">{a.events}+</div>
-                <div className="stat-lbl">{t("detail.events")}</div>
-              </div>
-            )}
+            {/* Echte Zahl aus der Datenbank: nur Buchungen über Showly, bei
+                denen der Auftritt per Check-in bestätigt ist (0011_shows_zaehlen) */}
+            <div className="stat-item">
+              <div className="stat-val">{shows > 0 ? shows : t("card.new")}</div>
+              <div className="stat-lbl">{t("detail.events")}</div>
+            </div>
             <div className="stat-item">
               <div className="stat-val">
                 {parseInt(L(a.exp), 10) + (lang === "de" ? " J." : lang === "es" ? " años" : " yrs")}
@@ -256,9 +264,9 @@ function Detail() {
               <Icon name="radius" /> {travelLabel(km, lang, L(a.loc))}
             </p>
             <p className="detail-text">
-              {t((a.events ?? 0) > 0 ? "detail.aboutP" : "detail.aboutPNew", {
+              {t(shows > 0 ? "detail.aboutP" : "detail.aboutPNew", {
                 exp: L(a.exp),
-                ev: a.events ?? 0,
+                ev: showsLabel,
                 name: L(a.name),
                 langs: (L(a.langs) ?? []).join(", "),
               })}

@@ -6,24 +6,30 @@
  * ihn sofort. Er kommt bei jedem Öffnen bzw. Neuladen der App, aber nicht
  * beim Wechsel zwischen Seiten.
  *
- * Das Video liegt als animiertes Bild vor, nicht als <video>: Videos starten
- * in vielen Umgebungen nie von selbst (eingebettete Ansichten in Apps,
- * Stromsparmodus), Bilder laufen überall. AVIF ist wie ein Video komprimiert
- * (volle 720 px, 24 Bilder pro Sekunde, 1,7 MB); ältere Browser ohne AVIF
- * bekommen dieselben Einzelbilder als WebP. Bis die Animation geladen ist,
- * steht ihr erstes Bild da. */
+ * Abgespielt wird ein echtes Video (H.264, 720 px, 24 Bilder pro Sekunde).
+ * Das entschlüsselt der Grafikchip des Handys, darum läuft es ruckelfrei in
+ * voller Qualität. Startet es nicht innerhalb kurzer Zeit von selbst (manche
+ * eingebetteten Ansichten in Apps, Stromsparmodus), springt das animierte
+ * Bild ein (AVIF, ältere Browser WebP). Bis dahin steht das erste Bild da.
+ * Solange der Vorspann läuft, ruht die Figuren-Animation dahinter
+ * (Klasse splash-open am <html>). */
 import { useEffect, useRef, useState } from "react";
 
 const TOTAL_MS = 4000;
 const FADE_MS = 450;
+/* Nach dieser Zeit prüfen, ob das Video überhaupt starten darf */
+const START_MS = 900;
 
 let shownThisLoad = false;
 
 export function Splash() {
   const [phase, setPhase] = useState<"show" | "fade" | "gone">("show");
+  /* video: Video läuft; anim: animiertes Bild als Ersatz */
+  const [mode, setMode] = useState<"wait" | "video" | "anim">("wait");
   const [ready, setReady] = useState(false);
   const timers = useRef<number[]>([]);
   const anim = useRef<HTMLImageElement>(null);
+  const video = useRef<HTMLVideoElement>(null);
 
   function clearAll() {
     timers.current.forEach((t) => window.clearTimeout(t));
@@ -41,13 +47,37 @@ export function Splash() {
       return;
     }
     shownThisLoad = true;
-    /* Schon vor dem Start der App geladen (Cache): gleich zeigen */
-    if (anim.current?.complete && anim.current.naturalWidth > 0) setReady(true);
+    const v = video.current;
+    if (v) {
+      v.muted = true;
+      v.play()?.catch(() => setMode((m) => (m === "wait" ? "anim" : m)));
+    }
+    /* Steht das Video nach kurzer Zeit still (Autoplay gesperrt), animiertes
+       Bild nehmen. Lädt es nur noch, weiter warten; das erste Bild steht ja. */
+    timers.current.push(
+      window.setTimeout(() => {
+        const blocked = !video.current || video.current.paused || !!video.current.error;
+        if (blocked) setMode((m) => (m === "wait" ? "anim" : m));
+      }, START_MS),
+    );
     /* Feste Obergrenze ab dem Öffnen */
     timers.current.push(window.setTimeout(close, TOTAL_MS - FADE_MS));
     return clearAll;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (mode === "anim" && anim.current?.complete && anim.current.naturalWidth > 0) setReady(true);
+    if (mode === "anim") video.current?.pause();
+  }, [mode]);
+
+  /* Hintergrund-Animation anhalten, solange der Vorspann zu sehen ist */
+  useEffect(() => {
+    const root = document.documentElement;
+    if (phase === "gone") root.classList.remove("splash-open");
+    else root.classList.add("splash-open");
+    return () => root.classList.remove("splash-open");
+  }, [phase]);
 
   if (phase === "gone") return null;
   return (
@@ -55,17 +85,33 @@ export function Splash() {
       <div className="splash-backdrop" />
       <div className="splash-stage">
         <img className="splash-video" src="/splash-poster.webp" alt="" fetchPriority="high" />
-        <picture>
-          <source srcSet="/splash-anim.avif" type="image/avif" />
-          <img
-            ref={anim}
-            className={"splash-video splash-anim" + (ready ? " on" : "")}
-            src="/splash-anim.webp"
-            alt=""
-            fetchPriority="high"
-            onLoad={() => setReady(true)}
+        {mode !== "anim" && (
+          <video
+            ref={video}
+            className={"splash-video splash-anim" + (mode === "video" ? " on" : "")}
+            src="/splash.mp4"
+            poster="/splash-poster.webp"
+            muted
+            playsInline
+            autoPlay
+            preload="auto"
+            disablePictureInPicture
+            onPlaying={() => setMode((m) => (m === "wait" ? "video" : m))}
+            onError={() => setMode((m) => (m === "wait" ? "anim" : m))}
           />
-        </picture>
+        )}
+        {mode === "anim" && (
+          <picture>
+            <source srcSet="/splash-anim.avif" type="image/avif" />
+            <img
+              ref={anim}
+              className={"splash-video splash-anim" + (ready ? " on" : "")}
+              src="/splash-anim.webp"
+              alt=""
+              onLoad={() => setReady(true)}
+            />
+          </picture>
+        )}
       </div>
     </div>
   );

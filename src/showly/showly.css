@@ -5607,6 +5607,9 @@ nav.cat-bar{height:auto;width:auto}
   mix-blend-mode:overlay;opacity:.5;
 }
 .hero-reel.paused .hero-reel-scene,.hero-reel.paused .hero-reel-light{animation-play-state:paused}
+/* Solange der Vorspann läuft, ruht der Hintergrund, damit das Video die
+   volle Rechenleistung bekommt und flüssig läuft */
+html.splash-open .hero-reel-scene,html.splash-open .hero-reel-light{animation-play-state:paused}
 
 @media(max-width:860px){
   .hero-reel{opacity:.4;

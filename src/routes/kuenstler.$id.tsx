@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { DemoBadge, DemoNote, demoBookable } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { isBusiness } from "@/showly/providerStatus";
@@ -20,7 +20,7 @@ import { ProfileVideos } from "@/components/showly/MediaView";
 import type { MediaRef } from "@/showly/media";
 
 export const Route = createFileRoute("/kuenstler/$id")({
-  head: ({ params }) => seoHead("/kuenstler/$id", `/kuenstler/${params.id}`),
+  head: (ctx) => seoHead("/kuenstler/$id", `/kuenstler/${ctx.params.id}`, headLang(ctx)),
   component: Detail,
 });
 

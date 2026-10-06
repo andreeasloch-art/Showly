@@ -1,6 +1,6 @@
 import { AccountStep } from "@/components/showly/AccountStep";
 import { isBackendConfigured } from "@/lib/supabase";
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
@@ -27,7 +27,7 @@ export const Route = createFileRoute("/shop")({
     ...(search["bereich"] === "deko" ? { bereich: "deko" as const } : {}),
     ...(String(search["anbieten"]) === "1" ? { anbieten: 1 as const } : {}),
   }),
-  head: () => seoHead("/shop", "/shop"),
+  head: (ctx) => seoHead("/shop", "/shop", headLang(ctx)),
   component: Shop,
 });
 

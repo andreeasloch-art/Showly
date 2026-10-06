@@ -258,6 +258,12 @@ Die App bringt alles mit, was Suchmaschinen brauchen:
 - strukturierte Daten mit Name, Logo und den Social-Media-Profilen
 - `/sitemap.xml` mit allen Künstlern und Anbietern
 - `/robots.txt`, die Konto, Kasse und Verwaltung aus der Suche heraushält
+- eigene Adresse je Sprache: Deutsch ohne Zusatz, Englisch mit `?lang=en`,
+  Spanisch mit `?lang=es`. Der Server liefert jede Fassung schon in ihrer
+  Sprache aus, und hreflang sagt Google, welche Fassung zu wem passt. So
+  zeigt Google Suchenden in den USA oder Großbritannien die englische, in
+  Spanien oder Lateinamerika die spanische und in Deutschland, Österreich
+  und der Schweiz die deutsche Seite.
 
 Schritte:
 

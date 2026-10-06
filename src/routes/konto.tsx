@@ -9,7 +9,7 @@
  * Server und geprüfter Verschlüsselung. */
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
@@ -19,7 +19,7 @@ import { loginId } from "@/showly/phone";
 import { pwScore } from "@/showly/figures";
 
 export const Route = createFileRoute("/konto")({
-  head: () => seoHead("/konto", "/konto"),
+  head: (ctx) => seoHead("/konto", "/konto", headLang(ctx)),
   component: AccountPage,
 });
 

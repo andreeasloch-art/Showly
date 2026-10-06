@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -26,7 +26,7 @@ import { isBackendConfigured } from "@/lib/supabase";
 import { AccountStep } from "@/components/showly/AccountStep";
 
 export const Route = createFileRoute("/torten/anbieten")({
-  head: () => seoHead("/torten/anbieten", "/torten/anbieten"),
+  head: (ctx) => seoHead("/torten/anbieten", "/torten/anbieten", headLang(ctx)),
   component: Onboard,
 });
 

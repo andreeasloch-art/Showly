@@ -11,7 +11,7 @@
 import { AccountStep } from "@/components/showly/AccountStep";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { ARTISTS } from "@/showly/data";
 import { Icon, bgOf } from "@/showly/ui";
@@ -35,7 +35,7 @@ import {
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/blog")({
-  head: () => seoHead("/blog", "/blog"),
+  head: (ctx) => seoHead("/blog", "/blog", headLang(ctx)),
   component: BlogPage,
 });
 

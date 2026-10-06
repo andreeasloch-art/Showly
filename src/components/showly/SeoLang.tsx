@@ -2,7 +2,7 @@
 import { useEffect } from "react";
 import { useRouterState } from "@tanstack/react-router";
 import { useShowly } from "@/showly/store";
-import { OG_LOCALE, SITE, seoText } from "@/showly/seo";
+import { OG_LOCALE, langUrl, seoText } from "@/showly/seo";
 
 function keyForPath(pathname: string): string {
   if (pathname.startsWith("/kuenstler/")) return "/kuenstler/$id";
@@ -40,7 +40,7 @@ export function SeoLang() {
     setMeta('meta[name="description"]', "name", "description", t.description);
     setMeta('meta[property="og:title"]', "property", "og:title", t.title);
     setMeta('meta[property="og:description"]', "property", "og:description", t.description);
-    setMeta('meta[property="og:url"]', "property", "og:url", `${SITE}${pathname}`);
+    setMeta('meta[property="og:url"]', "property", "og:url", langUrl(pathname, lang));
     setMeta('meta[name="twitter:title"]', "name", "twitter:title", t.title);
     setMeta('meta[name="twitter:description"]', "name", "twitter:description", t.description);
     setMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");

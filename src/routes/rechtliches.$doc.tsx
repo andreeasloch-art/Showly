@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
 import { LEGAL_DOCS, LEGAL_DOCS_ES } from "@/showly/legal";
 import { useShowly } from "@/showly/store";
@@ -21,7 +21,7 @@ const EXTRA: Record<string, Record<string, string>> = {
 };
 
 export const Route = createFileRoute("/rechtliches/$doc")({
-  head: ({ params }) => seoHead("/rechtliches/$doc", `/rechtliches/${params.doc}`),
+  head: (ctx) => seoHead("/rechtliches/$doc", `/rechtliches/${ctx.params.doc}`, headLang(ctx)),
   component: Legal,
 });
 

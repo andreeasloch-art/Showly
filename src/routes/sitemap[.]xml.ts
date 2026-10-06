@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
 import { ARTISTS } from "@/showly/data";
-import { LANGS, SITE } from "@/showly/seo";
+import { LANGS, SITE, langUrl } from "@/showly/seo";
 import { BAKERS } from "@/showly/sweets";
 
 const LEGAL_DOCS_KEYS = ["imprint", "privacy", "security", "cookies", "terms"];
@@ -39,8 +39,7 @@ export function buildSitemapXml(): string {
   const urls = buildEntries().map((e) => {
     const alt = [
       ...LANGS.map(
-        (l) =>
-          `    <xhtml:link rel="alternate" hreflang="${l}" href="${SITE}${e.path}?lang=${l}"/>`,
+        (l) => `    <xhtml:link rel="alternate" hreflang="${l}" href="${langUrl(e.path, l)}"/>`,
       ),
       `    <xhtml:link rel="alternate" hreflang="x-default" href="${SITE}${e.path}"/>`,
     ].join("\n");

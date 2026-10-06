@@ -97,7 +97,7 @@ describe("Übersetzte Titel und Meta-Tags", () => {
         expect(meta["description"]).toBe(t.description);
         expect(meta["og:title"]).toBe(t.title);
         expect(meta["og:description"]).toBe(t.description);
-        expect(meta["og:url"]).toBe(`${SITE}${path}`);
+        expect(meta["og:url"]).toBe(l === "de" ? `${SITE}${path}` : `${SITE}${path}?lang=${l}`);
         expect(meta["twitter:card"]).toBe("summary_large_image");
         expect(meta["twitter:title"]).toBe(t.title);
         expect(meta["language"]).toBe(l);
@@ -125,7 +125,8 @@ describe("hreflang und Canonical", () => {
       const alts = links.filter((l) => l.rel === "alternate");
       expect(alts.map((l) => l.hrefLang)).toEqual([...LANGS, "x-default"]);
       for (const l of LANGS) {
-        expect(alts.find((a) => a.hrefLang === l)!.href).toBe(`${SITE}${path}?lang=${l}`);
+        /* Deutsch ohne Zusatz, Englisch und Spanisch mit eigener Adresse */
+        expect(alts.find((a) => a.hrefLang === l)!.href).toBe(l === "de" ? `${SITE}${path}` : `${SITE}${path}?lang=${l}`);
       }
     }
   });
@@ -147,7 +148,8 @@ describe("sitemap.xml", () => {
   });
 
   it("verlinkt jede Sprachvariante per hreflang", () => {
-    for (const l of LANGS) {
+    expect(xml).toContain(`hreflang="de" href="${SITE}/shop"`);
+    for (const l of ["en", "es"]) {
       expect(xml).toContain(`hreflang="${l}" href="${SITE}/shop?lang=${l}"`);
     }
     expect(xml).toContain(`hreflang="x-default" href="${SITE}/shop"`);
@@ -180,5 +182,22 @@ describe("Suchmaschinen", () => {
     expect(head.meta.some((m) => "property" in m && m.property === "og:image")).toBe(true);
     const ld = JSON.parse(siteJsonLd());
     expect(ld["@graph"][0].sameAs).toContain("https://x.com/__showly__");
+  });
+});
+
+describe("Sprachfassungen für Google", () => {
+  it("englische und spanische Seite haben eigenes Canonical", () => {
+    const en = seoHead("/", "/", "en");
+    expect(en.links.find((l) => l.rel === "canonical")!.href).toBe(`${SITE}/?lang=en`);
+    expect((en.meta[0] as { title?: string }).title).toBe(seoText("/", "en")!.title);
+    const es = seoHead("/shop", "/shop", "es");
+    expect(es.links.find((l) => l.rel === "canonical")!.href).toBe(`${SITE}/shop?lang=es`);
+  });
+  it("headLang liest ?lang aus der Wurzel-Route", async () => {
+    const { headLang } = await import("./seo");
+    expect(headLang({ matches: [{ search: { lang: "en" } }] })).toBe("en");
+    expect(headLang({ matches: [{ search: { lang: "ES" } }] })).toBe("es");
+    expect(headLang({ matches: [{ search: {} }] })).toBe("de");
+    expect(headLang(undefined)).toBe("de");
   });
 });

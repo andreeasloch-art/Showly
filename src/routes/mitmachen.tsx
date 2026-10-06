@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { PrivacyAck, usePrivacyCopy } from "@/components/showly/PrivacyAck";
 import { FEE_RATE } from "@/showly/pricing";
 import { StatusChoice, TaxAck, TaxNotice } from "@/components/showly/ProviderNotices";
@@ -18,7 +18,7 @@ import { AccountStep } from "@/components/showly/AccountStep";
 import { loginId } from "@/showly/phone";
 
 export const Route = createFileRoute("/mitmachen")({
-  head: () => seoHead("/mitmachen", "/mitmachen"),
+  head: (ctx) => seoHead("/mitmachen", "/mitmachen", headLang(ctx)),
   component: Become,
 });
 

@@ -9,7 +9,7 @@
  * Die Sitzung landet danach in einem Cookie, das JavaScript nicht lesen kann. */
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
@@ -17,7 +17,7 @@ import { authRedirectTo, isBackendConfigured, supabase } from "@/lib/supabase";
 import { normalizePhone } from "@/showly/phone";
 
 export const Route = createFileRoute("/anmelden")({
-  head: () => seoHead("/anmelden", "/anmelden"),
+  head: (ctx) => seoHead("/anmelden", "/anmelden", headLang(ctx)),
   component: SignInPage,
 });
 

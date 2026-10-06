@@ -328,7 +328,11 @@ function seedAvail(): Avail {
 }
 
 export function ShowlyProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("de");
+  /* Startsprache aus ?lang=en|es: so liefert schon der Server die Seite in
+     dieser Sprache aus, und Google kann jede Sprachfassung unter ihrer
+     eigenen Adresse erfassen (hreflang in seo.ts) */
+  const initialSearch = useRouterState({ select: (st) => st.location.searchStr });
+  const [lang, setLangState] = useState<Lang>(() => langFromUrl(initialSearch) ?? "de");
   const [favorites, setFavorites] = useState<number[]>([]);
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartBookings, setCartBookings] = useState<CartBookingLine[]>([]);

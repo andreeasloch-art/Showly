@@ -6,7 +6,7 @@
  * Eingangsbestätigung mit Inhalt, Datum und Uhrzeit. */
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
@@ -14,7 +14,7 @@ import { isBackendConfigured } from "@/lib/supabase";
 import { submitWithdrawal } from "@/utils/support.functions";
 
 export const Route = createFileRoute("/widerruf")({
-  head: () => seoHead("/widerruf", "/widerruf"),
+  head: (ctx) => seoHead("/widerruf", "/widerruf", headLang(ctx)),
   component: Withdraw,
 });
 

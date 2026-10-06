@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ARTISTS, SHOP_ITEMS, type Artist } from "@/showly/data";
@@ -23,7 +23,7 @@ export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
   validateSearch: (search: Record<string, unknown>): { tab?: string } =>
     typeof search["tab"] === "string" ? { tab: (search["tab"] as string).slice(0, 20) } : {},
-  head: () => seoHead("/dashboard", "/dashboard"),
+  head: (ctx) => seoHead("/dashboard", "/dashboard", headLang(ctx)),
   component: Dashboard,
 });
 

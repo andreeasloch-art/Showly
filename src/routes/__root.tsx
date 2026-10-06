@@ -1,3 +1,5 @@
+import { langFromUrl } from "@/showly/store";
+import { useRouterState } from "@tanstack/react-router";
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { countryFromHeaders, serverCountry } from "@/showly/geoLang";
@@ -169,8 +171,11 @@ const BOOT = LANG_BOOT_SCRIPT.replace("__GEO_MAP__", JSON.stringify(COUNTRY_LANG
 
 function RootShell({ children }: { children: ReactNode }) {
   const geo = requestCountry();
+  /* Sprachfassung aus ?lang=en|es schon im HTML des Servers (für Google) */
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  const htmlLang = langFromUrl(searchStr) ?? "de";
   return (
-    <html lang="de" suppressHydrationWarning>
+    <html lang={htmlLang} suppressHydrationWarning>
       <head>
         <HeadContent />
         <script

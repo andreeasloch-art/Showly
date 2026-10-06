@@ -296,25 +296,37 @@ export function seoText(key: string, lang: Lang): SeoText | null {
   return entry ? entry[lang] : null;
 }
 
-/** hreflang-Links + selbstreferenzierendes Canonical für eine konkrete URL. */
-export function hreflangLinks(path: string) {
+/** Adresse einer Sprachfassung: Deutsch ohne Zusatz, sonst ?lang=en|es */
+export function langUrl(path: string, lang: Lang): string {
   const clean = path.startsWith("/") ? path : `/${path}`;
+  return lang === DEFAULT_LANG ? `${SITE}${clean}` : `${SITE}${clean}?lang=${lang}`;
+}
+
+/** hreflang-Links + selbstreferenzierendes Canonical für eine konkrete URL.
+ *  Jede Sprachfassung hat ihre eigene Adresse; Google zeigt Suchenden aus den
+ *  USA die englische, aus Spanien die spanische und aus Deutschland die
+ *  deutsche Fassung. */
+export function hreflangLinks(path: string, lang: Lang = DEFAULT_LANG) {
   return [
-    { rel: "canonical", href: `${SITE}${clean}` },
-    ...LANGS.map((l) => ({
-      rel: "alternate",
-      hrefLang: l,
-      href: `${SITE}${clean}?lang=${l}`,
-    })),
-    { rel: "alternate", hrefLang: "x-default", href: `${SITE}${clean}` },
+    { rel: "canonical", href: langUrl(path, lang) },
+    ...LANGS.map((l) => ({ rel: "alternate", hrefLang: l, href: langUrl(path, l) })),
+    { rel: "alternate", hrefLang: "x-default", href: langUrl(path, DEFAULT_LANG) },
   ];
+}
+
+/** Sprache der aufgerufenen Adresse im head()-Kontext einer Route
+ *  (aus ?lang der Wurzel-Route, die alle Parameter sieht) */
+export function headLang(ctx: { matches?: ReadonlyArray<{ search?: unknown }> } | undefined): Lang {
+  const s = ctx?.matches?.[0]?.search as { lang?: unknown } | undefined;
+  const v = String(s?.lang ?? "").toLowerCase();
+  return v === "en" || v === "es" ? v : DEFAULT_LANG;
 }
 
 /** Vollständiger head()-Block (Standardsprache im SSR-HTML + hreflang). */
 export function seoHead(key: string, path: string, lang: Lang = DEFAULT_LANG) {
   const t = seoText(key, lang) ?? seoText(key, DEFAULT_LANG)!;
   const clean = path.startsWith("/") ? path : `/${path}`;
-  const url = `${SITE}${clean}`;
+  const url = langUrl(clean, lang);
   return {
     meta: [
       { title: t.title },
@@ -342,6 +354,6 @@ export function seoHead(key: string, path: string, lang: Lang = DEFAULT_LANG) {
       { name: "twitter:image", content: OG_IMAGE },
       { name: "twitter:site", content: "@__showly__" },
     ],
-    links: hreflangLinks(clean),
+    links: hreflangLinks(clean, lang),
   };
 }

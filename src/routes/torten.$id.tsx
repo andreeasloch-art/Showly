@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { DemoNote } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -40,7 +40,7 @@ export const Route = createFileRoute("/torten/$id")({
     if (Number.isInteger(a) && a > 0) out.angebot = a;
     return out;
   },
-  head: ({ params }) => seoHead("/torten/$id", `/torten/${params.id}`),
+  head: (ctx) => seoHead("/torten/$id", `/torten/${ctx.params.id}`, headLang(ctx)),
   component: BakerProfile,
 });
 

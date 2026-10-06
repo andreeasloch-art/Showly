@@ -23,7 +23,7 @@ import {
   type CityEntry,
 } from "@/showly/cities";
 
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { useShowly } from "@/showly/store";
 import { ARTISTS } from "@/showly/data";
 import { Icon, SLOTS, todayISO } from "@/showly/ui";
@@ -36,7 +36,7 @@ import stageImg from "@/assets/spotlight-stage.jpg";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 export const Route = createFileRoute("/portal")({
-  head: () => seoHead("/portal", "/portal"),
+  head: (ctx) => seoHead("/portal", "/portal", headLang(ctx)),
   component: Portal,
 });
 

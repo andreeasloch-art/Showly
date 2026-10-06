@@ -1,4 +1,4 @@
-import { seoHead } from "@/showly/seo";
+import { headLang, seoHead } from "@/showly/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useShowly } from "@/showly/store";
@@ -25,7 +25,7 @@ import {
 } from "@/showly/sweets";
 
 export const Route = createFileRoute("/torten/")({
-  head: () => seoHead("/torten", "/torten"),
+  head: (ctx) => seoHead("/torten", "/torten", headLang(ctx)),
   component: Sweets,
 });
 

@@ -28,7 +28,8 @@ export async function notify(
     if (error) return false;
   }
   const { data } = await db.from("profiles").select("email").eq("id", profile).maybeSingle();
-  if (!data?.email) return false;
+  /* Konten nur mit Handynummer haben eine Ersatzadresse (sms.server.ts) */
+  if (!data?.email || data.email.endsWith("@sms.showly.eu")) return false;
   return sendMail(data.email, subject, [...lines, `Zur App: ${SITE}${opts.path ?? "/dashboard"}`]);
 }
 

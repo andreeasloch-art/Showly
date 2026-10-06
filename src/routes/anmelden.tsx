@@ -15,6 +15,7 @@ import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { authRedirectTo, isBackendConfigured, supabase } from "@/lib/supabase";
 import { normalizePhone } from "@/showly/phone";
+import { confirmSmsCode, requestSmsCode, smsMessage, type SmsVia } from "@/showly/smsLogin";
 
 export const Route = createFileRoute("/anmelden")({
   head: (ctx) => seoHead("/anmelden", "/anmelden", headLang(ctx)),
@@ -140,6 +141,8 @@ function SignInPage() {
   const [sent, setSent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [smsVia, setSmsVia] = useState<SmsVia>("server");
+  const [smsPhone, setSmsPhone] = useState("");
 
   if (!isBackendConfigured()) {
     return (
@@ -182,14 +185,19 @@ function SignInPage() {
     if (mode === "phone" && !normalizePhone(value, lang)) return setErr(T.errPhone);
 
     setBusy(true);
-    const sb = supabase();
-    const { error } =
-      mode === "mail"
-        ? await sb.auth.signInWithOtp({
-            email: value,
-            options: { emailRedirectTo: authRedirectTo("/dashboard") },
-          })
-        : await sb.auth.signInWithOtp({ phone: normalizePhone(value, lang)! });
+    if (mode === "phone") {
+      /* Über den Showly-Server mit Kostenbremse (smsLogin.ts) */
+      const r = await requestSmsCode(normalizePhone(value, lang)!, lang);
+      setBusy(false);
+      if ("error" in r) return setErr(smsMessage(r.error, lang));
+      setSmsVia(r.via);
+      setSmsPhone(r.phone);
+      return setSent(true);
+    }
+    const { error } = await supabase().auth.signInWithOtp({
+      email: value,
+      options: { emailRedirectTo: authRedirectTo("/dashboard") },
+    });
 
     setBusy(false);
     if (error) return setErr(error.message);
@@ -213,11 +221,14 @@ function SignInPage() {
     setErr("");
     setBusy(true);
     const value = target.trim();
-    const { error } = await supabase().auth.verifyOtp(
-      mode === "mail"
-        ? { email: value, token: code.trim(), type: "email" }
-        : { phone: normalizePhone(value, lang)!, token: code.trim(), type: "sms" },
-    );
+    if (mode === "phone") {
+      const r = await confirmSmsCode(smsVia, smsPhone, code);
+      setBusy(false);
+      if ("error" in r) return setErr(smsMessage(r.error, lang));
+      toast(T.ok);
+      return navigate({ to: "/dashboard" });
+    }
+    const { error } = await supabase().auth.verifyOtp({ email: value, token: code.trim(), type: "email" });
     setBusy(false);
     if (error) return setErr(T.errCode);
     toast(T.ok);

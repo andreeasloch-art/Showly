@@ -96,19 +96,43 @@ Ablauf: /passwort-vergessen → E-Mail → /auth/rueckkehr → /passwort-neu. Di
 Seite antwortet immer gleich, egal ob es die Adresse gibt. Nach dem Speichern
 werden alle anderen Sitzungen abgemeldet.
 
-## 4. Anmeldung per Telefon
+## 4. Anmeldung per Telefon (SMS-Code mit Kostenbremse)
 
-Unter **Authentication → Providers → Phone** einen SMS-Dienst hinterlegen,
-etwa Twilio oder MessageBird. Beachte: Jede SMS kostet Geld, in Deutschland
-grob sieben bis zehn Cent. Ohne diesen Schritt bleibt der Telefon-Reiter zwar
-sichtbar, meldet aber einen Fehler.
+Showly verschickt SMS-Codes über **Twilio Verify**, über den eigenen Server
+und mit eingebauter Kostenbremse (`src/lib/sms.server.ts`):
 
-Mit der Handynummer kann man sich nicht nur anmelden, sondern auch
-**registrieren**: Künstler und Planer (Mitmachen), Torten- und
-Deko-Anbieter sowie Blog-Autoren bestätigen ihr Konto im letzten Schritt
-mit einem SMS-Code (oder per E-Mail-Code). Eine Nummer gehört zu genau einem
-Konto. Wer sich nur per Handynummer anmeldet, hat keine E-Mail-Adresse und
-bekommt deshalb keine Benachrichtigungs-Mails; alles steht im Dashboard.
+- nur echte Handynummern; Festnetz-, Sonder- (0900), Premium- und
+  Satellitennummern bekommen keine SMS
+- nur Länder auf der Liste: Deutschland, Österreich, Schweiz, Liechtenstein,
+  Luxemburg, Spanien, Andorra, spanischsprachiges Amerika, Großbritannien,
+  Irland, USA, Kanada, Australien und Neuseeland. Weitere Länder in Lovable
+  unter Secrets als `SMS_EXTRA_COUNTRIES` freischalten, z. B. `FR,IT,NL`.
+  Für sie gelten strengere Tageslimits. Alle anderen melden sich kostenlos
+  per E-Mail, Google oder Apple an.
+- je Nummer höchstens 3 Codes pro Stunde und 5 pro Tag, je Internetadresse
+  5 pro Stunde und 15 pro Tag, 5 Prüfversuche pro Stunde
+- je Land und Tag höchstens 150 (`SMS_COUNTRY_DAILY_LIMIT`), für
+  zusätzlich freigeschaltete Länder 25
+- insgesamt höchstens 300 SMS pro Tag (`SMS_DAILY_LIMIT`). Bei rund
+  8 Cent sind das höchstens etwa 24 € am Tag, auch bei einem Angriff.
+- Schlägt die Zählung fehl, geht im Zweifel keine SMS raus.
+
+Einrichtung:
+
+1. Auf twilio.com ein Konto anlegen, Guthaben aufladen (z. B. 20 €) und
+   **Auto-Recharge ausschalten**, damit nie mehr abgebucht wird, als du
+   aufgeladen hast.
+2. In der Twilio-Konsole unter **Verify → Services** einen Dienst „Showly“
+   anlegen, Kanal SMS. Dort **Fraud Guard** auf „Maximum“ stellen.
+3. Unter **Verify → Geo Permissions** nur die Länder oben erlauben,
+   alle anderen sperren.
+4. In Lovable unter Secrets eintragen: `TWILIO_ACCOUNT_SID`,
+   `TWILIO_AUTH_TOKEN`, `TWILIO_VERIFY_SERVICE_SID` (beginnt mit `VA…`).
+5. Optional: `SMS_DAILY_LIMIT` und `SMS_COUNTRY_DAILY_LIMIT` anpassen.
+
+Ohne diese Angaben bleibt der Telefon-Weg aus. Die App meldet dann freundlich,
+dass man E-Mail nehmen soll. Ist stattdessen in der Datenbank selbst ein
+SMS-Dienst hinterlegt (Authentication → Phone), nutzt die App den.
 
 ## 5. Ausweisprüfung bei Stripe
 

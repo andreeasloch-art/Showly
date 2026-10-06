@@ -18,6 +18,7 @@ import { Icon } from "@/showly/ui";
 import { useEscape } from "@/showly/useEscape";
 import { authRedirectTo, supabase } from "@/lib/supabase";
 import { normalizePhone, prettyPhone } from "@/showly/phone";
+import { confirmSmsCode, requestSmsCode, smsMessage, type SmsVia } from "@/showly/smsLogin";
 
 const COPY = {
   de: {
@@ -118,6 +119,7 @@ export function AccountStep({
   const [mode, setMode] = useState<"phone" | "mail">("phone");
   const [target, setTarget] = useState("");
   const [sentTo, setSentTo] = useState("");
+  const [via, setVia] = useState<SmsVia>("server");
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -130,10 +132,12 @@ export function AccountStep({
       const phone = normalizePhone(target, lang);
       if (!phone) return setErr(T.errPhone);
       setBusy(true);
-      const { error } = await sb.auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
+      /* Über den Showly-Server mit Kostenbremse (smsLogin.ts) */
+      const r = await requestSmsCode(phone, lang);
       setBusy(false);
-      if (error) return setErr(T.errSms);
-      setSentTo(phone);
+      if ("error" in r) return setErr(smsMessage(r.error, lang));
+      setVia(r.via);
+      setSentTo(r.phone);
     } else {
       const email = target.trim().toLowerCase();
       if (!MAIL.test(email)) return setErr(T.errMail);
@@ -153,9 +157,13 @@ export function AccountStep({
     const token = code.replace(/\D/g, "");
     if (token.length < 6) return setErr(T.errCode);
     setBusy(true);
-    const { error } = await supabase().auth.verifyOtp(
-      mode === "phone" ? { phone: sentTo, token, type: "sms" } : { email: sentTo, token, type: "email" },
-    );
+    if (mode === "phone") {
+      const r = await confirmSmsCode(via, sentTo, token);
+      setBusy(false);
+      if ("error" in r) return setErr(smsMessage(r.error, lang));
+      return onDone();
+    }
+    const { error } = await supabase().auth.verifyOtp({ email: sentTo, token, type: "email" });
     setBusy(false);
     if (error) return setErr(T.errCode);
     onDone();

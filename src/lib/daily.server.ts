@@ -43,6 +43,7 @@ export async function runDaily(): Promise<DailyResult> {
   const reminded = await remindOpenRequests().catch(() => 0);
   const payouts = await runDuePayouts().catch(() => ({ paid: 0, held: 0, skipped: 0, failed: 0 }));
   await db.rpc("purge_old_data").then(undefined, () => null);
+  await db.rpc("purge_sms_log").then(undefined, () => null);
   /* Merker für verschickte Mails nach 30 Tagen löschen */
   await db
     .from("notifications_sent")

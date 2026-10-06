@@ -368,6 +368,16 @@ export type Database = {
       verifications: Table<VerificationRow>;
       /** Prüfwert aus der Ausweisprüfung, nur für den Server (0008) */
       notifications_sent: Table<{ key: string; created_at: string }>;
+      /** Zähler für SMS-Codes (0010), nur gehashte Werte */
+      sms_log: Table<{
+        id: number;
+        kind: "send" | "check";
+        phone_hash: string;
+        ip_hash: string;
+        country: string;
+        ok: boolean;
+        created_at: string;
+      }>;
       identity_fingerprints: Table<{ hash: string; owner: string | null; blocked: boolean; created_at: string }>;
       reports: Table<ReportRow>;
       blocks: Table<{ blocker: string; blocked: string; created_at: string }>;
@@ -403,6 +413,10 @@ export type Database = {
         Returns: boolean;
       };
       purge_old_data: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      purge_sms_log: {
         Args: Record<string, never>;
         Returns: undefined;
       };

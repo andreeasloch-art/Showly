@@ -89,9 +89,11 @@ html body .home-hero{
     radial-gradient(55% 45% at 0% 100%,rgba(74,236,181,.26),transparent 70%),
     #FFFFFF;
 }
-/* Die Bühnenbilder im Hintergrund nur noch als Hauch, damit die Logofarben
-   tragen und nichts grau wirkt */
-html body .hero-reel{opacity:.12;mix-blend-mode:multiply}
+/* Die Figuren im Hintergrund deutlich sichtbar (früher nur ein Hauch mit
+   .12). "multiply" hält die Farben kräftig, ohne dass etwas grau wirkt; die
+   Schrift davor bekommt einen hellen Schein (showly.css, .home-lead usw.). */
+html body .hero-reel{opacity:.5;mix-blend-mode:multiply}
+@media(max-width:860px){html body .hero-reel{opacity:.4}}
 html body .home-hero::before{opacity:.5}
 html body .home-pill-dot{background:var(--lg-mint)}
 html body .home-pill-dot::after{border-color:rgba(74,236,181,.45)}

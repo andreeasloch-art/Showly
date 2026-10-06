@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, SLOTS, isoOf, todayISO } from "@/showly/ui";
-import { SLOT_STEP_H, unavailable } from "@/showly/schedule";
+import { DEFAULT_SHOW_H, parseBusy, unavailable } from "@/showly/schedule";
 
 export interface CalSel {
   date: string | null;
@@ -25,7 +25,7 @@ export function Calendar({
   ym,
   setYm,
   id,
-  hours = SLOT_STEP_H,
+  hours = DEFAULT_SHOW_H,
 }: {
   providerId: number;
   /** Dauer der Show, die gebucht werden soll (Besucher-Ansicht) */
@@ -40,9 +40,19 @@ export function Calendar({
   const { t, lang, fmtDate, bookedSlots, toggleBlock, toast } = useShowly();
   const tISO = todayISO();
 
-  /* Selbst gesperrt oder Startzeit einer Buchung */
-  const explicitOn = (iso: string) =>
-    bookedSlots(providerId, iso).flatMap((e) => (e === "all" ? SLOTS : [e.split("+")[0]!]));
+  /* Selbst gesperrt oder Zeit einer gebuchten Show (ganze Dauer) */
+  const explicitOn = (iso: string) => {
+    const entries = bookedSlots(providerId, iso);
+    if (entries.includes("all")) return SLOTS;
+    const busy = parseBusy(entries);
+    return SLOTS.filter((s) => {
+      const h = Number(s.slice(0, 2));
+      return busy.some((b) => {
+        const bs = Number(b.slot.slice(0, 2));
+        return h >= bs && h < bs + b.hours;
+      });
+    });
+  };
   /* Besucher: was für eine Show dieser Länge samt einer Stunde Fahrtzeit
      vor und nach anderen Buchungen nicht mehr geht (schedule.ts).
      Anbieter: was er selbst gesperrt hat bzw. was gebucht ist. */

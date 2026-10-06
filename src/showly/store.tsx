@@ -323,7 +323,7 @@ function seedAvail(): Avail {
       const x = new Date(d.getTime());
       x.setDate(x.getDate() + k + (art.id % 3));
       const iso = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-      a[art.id]![iso] = ["10:00", "12:00"];
+      a[art.id]![iso] = ["10:00", "11:00", "12:00", "13:00"];
     }
   });
   return a;

@@ -1,13 +1,14 @@
 /* Wann ist ein Künstler frei? Dauer der Show plus Fahrtzeit.
  *
- * Termine beginnen zu festen Zeiten (SLOTS: 10, 12, 14 … 20 Uhr). Eine
+ * Termine beginnen zur vollen Stunde (SLOTS: 10, 11 … 20 Uhr). Eine
  * Buchung belegt nicht nur ihre Startzeit, sondern ihre ganze Dauer und
  * danach eine Stunde, damit der Künstler zur nächsten Show fahren kann.
  * Dieselbe Stunde gilt davor: Wer um 12 Uhr für zwei Stunden bucht, endet
  * um 14 Uhr und kann keine Show um 14 Uhr haben.
  *
- * Beispiel: gebucht 14–16 Uhr → frei ist erst wieder ab 17 Uhr, also der
- * nächste Termin um 18 Uhr; 12 Uhr geht nur, wenn die Show bis 13 Uhr endet.
+ * Beispiel: gebucht 14–16 Uhr → gesperrt ist 13–17 Uhr. Die nächste Show
+ * kann um 17 Uhr beginnen; davor muss eine Show spätestens um 13 Uhr enden
+ * (zwei Stunden also ab 11 Uhr).
  *
  * Im Kalender stehen zwei Arten von Einträgen (je Tag eine Liste Texte):
  *   "14:00"    vom Künstler gesperrt bzw. Startzeit einer Buchung
@@ -18,7 +19,9 @@
 /** Fahrtzeit zwischen zwei Shows in Stunden */
 export const TRAVEL_BUFFER_H = 1;
 /** Abstand der Startzeiten; eine Sperre gilt für dieses ganze Fenster */
-export const SLOT_STEP_H = 2;
+export const SLOT_STEP_H = 1;
+/** Übliche Länge einer Show, wenn noch keine gewählt ist */
+export const DEFAULT_SHOW_H = 2;
 
 export interface Busy {
   slot: string;

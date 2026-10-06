@@ -98,4 +98,6 @@ export function todayISO() {
   const d = new Date();
   return isoOf(d.getFullYear(), d.getMonth(), d.getDate());
 }
-export const SLOTS = ["10:00", "12:00", "14:00", "16:00", "18:00", "20:00"];
+/* Startzeiten zur vollen Stunde. Zwischen zwei Shows bleibt eine Stunde
+   Fahrtzeit frei (schedule.ts): nach 14–16 Uhr ist ab 17 Uhr wieder frei. */
+export const SLOTS = ["10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00", "19:00", "20:00"];

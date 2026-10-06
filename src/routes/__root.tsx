@@ -1,3 +1,7 @@
+import { createIsomorphicFn } from "@tanstack/react-start";
+import { getRequestHeader } from "@tanstack/react-start/server";
+import { countryFromHeaders, serverCountry } from "@/showly/geoLang";
+import { COUNTRY_LANG } from "@/showly/country";
 import { siteJsonLd } from "@/showly/seo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -144,19 +148,35 @@ var q='';try{q=(new URLSearchParams(location.search).get('lang')||'').toLowerCas
 var s=null;try{s=localStorage.getItem('showly.lang')}catch(e){}
 var l=(q==='de'||q==='en'||q==='es')?q:s;
 if(l!=='de'&&l!=='en'&&l!=='es'){
-  l='de';
+  /* Land der Internetadresse vom Server (siehe geoLang.ts); Suchmaschinen
+     bleiben bei Deutsch. Die genaue Erkennung macht danach der Store. */
+  var g=window.__SHOWLY_GEO, m=__GEO_MAP__;
+  l=(!/bot|crawl|spider|slurp|bingpreview|facebookexternalhit|whatsapp/i.test(navigator.userAgent)&&g&&m[g])||'';
+  if(!l){l='de';
   var ls=(navigator.languages||[navigator.language||'']);
-  for(var i=0;i<ls.length;i++){var c=String(ls[i]||'').toLowerCase().slice(0,2);if(c==='de'||c==='en'||c==='es'){l=c;break;}}
+  for(var i=0;i<ls.length;i++){var c=String(ls[i]||'').toLowerCase().slice(0,2);if(c==='de'||c==='en'||c==='es'){l=c;break;}}}
 }
 if(l!=='de'){document.documentElement.setAttribute('data-lang-boot','1');}
 }catch(e){}})();`;
 
+/* Land der Anfrage: auf dem Server aus der Kopfzeile des Hosters
+   (CF-IPCountry), im Browser aus dem, was der Server ins HTML geschrieben hat */
+const requestCountry = createIsomorphicFn()
+  .server(() => countryFromHeaders((h) => getRequestHeader(h)))
+  .client(() => serverCountry());
+
+const BOOT = LANG_BOOT_SCRIPT.replace("__GEO_MAP__", JSON.stringify(COUNTRY_LANG));
+
 function RootShell({ children }: { children: ReactNode }) {
+  const geo = requestCountry();
   return (
     <html lang="de" suppressHydrationWarning>
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: LANG_BOOT_SCRIPT }} />
+        <script
+          dangerouslySetInnerHTML={{ __html: `window.__SHOWLY_GEO=${JSON.stringify(geo ?? "")};` }}
+        />
+        <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>
       <body data-theme="home">
         {children}

@@ -16,7 +16,7 @@ import {
 import { useRouterState } from "@tanstack/react-router";
 import { I18N, ARTISTS, SHOP_ITEMS, type Artist, type Lang } from "./data";
 import { ES } from "./i18n.es";
-import { detectCountry, langForCountry } from "./country";
+import { detectCountry } from "./country";
 import { deleteLocalAccount, hydrateArtists, loadJSON, saveJSON } from "./persist";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { deleteMyAccount } from "@/utils/account.functions";
@@ -58,6 +58,7 @@ import {
   type Standing,
 } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
+import { isBot, localeFor, pickLang, serverCountry } from "./geoLang";
 
 
 const DICT: Record<string, Record<string, string>> = {
@@ -65,37 +66,7 @@ const DICT: Record<string, Record<string, string>> = {
   en: I18N["en"]!,
   es: { ...I18N["en"]!, ...ES },
 };
-const LOCALE: Record<string, string> = { de: "de-DE", en: "en-GB", es: "es-ES" };
 
-/* Automatische Spracherkennung: Browser-Sprachen zuerst, danach Zeitzone/Standort */
-const TZ_LANG: Record<string, Lang> = {
-  "Europe/Berlin": "de",
-  "Europe/Vienna": "de",
-  "Europe/Zurich": "de",
-  "Europe/Busingen": "de",
-  "Europe/Madrid": "es",
-  "Atlantic/Canary": "es",
-  "Europe/Andorra": "es",
-  "America/Mexico_City": "es",
-  "America/Bogota": "es",
-  "America/Lima": "es",
-  "America/Santiago": "es",
-  "America/Argentina/Buenos_Aires": "es",
-  "America/Montevideo": "es",
-  "America/Caracas": "es",
-  "America/Guatemala": "es",
-  "America/Havana": "es",
-  "America/Santo_Domingo": "es",
-  "America/Panama": "es",
-  "America/Costa_Rica": "es",
-  "America/La_Paz": "es",
-  "America/Asuncion": "es",
-  "America/Guayaquil": "es",
-  "America/Managua": "es",
-  "America/Tegucigalpa": "es",
-  "America/El_Salvador": "es",
-  "America/Puerto_Rico": "es",
-};
 
 /* ?lang=DE|EN|ES aus der URL lesen */
 export function langFromUrl(search?: string): Lang | null {
@@ -113,25 +84,21 @@ export function langFromUrl(search?: string): Lang | null {
 
 function detectLang(): Lang {
   if (typeof window === "undefined") return "de";
-  // Standort (Zeitzone/Land) hat Vorrang, danach die Browsersprache.
-  const byCountry = langForCountry(detectCountry());
-  if (byCountry) return byCountry;
-  const langs: string[] = [
-    ...(Array.isArray(navigator.languages) ? navigator.languages : []),
-    navigator.language || "",
-  ];
-  for (const raw of langs) {
-    const code = String(raw).toLowerCase().slice(0, 2);
-    if (code === "de" || code === "es" || code === "en") return code;
-  }
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (tz && TZ_LANG[tz]) return TZ_LANG[tz]!;
-    if (tz && tz.startsWith("America/")) return "en";
-  } catch {
-    /* Zeitzone nicht verfügbar */
-  }
-  return "de";
+  /* Land der Internetadresse (vom Server), dann Zeitzone, dann Browser.
+     Details und Reihenfolge in geo.ts. */
+  return pickLang({
+    ipCountry: serverCountry(),
+    tzCountry: detectCountry(),
+    browser: [...(Array.isArray(navigator.languages) ? navigator.languages : []), navigator.language || ""],
+    bot: isBot(),
+  });
+}
+
+/* Land für Zahlen- und Datumsformat (etwa US-Datum für Besucher aus den USA) */
+let geoCountryMemo: string | null | undefined;
+function geoCountry(): string | null {
+  if (geoCountryMemo === undefined) geoCountryMemo = typeof window === "undefined" ? null : serverCountry() ?? detectCountry();
+  return geoCountryMemo ?? null;
 }
 
 
@@ -494,7 +461,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
 
   const fmt = useCallback(
     (n: number) =>
-      new Intl.NumberFormat(LOCALE[lang], {
+      new Intl.NumberFormat(localeFor(lang, geoCountry()), {
         style: "currency",
         currency: "EUR",
         maximumFractionDigits: 0,
@@ -510,7 +477,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   const fmtDate = useCallback(
     (iso?: string) => {
       if (!iso) return "–";
-      return new Date(iso).toLocaleDateString(LOCALE[lang], {
+      return new Date(iso).toLocaleDateString(localeFor(lang, geoCountry()), {
         day: "2-digit",
         month: "short",
         year: "numeric",
@@ -565,7 +532,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   /* Sprach-Priorität:
      1. ?lang=de|en|es in der URL (gilt für alle Routen und Deep-Links)
      2. manuell gewählte, gespeicherte Sprache (localStorage)
-     3. automatische Erkennung (Browser-Sprachen, danach Zeitzone/Standort)
+     3. automatische Erkennung: Land der Internetadresse, Zeitzone, Browser
+        (geoLang.ts)
      Ungültige ?lang-Werte werden ignoriert und fallen auf 2. bzw. 3. zurück. */
   const searchStr = useRouterState({ select: (st) => st.location.searchStr });
 

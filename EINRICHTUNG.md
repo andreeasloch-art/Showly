@@ -249,6 +249,34 @@ Ablehnung und Nichterscheinen.
 - neuer Shop-Bestellung
 - Erinnerung an offene Anfragen
 
+## 14. Bei Google gefunden werden (Search Console)
+
+Die App bringt alles mit, was Suchmaschinen brauchen:
+
+- Seitentitel und Beschreibung je Seite und Sprache, mit hreflang
+- Vorschaubild (`/og-showly.jpg`) für Google, WhatsApp, Facebook und X
+- strukturierte Daten mit Name, Logo und den Social-Media-Profilen
+- `/sitemap.xml` mit allen Künstlern und Anbietern
+- `/robots.txt`, die Konto, Kasse und Verwaltung aus der Suche heraushält
+
+Schritte:
+
+1. Die App in Lovable veröffentlichen (Publish). Am besten mit eigener
+   Domain, etwa showly.de. Die Domain in Lovable unter Secrets als
+   `VITE_SITE_URL` eintragen (z. B. `https://showly.de`), dann zeigen
+   Canonical, Sitemap und Vorschaubilder darauf.
+2. Auf search.google.com/search-console eine Property anlegen:
+   - mit eigener Domain „Domain“ wählen und per DNS-Eintrag bestätigen;
+   - sonst „URL-Präfix“ mit der veröffentlichten Adresse und Methode
+     „HTML-Tag“. Den Wert hinter `content="…"` in Lovable unter Secrets als
+     `VITE_GOOGLE_SITE_VERIFICATION` eintragen, neu veröffentlichen und in
+     der Search Console auf „Bestätigen“ tippen.
+3. In der Search Console unter „Sitemaps“ `sitemap.xml` einreichen.
+4. Optional Bing Webmaster Tools (Code als `VITE_BING_SITE_VERIFICATION`).
+   Bing kann die Einstellungen aus der Search Console übernehmen.
+
+Bis Google die Seite zeigt, vergehen meist einige Tage bis wenige Wochen.
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:

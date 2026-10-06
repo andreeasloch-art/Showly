@@ -164,3 +164,21 @@ describe("SEO-Tabelle", () => {
     expect(Object.keys(SEO).sort()).toEqual(ROUTES.map(([k]) => k).sort());
   });
 });
+
+describe("Suchmaschinen", () => {
+  it("robots.txt sperrt private Bereiche und nennt die Sitemap", async () => {
+    const { buildRobotsTxt } = await import("@/routes/robots[.]txt");
+    const r = buildRobotsTxt();
+    expect(r).toContain("Disallow: /admin");
+    expect(r).toContain("Disallow: /dashboard");
+    expect(r).toContain(`Sitemap: ${SITE}/sitemap.xml`);
+    expect(r).not.toContain("Disallow: /\n");
+  });
+  it("Startseite hat Vorschaubild und strukturierte Daten mit Social-Media-Profilen", async () => {
+    const { siteJsonLd } = await import("./seo");
+    const head = seoHead("/", "/");
+    expect(head.meta.some((m) => "property" in m && m.property === "og:image")).toBe(true);
+    const ld = JSON.parse(siteJsonLd());
+    expect(ld["@graph"][0].sameAs).toContain("https://x.com/__showly__");
+  });
+});

@@ -2,7 +2,51 @@
    Sprachvarianten werden über ?lang=de|en|es ausgeliefert. */
 import type { Lang } from "./data";
 
-export const SITE = "https://app-maker-magic-588.lovable.app";
+/* Öffentliche Adresse. Mit eigener Domain (etwa https://showly.de) in Lovable
+   unter Secrets VITE_SITE_URL setzen; dann zeigen Canonical, Sitemap und
+   Vorschaubilder auf die Domain, unter der Google die Seite finden soll. */
+export const SITE = (
+  (import.meta.env?.["VITE_SITE_URL"] as string | undefined) || "https://app-maker-magic-588.lovable.app"
+).replace(/\/+$/, "");
+
+/** Vorschaubild beim Teilen (WhatsApp, Facebook, X) und für Google, 1200 × 630 */
+export const OG_IMAGE = `${SITE}/og-showly.jpg`;
+
+/* Social-Media-Profile von Showly; Google verknüpft sie über "sameAs" mit
+   der Website (Footer.tsx nutzt dieselben Adressen). */
+export const SOCIAL_PROFILES = [
+  "https://www.instagram.com/__showly__/",
+  "https://www.facebook.com/profile.php?id=61595200046446",
+  "https://www.tiktok.com/@showly938",
+  "https://x.com/__showly__",
+];
+
+/** Strukturierte Daten (schema.org) für die Startseite: Google zeigt damit
+ *  Name, Logo und Social-Media-Profile von Showly im Suchergebnis an. */
+export function siteJsonLd(): string {
+  return JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE}/#organization`,
+        name: "Showly",
+        url: `${SITE}/`,
+        logo: `${SITE}/logo-showly-512.png`,
+        sameAs: SOCIAL_PROFILES,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE}/#website`,
+        name: "Showly",
+        alternateName: "Showly – Künstler & Event-Acts buchen",
+        url: `${SITE}/`,
+        inLanguage: ["de", "en", "es"],
+        publisher: { "@id": `${SITE}/#organization` },
+      },
+    ],
+  }).replace(/</g, "\\u003c");
+}
 export const LANGS: Lang[] = ["de", "en", "es"];
 export const DEFAULT_LANG: Lang = "de";
 
@@ -282,6 +326,10 @@ export function seoHead(key: string, path: string, lang: Lang = DEFAULT_LANG) {
       { property: "og:title", content: t.title },
       { property: "og:description", content: t.description },
       { property: "og:url", content: url },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Showly – Künstler, Torten, Kostüme und Deko für dein Event" },
       { property: "og:locale", content: OG_LOCALE[lang] },
       ...LANGS.filter((l) => l !== lang).map((l) => ({
         property: "og:locale:alternate",
@@ -291,6 +339,8 @@ export function seoHead(key: string, path: string, lang: Lang = DEFAULT_LANG) {
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: t.title },
       { name: "twitter:description", content: t.description },
+      { name: "twitter:image", content: OG_IMAGE },
+      { name: "twitter:site", content: "@__showly__" },
     ],
     links: hreflangLinks(clean),
   };

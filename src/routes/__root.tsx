@@ -1,3 +1,4 @@
+import { siteJsonLd } from "@/showly/seo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -83,6 +84,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const GOOGLE_VERIFY = String(import.meta.env["VITE_GOOGLE_SITE_VERIFICATION"] || "").trim();
+const BING_VERIFY = String(import.meta.env["VITE_BING_SITE_VERIFICATION"] || "").trim();
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -103,7 +107,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-title", content: "Showly" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      /* Inhaberschaft für Google Search Console und Bing Webmaster Tools.
+         Den Code aus der Search Console (Methode "HTML-Tag", nur der Wert
+         von content) in Lovable unter Secrets als
+         VITE_GOOGLE_SITE_VERIFICATION eintragen, für Bing
+         VITE_BING_SITE_VERIFICATION. Ohne Wert entfällt das Tag. */
+      ...(GOOGLE_VERIFY ? [{ name: "google-site-verification", content: GOOGLE_VERIFY }] : []),
+      ...(BING_VERIFY ? [{ name: "msvalidate.01", content: BING_VERIFY }] : []),
     ],
+    /* Name, Logo und Social-Media-Profile für das Google-Suchergebnis */
+    scripts: [{ type: "application/ld+json", children: siteJsonLd() }],
     links: [
       { rel: "stylesheet", href: appCss },
       /* Outfit, die Schrift der Wortmarke, liegt im Projekt und wird in

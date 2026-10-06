@@ -21,6 +21,7 @@ import { Route as MitmachenRouteImport } from './routes/mitmachen'
 import { Route as PasswortNeuRouteImport } from './routes/passwort-neu'
 import { Route as PasswortVergessenRouteImport } from './routes/passwort-vergessen'
 import { Route as PortalRouteImport } from './routes/portal'
+import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TopActRouteImport } from './routes/top-act'
@@ -92,6 +93,11 @@ const PasswortVergessenRoute = PasswortVergessenRouteImport.update({
 const PortalRoute = PortalRouteImport.update({
   id: '/portal',
   path: '/portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
+  id: '/robots.txt',
+  path: '/robots.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
@@ -221,6 +229,7 @@ export interface FileRoutesById {
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
   '/portal': typeof PortalRoute
+  '/robots.txt': typeof RobotsDottxtRoute
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/passwort-neu'
     | '/passwort-vergessen'
     | '/portal'
+    | '/robots.txt'
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
     | '/passwort-neu'
     | '/passwort-vergessen'
     | '/portal'
+    | '/robots.txt'
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
@@ -301,6 +312,7 @@ export interface FileRouteTypes {
     | '/passwort-neu'
     | '/passwort-vergessen'
     | '/portal'
+    | '/robots.txt'
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
@@ -328,6 +340,7 @@ export interface RootRouteChildren {
   PasswortNeuRoute: typeof PasswortNeuRoute
   PasswortVergessenRoute: typeof PasswortVergessenRoute
   PortalRoute: typeof PortalRoute
+  RobotsDottxtRoute: typeof RobotsDottxtRoute
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TopActRoute: typeof TopActRoute
@@ -426,6 +439,13 @@ declare module '@tanstack/react-router' {
       path: '/portal'
       fullPath: '/portal'
       preLoaderRoute: typeof PortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/robots.txt': {
+      id: '/robots.txt'
+      path: '/robots.txt'
+      fullPath: '/robots.txt'
+      preLoaderRoute: typeof RobotsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -528,6 +548,7 @@ const rootRouteChildren: RootRouteChildren = {
   PasswortNeuRoute: PasswortNeuRoute,
   PasswortVergessenRoute: PasswortVergessenRoute,
   PortalRoute: PortalRoute,
+  RobotsDottxtRoute: RobotsDottxtRoute,
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TopActRoute: TopActRoute,

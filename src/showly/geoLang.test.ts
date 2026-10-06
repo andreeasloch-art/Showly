@@ -48,4 +48,11 @@ describe("Sprache nach Land", () => {
     expect(localeFor("de", "at")).toBe("de-AT");
     expect(localeFor("es", "co")).toBe("es-CO");
   });
+  it("jedes Land mit Spanisch, Deutsch oder Englisch als Hauptsprache", () => {
+    for (const c of ["mx", "ar", "cl", "pe", "ve", "uy", "cr", "pa", "cu", "do", "pr", "gq", "ad"])
+      expect(pickLang({ ipCountry: c, browser: ["de-DE"] })).toBe("es");
+    for (const c of ["de", "at", "ch", "li", "lu"]) expect(pickLang({ ipCountry: c, browser: ["en"] })).toBe("de");
+    for (const c of ["gb", "ie", "us", "ca", "au", "nz", "za", "jm", "ng", "ke", "in", "sg", "mt"])
+      expect(pickLang({ ipCountry: c, browser: ["de-DE"] })).toBe("en");
+  });
 });

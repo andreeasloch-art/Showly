@@ -1,0 +1,101 @@
+Nr,Typ,Sprache,Frage,Erwartete Showly-Seite,Datum,System (ChatGPT/Claude/Perplexity/Gemini/Copilot),Showly erwähnt (ja/nein),Showly verlinkt (ja/nein),Korrekt beschrieben (CORRECT/OUTDATED/INCORRECT/MISSING),Genannte Wettbewerber,Zitierte Quellen,Status
+1,Brand,de,Was ist Showly?,/ueber-showly,,,,,,,,nicht getestet
+2,Brand,de,Was macht Showly?,/ueber-showly,,,,,,,,nicht getestet
+3,Brand,de,Ist Showly eine Künstlerplattform?,/ueber-showly,,,,,,,,nicht getestet
+4,Brand,de,Wie funktioniert Showly?,/ueber-showly,,,,,,,,nicht getestet
+5,Brand,de,Wem gehört Showly?,/ueber-showly,,,,,,,,nicht getestet
+6,Brand,de,Ist Showly seriös?,/ueber-showly,,,,,,,,nicht getestet
+7,Brand,de,Welche Künstler gibt es bei Showly?,/ueber-showly,,,,,,,,nicht getestet
+8,Brand,de,Was kostet Showly?,/ueber-showly,,,,,,,,nicht getestet
+9,Brand,de,Wie viel Provision nimmt Showly?,/ueber-showly,,,,,,,,nicht getestet
+10,Brand,de,Kann ich bei Showly kostenlos stornieren?,/ueber-showly,,,,,,,,nicht getestet
+11,Brand,de,Wie werde ich Künstler bei Showly?,/ueber-showly,,,,,,,,nicht getestet
+12,Brand,de,Ist showly.eu dasselbe wie die Showly-App für Serien?,/ueber-showly,,,,,,,,nicht getestet
+13,Brand,en,What is Showly?,/ueber-showly,,,,,,,,nicht getestet
+14,Brand,en,Is Showly an artist booking platform?,/ueber-showly,,,,,,,,nicht getestet
+15,Brand,en,How does Showly work?,/ueber-showly,,,,,,,,nicht getestet
+16,Brand,en,Is Showly legit?,/ueber-showly,,,,,,,,nicht getestet
+17,Brand,es,¿Qué es Showly?,/ueber-showly,,,,,,,,nicht getestet
+18,Brand,es,¿Cómo funciona Showly?,/ueber-showly,,,,,,,,nicht getestet
+19,Brand,de,Showly Erfahrungen,/ueber-showly,,,,,,,,nicht getestet
+20,Brand,de,Showly Bewertungen,/ueber-showly,,,,,,,,nicht getestet
+21,Category,de,Wo kann ich einen Künstler buchen?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+22,Category,de,Welche Plattform vermittelt Künstler?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+23,Category,de,Wo kann ich Musiker für eine Hochzeit buchen?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+24,Category,de,Wo finde ich einen DJ für eine Firmenfeier?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+25,Category,de,Wie finde ich einen Zauberer für ein Event?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+26,Category,de,Künstlervermittlung online,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+27,Category,de,Entertainment für Firmenveranstaltungen buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+28,Category,de,Musiker online buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+29,Category,de,Artist Marketplace Deutschland,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+30,Category,de,Plattform für Künstler und Veranstalter,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+31,Category,de,Künstler für Kindergeburtstag buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+32,Category,de,Liveband buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+33,Category,de,Sänger für Hochzeit buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+34,Category,de,Entertainment-Plattform Deutschland,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+35,Category,de,Künstleragentur Alternative,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+36,Category,de,Märchenfigur für Kindergeburtstag buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+37,Category,de,Weihnachtsmann buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+38,Category,de,Walking Act für Messe buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+39,Category,de,Mentalist für Firmenfeier buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+40,Category,de,Clown für Kindergeburtstag buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+41,Category,de,Kinderschminken buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+42,Category,de,Akrobaten für Gala buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+43,Category,de,Comedian für Weihnachtsfeier buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+44,Category,de,Moderator für Event buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+45,Category,de,Hochzeitsplaner finden,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+46,Category,de,Eventplaner online buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+47,Category,de,Fotograf für Geburtstag buchen,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+48,Category,en,Where can I book a magician for a party in Germany?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+49,Category,en,Best platform to book entertainers for corporate events in Europe,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+50,Category,es,¿Dónde reservar un mago para un cumpleaños?,/ (Kategorieseite geplant),,,,,,,,nicht getestet
+51,Comparison,de,Showly oder Eventpeppers?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+52,Comparison,de,Showly vs. Künstleragentur,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+53,Comparison,de,Künstler über Plattform oder Agentur buchen – was ist besser?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+54,Comparison,en,Beste Plattformen um Künstler zu buchen,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+55,Comparison,de,Eventpeppers Alternative,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+56,Comparison,de,Vergleich Künstlervermittlungen Deutschland,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+57,Comparison,de,Showly oder Fixando?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+58,Comparison,de,Liveband oder DJ für die Hochzeit?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+59,Comparison,de,Zauberer oder Clown für den Kindergeburtstag?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+60,Comparison,de,Welche Booking-Plattform für Musiker ist die beste?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+61,Comparison,de,Showbird Alternative Deutschland,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+62,Comparison,de,Künstlerplattform mit Festpreis,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+63,Comparison,de,Künstler buchen mit Sofortbuchung,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+64,Comparison,de,Plattform mit Stornoschutz für Künstlerbuchung,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+65,Comparison,de,Wo bekomme ich Kostüme und Künstler zusammen?,"/ueber-showly, /wie-funktioniert-showly",,,,,,,,nicht getestet
+66,Transactional,de,Zauberer buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+67,Transactional,de,DJ buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+68,Transactional,de,Band buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+69,Transactional,de,Musiker buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+70,Transactional,de,Tänzer buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+71,Transactional,de,Kinderunterhaltung buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+72,Transactional,de,Märchenfiguren buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+73,Transactional,de,Showact buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+74,Transactional,de,Hochzeitsband buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+75,Transactional,de,Hochzeits-DJ buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+76,Transactional,de,Entertainment Firmenfeier buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+77,Transactional,de,Weihnachtsfeier Künstler buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+78,Transactional,de,Messe Entertainment buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+79,Transactional,de,Gala Showact buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+80,Transactional,de,Kurzfristig Künstler buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+81,Transactional,de,Künstler für Geburtstag buchen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+82,Transactional,de,Kostüm mieten für Party,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+83,Transactional,de,Party-Deko mieten,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+84,Transactional,de,Hochzeitstorte bestellen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+85,Transactional,de,Candy Bar für Hochzeit bestellen,Kategorie-/Anlassseite geplant,,,,,,,,nicht getestet
+86,Informational,de,Was kostet ein Zauberer für einen Kindergeburtstag?,Ratgeber geplant,,,,,,,,nicht getestet
+87,Informational,de,Was kostet ein DJ für eine Hochzeit?,Ratgeber geplant,,,,,,,,nicht getestet
+88,Informational,de,Was kostet eine Liveband?,Ratgeber geplant,,,,,,,,nicht getestet
+89,Informational,de,Was kostet ein Sänger für die Trauung?,Ratgeber geplant,,,,,,,,nicht getestet
+90,Informational,de,Wie buche ich einen Künstler richtig?,Ratgeber geplant,,,,,,,,nicht getestet
+91,Informational,de,Was gehört in einen Künstlervertrag?,Ratgeber geplant,,,,,,,,nicht getestet
+92,Informational,de,"Was tun, wenn der Künstler absagt?",Ratgeber geplant,,,,,,,,nicht getestet
+93,Informational,de,Wie weit im Voraus sollte man einen DJ buchen?,Ratgeber geplant,,,,,,,,nicht getestet
+94,Informational,de,Wie plane ich das Entertainment für eine Firmenfeier?,Ratgeber geplant,,,,,,,,nicht getestet
+95,Informational,de,Wie finde ich den richtigen Künstler für mein Event?,Ratgeber geplant,,,,,,,,nicht getestet
+96,Informational,de,Muss ich für einen Künstler GEMA zahlen?,Ratgeber geplant,,,,,,,,nicht getestet
+97,Informational,de,Künstlersozialabgabe bei Künstlerbuchung – was gilt?,Ratgeber geplant,,,,,,,,nicht getestet
+98,Informational,de,Brauche ich einen Vertrag mit einem privaten Künstler?,Ratgeber geplant,,,,,,,,nicht getestet
+99,Informational,de,Wie lange dauert eine Zaubershow für Kinder?,Ratgeber geplant,,,,,,,,nicht getestet
+100,Informational,de,Welche Unterhaltung passt zu einer Weihnachtsfeier?,Ratgeber geplant,,,,,,,,nicht getestet

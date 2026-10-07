@@ -70,7 +70,7 @@ export function artistFromRow(r: PublicRow): Artist {
   };
 }
 
-function upsert(a: Artist) {
+export function upsertArtist(a: Artist) {
   const i = ARTISTS.findIndex((x) => x.id === a.id);
   if (i >= 0) ARTISTS[i] = { ...ARTISTS[i], ...a };
   else ARTISTS.push(a);
@@ -88,7 +88,7 @@ export async function hydrateDbArtists(ownerId?: string): Promise<number> {
     loaded = true;
     const { data } = await sb.from("artists_public").select("*").limit(1000);
     for (const r of data || []) {
-      upsert(artistFromRow(r));
+      upsertArtist(artistFromRow(r));
       n++;
     }
     void preloadCloudGalleries((data || []).flatMap((r) => (Array.isArray(r.media) ? r.media : []).map((m) => "c:" + m.id)));
@@ -96,7 +96,7 @@ export async function hydrateDbArtists(ownerId?: string): Promise<number> {
   if (ownerId) {
     const { data } = await sb.from("artists").select("*").eq("owner", ownerId).limit(5);
     for (const r of data || []) {
-      upsert(artistFromRow(r));
+      upsertArtist(artistFromRow(r));
       n++;
     }
     void preloadCloudGalleries((data || []).flatMap((r) => (Array.isArray(r.media) ? r.media : []).map((m) => "c:" + m.id)));

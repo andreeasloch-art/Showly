@@ -20,6 +20,9 @@ const ROUTES: [string, string][] = [
   ["/torten", "/torten"],
   ["/torten/$id", "/torten/1"],
   ["/torten/anbieten", "/torten/anbieten"],
+  ["/hilfe", "/hilfe"],
+  ["/ueber-showly", "/ueber-showly"],
+  ["/wie-funktioniert-showly", "/wie-funktioniert-showly"],
 ];
 
 /* Priorität: ?lang > gespeicherte Auswahl > Erkennung */
@@ -142,9 +145,19 @@ describe("sitemap.xml", () => {
   const xml = buildSitemapXml();
 
   it("enthält alle öffentlichen Routen", () => {
-    for (const p of ["/", "/shop", "/mitmachen", "/kuenstler/1", "/rechtliches/imprint"]) {
+    for (const p of ["/", "/shop", "/mitmachen", "/ueber-showly", "/wie-funktioniert-showly", "/hilfe", "/rechtliches/imprint"]) {
       expect(xml).toContain(`<loc>${SITE}${p}</loc>`);
     }
+  });
+
+  it("führt keine Beispielprofile (die sind noindex)", () => {
+    expect(xml).not.toContain(`<loc>${SITE}/kuenstler/1</loc>`);
+  });
+
+  it("nimmt echte Profile mit Änderungsdatum auf", () => {
+    const x = buildSitemapXml([{ path: "/kuenstler/100001", lastmod: "2026-10-01" }]);
+    expect(x).toContain(`<loc>${SITE}/kuenstler/100001</loc>`);
+    expect(x).toContain("<lastmod>2026-10-01</lastmod>");
   });
 
   it("verlinkt jede Sprachvariante per hreflang", () => {
@@ -175,6 +188,19 @@ describe("Suchmaschinen", () => {
     expect(r).toContain("Disallow: /dashboard");
     expect(r).toContain(`Sitemap: ${SITE}/sitemap.xml`);
     expect(r).not.toContain("Disallow: /\n");
+  });
+  it("robots.txt lässt KI-Suchen zu, sperrt aber auch für sie private Bereiche", async () => {
+    const { buildRobotsTxt } = await import("@/routes/robots[.]txt");
+    const groups = buildRobotsTxt().split("\n\n");
+    for (const bot of ["OAI-SearchBot", "Claude-SearchBot", "Claude-User", "PerplexityBot", "Googlebot", "Bingbot"]) {
+      const g = groups.find((x) => x.includes(`User-agent: ${bot}\n`));
+      expect(g, bot).toBeTruthy();
+      expect(g).toContain("Disallow: /dashboard");
+      expect(g).toContain("Disallow: /checkout");
+    }
+    /* Trainings-Crawler bleiben unverändert unter "*" */
+    expect(buildRobotsTxt()).not.toContain("GPTBot");
+    expect(buildRobotsTxt()).not.toContain("ClaudeBot");
   });
   it("Startseite hat Vorschaubild und strukturierte Daten mit Social-Media-Profilen", async () => {
     const { siteJsonLd } = await import("./seo");

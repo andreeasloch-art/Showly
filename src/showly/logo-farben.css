@@ -595,3 +595,18 @@ html body .stats-grid .stat-item+.stat-item{border-left:1px solid var(--sh-borde
 /* Die leere Meldung lag sonst sichtbar über der Menüleiste */
 html body #toast:not(.show){visibility:hidden;opacity:0;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .2s,visibility 0s .35s}
 html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cubic-bezier(.2,.8,.2,1),opacity .2s}
+
+/* --- Informationsseiten (Über Showly, So funktioniert's) ---------------- */
+.info26-crumbs{font-size:13.5px;color:var(--h-muted,#6B6480);margin:0 0 10px}
+.info26-crumbs a{color:inherit;text-decoration:none}
+.info26-crumbs a:hover{text-decoration:underline}
+.info26-lead{font-size:17.5px;line-height:1.55;color:var(--h-ink,#1A0E3D);margin:0 0 8px;
+  padding:16px 18px;border-radius:18px;background:rgba(184,174,252,.16);border:1px solid rgba(184,174,252,.4)}
+.info26-sec p,.info26-sec li{font-size:16px;line-height:1.6;color:var(--h-ink,#1A0E3D)}
+.info26-sec p{margin:0 0 12px}
+.info26-sec ul{padding-left:20px;margin:0}
+.info26-sec li{margin:0 0 8px}
+.info26-cta{display:flex;flex-wrap:wrap;gap:10px;margin:28px 0 8px}
+.info26-links ul{list-style:none;padding:0;display:grid;gap:8px}
+.info26-links a{display:inline-flex;align-items:center;gap:8px;color:var(--lg-blau-d,#3B2BD8);text-decoration:none;font-weight:600}
+.info26-links a svg{width:16px;height:16px}

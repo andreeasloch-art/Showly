@@ -378,6 +378,11 @@ export const adminAct = createServerFn({ method: "POST" })
                   .select("owner")
                   .maybeSingle();
           if (!row) return { error: "Nicht gefunden" };
+          /* Suchmaschinen über neue oder entfernte Profile informieren */
+          if (data.section === "artists" && data.action !== "unblock") {
+            const { indexNow } = await import("@/lib/indexnow.server");
+            await indexNow([`/kuenstler/${data.id}`]);
+          }
           const to = await emailOf(row.owner);
           if (to && data.action === "publish")
             await sendMail(to, "Dein Showly-Profil ist freigeschaltet", [

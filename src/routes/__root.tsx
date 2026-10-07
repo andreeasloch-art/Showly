@@ -4,7 +4,8 @@ import { createIsomorphicFn } from "@tanstack/react-start";
 import { getRequestHeader } from "@tanstack/react-start/server";
 import { countryFromHeaders, serverCountry } from "@/showly/geoLang";
 import { COUNTRY_LANG } from "@/showly/country";
-import { siteJsonLd } from "@/showly/seo";
+import { siteGraph } from "@/showly/schema";
+import { headLang } from "@/showly/seo";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
@@ -94,7 +95,7 @@ const GOOGLE_VERIFY = String(import.meta.env["VITE_GOOGLE_SITE_VERIFICATION"] ||
 const BING_VERIFY = String(import.meta.env["VITE_BING_SITE_VERIFICATION"] || "").trim();
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
+  head: (ctx) => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
@@ -122,7 +123,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       ...(BING_VERIFY ? [{ name: "msvalidate.01", content: BING_VERIFY }] : []),
     ],
     /* Name, Logo und Social-Media-Profile für das Google-Suchergebnis */
-    scripts: [{ type: "application/ld+json", children: siteJsonLd() }],
+    scripts: [{ type: "application/ld+json", children: siteGraph(headLang(ctx)) }],
     links: [
       { rel: "stylesheet", href: appCss },
       /* Outfit, die Schrift der Wortmarke, liegt im Projekt und wird in

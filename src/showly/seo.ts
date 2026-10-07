@@ -270,6 +270,55 @@ export const SEO: Record<string, Record<Lang, SeoText>> = {
       description: "Perfil, fotos, ofertas y precios: solicita una tarta o candy bar directamente.",
     },
   },
+  "/hilfe": {
+    de: {
+      title: "Hilfe & häufige Fragen zur Künstlerbuchung | Showly",
+      description:
+        "Antworten zu Buchung, Zahlung, Stornierung, Check-in und Konto bei Showly – und der direkte Weg zu unserem Team.",
+    },
+    en: {
+      title: "Help & FAQ about booking artists | Showly",
+      description: "Answers on booking, payment, cancellation, check-in and accounts at Showly – and a direct line to our team.",
+    },
+    es: {
+      title: "Ayuda y preguntas frecuentes sobre reservas | Showly",
+      description: "Respuestas sobre reserva, pago, cancelación, check-in y cuenta en Showly, y contacto directo con el equipo.",
+    },
+  },
+  "/ueber-showly": {
+    de: {
+      title: "Über Showly – Plattform für Künstler & Entertainment-Buchung",
+      description:
+        "Was ist Showly? Die Plattform, um Künstler und Entertainment-Acts für Feiern und Firmenevents zu finden und direkt zu buchen – mit Live-Kalender und Festpreis.",
+    },
+    en: {
+      title: "About Showly – artist & entertainment booking platform",
+      description:
+        "What is Showly? The platform for finding and directly booking artists and entertainment acts for parties and corporate events – with a live calendar and fixed prices.",
+    },
+    es: {
+      title: "Sobre Showly – plataforma para reservar artistas y espectáculos",
+      description:
+        "¿Qué es Showly? La plataforma para encontrar y reservar artistas y espectáculos para fiestas y eventos de empresa, con calendario en vivo y precio fijo.",
+    },
+  },
+  "/wie-funktioniert-showly": {
+    de: {
+      title: "So funktioniert Showly – Künstler buchen in 4 Schritten",
+      description:
+        "Künstler finden, Termin im Live-Kalender wählen, sicher bezahlen, Auftritt per Check-in bestätigen: so läuft eine Buchung über Showly ab.",
+    },
+    en: {
+      title: "How Showly works – book an artist in 4 steps",
+      description:
+        "Find an artist, pick a date in the live calendar, pay securely, confirm the show with a check-in code: how a booking on Showly works.",
+    },
+    es: {
+      title: "Cómo funciona Showly – reserva un artista en 4 pasos",
+      description:
+        "Encuentra un artista, elige fecha en el calendario, paga de forma segura y confirma la actuación con un código: así funciona una reserva en Showly.",
+    },
+  },
   "/torten/anbieten": {
     de: {
       title: "Torten anbieten – auch als Privatperson | Showly",

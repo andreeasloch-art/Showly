@@ -10,17 +10,22 @@ import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
+import { headLang, seoHead } from "@/showly/seo";
+import { faqGraph } from "@/showly/schema";
 import { isBackendConfigured } from "@/lib/supabase";
 import { createTicket, myTickets } from "@/utils/support.functions";
 import type { SupportTopic } from "@/lib/database.types";
 
 export const Route = createFileRoute("/hilfe")({
-  head: () => ({
-    meta: [
-      { title: "Hilfe und Kontakt – Showly" },
-      { name: "description", content: "Antworten zu Buchung, Zahlung, Stornierung und Konto bei Showly, und der direkte Weg zu unserem Team." },
-    ],
-  }),
+  head: (ctx) => {
+    const lang = headLang(ctx);
+    const C = COPY[lang] ?? COPY.de;
+    /* Die sichtbaren Fragen auch als FAQPage für Suchmaschinen und KI-Suchen */
+    return {
+      ...seoHead("/hilfe", "/hilfe", lang),
+      scripts: [{ type: "application/ld+json", children: faqGraph(lang, "/hilfe", C.h, C.faq as unknown as [string, string][]) }],
+    };
+  },
   component: HelpPage,
 });
 
@@ -191,7 +196,8 @@ function HelpPage() {
                 {q}
                 <span aria-hidden="true">{open === i ? "−" : "+"}</span>
               </button>
-              {open === i && <p>{a}</p>}
+              {/* Alle Antworten stehen im HTML (für Suchmaschinen und Vorleseprogramme), zugeklappte sind nur ausgeblendet */}
+              <p hidden={open !== i}>{a}</p>
             </div>
           ))}
         </div>

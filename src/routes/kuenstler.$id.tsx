@@ -1,4 +1,9 @@
 import { headLang, seoHead } from "@/showly/seo";
+import { artistGraph, profileIndexable } from "@/showly/schema";
+import { artistFromRow, upsertArtist } from "@/showly/cloudArtists";
+import { catName } from "@/showly/catName";
+import type { PublicArtistRow } from "@/utils/seo.functions";
+import type { Lang } from "@/showly/data";
 import { DemoBadge, DemoNote, demoBookable } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { isBusiness } from "@/showly/providerStatus";
@@ -20,9 +25,54 @@ import { ProfileVideos } from "@/components/showly/MediaView";
 import type { MediaRef } from "@/showly/media";
 
 export const Route = createFileRoute("/kuenstler/$id")({
-  head: (ctx) => seoHead("/kuenstler/$id", `/kuenstler/${ctx.params.id}`, headLang(ctx)),
+  /* Echte Profile schon beim Rendern auf dem Server laden, damit
+     Suchmaschinen und KI-Suchen den Inhalt ohne JavaScript sehen */
+  loader: async ({ params }) => {
+    const id = Number(params.id);
+    if (!(id >= 100000)) return { row: null };
+    const { publicArtist } = await import("@/utils/seo.functions");
+    const row = await publicArtist({ data: { id } }).catch(() => null);
+    if (row) upsertArtist(artistFromRow(row));
+    return { row };
+  },
+  head: (ctx) => artistHead(ctx.params.id, headLang(ctx), ctx.loaderData?.row ?? null),
   component: Detail,
 });
+
+/* Titel, Beschreibung und strukturierte Daten je Profil. Beispielprofile
+   und dünne Profile bleiben aus dem Suchindex (noindex), damit nur echte,
+   gepflegte Angebote gefunden werden. */
+function artistHead(idParam: string, lang: Lang, row: PublicArtistRow | null) {
+  const path = `/kuenstler/${idParam}`;
+  const base = seoHead("/kuenstler/$id", path, lang);
+  const a = row ? artistFromRow(row) : ARTISTS.find((x) => x.id === Number(idParam));
+  if (!a) return { ...base, meta: [...base.meta, { name: "robots", content: "noindex, follow" }] };
+  const name = String((a.name as Record<string, string>)[lang] || (a.name as Record<string, string>)["de"] || a.name);
+  const cat = catName(a.cat, lang);
+  const desc = String((a.desc as Record<string, string>)[lang] || (a.desc as Record<string, string>)["de"] || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const title =
+    lang === "en" ? `${name} – book ${cat} | Showly` : lang === "es" ? `${name} – reservar ${cat} | Showly` : `${name} – ${cat} buchen | Showly`;
+  const description = desc.length > 155 ? desc.slice(0, 152).replace(/\s\S*$/, "") + " …" : desc || base.meta[1]!.content!;
+  const indexable = profileIndexable(a);
+  const meta = base.meta.map((m) =>
+    "title" in m
+      ? { title }
+      : m.name === "description" || m.property === "og:description" || m.name === "twitter:description"
+        ? { ...m, content: description }
+        : m.property === "og:title" || m.name === "twitter:title"
+          ? { ...m, content: title }
+          : m.property === "og:type"
+            ? { ...m, content: "profile" }
+            : m,
+  );
+  return {
+    meta: indexable ? meta : [...meta, { name: "robots", content: "noindex, follow" }],
+    links: base.links,
+    ...(indexable ? { scripts: [{ type: "application/ld+json", children: artistGraph(a, lang, cat) }] } : {}),
+  };
+}
 
 function Face({ a }: { a: Artist }) {
   if (hasImg(a)) return null;

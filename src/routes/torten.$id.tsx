@@ -40,7 +40,12 @@ export const Route = createFileRoute("/torten/$id")({
     if (Number.isInteger(a) && a > 0) out.angebot = a;
     return out;
   },
-  head: (ctx) => seoHead("/torten/$id", `/torten/${ctx.params.id}`, headLang(ctx)),
+  head: (ctx) => {
+    const h = seoHead("/torten/$id", `/torten/${ctx.params.id}`, headLang(ctx));
+    /* Beispiel-Anbieter zeigen nur, wie ein Angebot aussieht: nicht in den Suchindex */
+    const demo = BAKERS.find((b) => String(b.id) === ctx.params.id)?.demo;
+    return demo ? { ...h, meta: [...h.meta, { name: "robots", content: "noindex, follow" }] } : h;
+  },
   component: BakerProfile,
 });
 

@@ -312,6 +312,11 @@ Vorschaubilder zeigen schon darauf.
 
 Bis Google die Seite zeigt, vergehen meist einige Tage bis wenige Wochen.
 
+### IndexNow und KI-Suche (ab Livegang)
+
+- In Lovable unter Secrets `INDEXNOW_KEY` setzen (32 Zeichen, z. B. `openssl rand -hex 16`). Dann meldet Showly neue und geänderte Künstlerprofile automatisch an Bing und Copilot. Anleitung: `docs/seo/BING-WEBMASTER-SETUP.md`.
+- Die robots.txt lässt Google, Bing und die KI-Suchen (ChatGPT, Claude, Perplexity) ausdrücklich zu und sperrt private Bereiche. Alles Weitere zu Sichtbarkeit: `docs/seo/`.
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:

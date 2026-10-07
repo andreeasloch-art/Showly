@@ -161,10 +161,16 @@ export const refreshIdentityCheck = createServerFn({ method: "POST" }).handler(
       /* Nur hier wird das Siegel gesetzt. Der Browser kann das nicht. */
       if (status === "verified") {
         /* Mit bestandener Prüfung wird das Profil auch sichtbar und buchbar */
-        await db
+        const { data: live } = await db
           .from("artists")
           .update({ verified: true, published: true })
-          .eq("owner", user.id);
+          .eq("owner", user.id)
+          .select("id");
+        /* Neues Profil sofort an Bing & Co. melden (IndexNow) */
+        if (live?.length) {
+          const { indexNow } = await import("@/lib/indexnow.server");
+          await indexNow(live.map((r) => `/kuenstler/${r.id}`));
+        }
       } else if (reason === DUPLICATE) {
         await db
           .from("artists")

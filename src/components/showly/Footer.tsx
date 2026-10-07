@@ -84,9 +84,14 @@ export function Footer() {
           <div>
             <div className="footer-col-title">{t("foot.company")}</div>
             <ul className="footer-links">
-              <li>{t("foot.about")}</li>
+              <li>
+                <Link to="/ueber-showly">{t("foot.about")}</Link>
+              </li>
               <li>
                 <Link to="/blog">{t("foot.blog")}</Link>
+              </li>
+              <li>
+                <Link to="/wie-funktioniert-showly">{lang === "en" ? "How it works" : lang === "es" ? "Cómo funciona" : "So funktioniert's"}</Link>
               </li>
               <li>
                 <Link to="/hilfe">{lang === "en" ? "Help & contact" : lang === "es" ? "Ayuda y contacto" : "Hilfe & Kontakt"}</Link>

@@ -16,7 +16,9 @@ import { Route as BlogRouteImport } from './routes/blog'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as HilfeRouteImport } from './routes/hilfe'
+import { Route as IndexnowKeyDottxtRouteImport } from './routes/indexnow-key[.]txt'
 import { Route as KontoRouteImport } from './routes/konto'
+import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as MitmachenRouteImport } from './routes/mitmachen'
 import { Route as PasswortNeuRouteImport } from './routes/passwort-neu'
 import { Route as PasswortVergessenRouteImport } from './routes/passwort-vergessen'
@@ -25,7 +27,9 @@ import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as TopActRouteImport } from './routes/top-act'
+import { Route as UeberShowlyRouteImport } from './routes/ueber-showly'
 import { Route as WiderrufRouteImport } from './routes/widerruf'
+import { Route as WieFunktioniertShowlyRouteImport } from './routes/wie-funktioniert-showly'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
@@ -70,9 +74,19 @@ const HilfeRoute = HilfeRouteImport.update({
   path: '/hilfe',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexnowKeyDottxtRoute = IndexnowKeyDottxtRouteImport.update({
+  id: '/indexnow-key.txt',
+  path: '/indexnow-key.txt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KontoRoute = KontoRouteImport.update({
   id: '/konto',
   path: '/konto',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LlmsDottxtRoute = LlmsDottxtRouteImport.update({
+  id: '/llms.txt',
+  path: '/llms.txt',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MitmachenRoute = MitmachenRouteImport.update({
@@ -115,9 +129,19 @@ const TopActRoute = TopActRouteImport.update({
   path: '/top-act',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UeberShowlyRoute = UeberShowlyRouteImport.update({
+  id: '/ueber-showly',
+  path: '/ueber-showly',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WiderrufRoute = WiderrufRouteImport.update({
   id: '/widerruf',
   path: '/widerruf',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WieFunktioniertShowlyRoute = WieFunktioniertShowlyRouteImport.update({
+  id: '/wie-funktioniert-showly',
+  path: '/wie-funktioniert-showly',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiTaeglichRoute = ApiTaeglichRouteImport.update({
@@ -169,7 +193,9 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/hilfe': typeof HilfeRoute
+  '/indexnow-key.txt': typeof IndexnowKeyDottxtRoute
   '/konto': typeof KontoRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/mitmachen': typeof MitmachenRoute
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
@@ -178,7 +204,9 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
+  '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -196,7 +224,9 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/hilfe': typeof HilfeRoute
+  '/indexnow-key.txt': typeof IndexnowKeyDottxtRoute
   '/konto': typeof KontoRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/mitmachen': typeof MitmachenRoute
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
@@ -205,7 +235,9 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
+  '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -224,7 +256,9 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/dashboard': typeof DashboardRoute
   '/hilfe': typeof HilfeRoute
+  '/indexnow-key.txt': typeof IndexnowKeyDottxtRoute
   '/konto': typeof KontoRoute
+  '/llms.txt': typeof LlmsDottxtRoute
   '/mitmachen': typeof MitmachenRoute
   '/passwort-neu': typeof PasswortNeuRoute
   '/passwort-vergessen': typeof PasswortVergessenRoute
@@ -233,7 +267,9 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/top-act': typeof TopActRoute
+  '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
+  '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
@@ -253,7 +289,9 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/dashboard'
     | '/hilfe'
+    | '/indexnow-key.txt'
     | '/konto'
+    | '/llms.txt'
     | '/mitmachen'
     | '/passwort-neu'
     | '/passwort-vergessen'
@@ -262,7 +300,9 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/ueber-showly'
     | '/widerruf'
+    | '/wie-funktioniert-showly'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout/return'
@@ -280,7 +320,9 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/dashboard'
     | '/hilfe'
+    | '/indexnow-key.txt'
     | '/konto'
+    | '/llms.txt'
     | '/mitmachen'
     | '/passwort-neu'
     | '/passwort-vergessen'
@@ -289,7 +331,9 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/ueber-showly'
     | '/widerruf'
+    | '/wie-funktioniert-showly'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout/return'
@@ -307,7 +351,9 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/dashboard'
     | '/hilfe'
+    | '/indexnow-key.txt'
     | '/konto'
+    | '/llms.txt'
     | '/mitmachen'
     | '/passwort-neu'
     | '/passwort-vergessen'
@@ -316,7 +362,9 @@ export interface FileRouteTypes {
     | '/shop'
     | '/sitemap.xml'
     | '/top-act'
+    | '/ueber-showly'
     | '/widerruf'
+    | '/wie-funktioniert-showly'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout_/return'
@@ -335,7 +383,9 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   DashboardRoute: typeof DashboardRoute
   HilfeRoute: typeof HilfeRoute
+  IndexnowKeyDottxtRoute: typeof IndexnowKeyDottxtRoute
   KontoRoute: typeof KontoRoute
+  LlmsDottxtRoute: typeof LlmsDottxtRoute
   MitmachenRoute: typeof MitmachenRoute
   PasswortNeuRoute: typeof PasswortNeuRoute
   PasswortVergessenRoute: typeof PasswortVergessenRoute
@@ -344,7 +394,9 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TopActRoute: typeof TopActRoute
+  UeberShowlyRoute: typeof UeberShowlyRoute
   WiderrufRoute: typeof WiderrufRoute
+  WieFunktioniertShowlyRoute: typeof WieFunktioniertShowlyRoute
   ApiTaeglichRoute: typeof ApiTaeglichRoute
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
@@ -406,11 +458,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HilfeRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/indexnow-key.txt': {
+      id: '/indexnow-key.txt'
+      path: '/indexnow-key.txt'
+      fullPath: '/indexnow-key.txt'
+      preLoaderRoute: typeof IndexnowKeyDottxtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/konto': {
       id: '/konto'
       path: '/konto'
       fullPath: '/konto'
       preLoaderRoute: typeof KontoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/llms.txt': {
+      id: '/llms.txt'
+      path: '/llms.txt'
+      fullPath: '/llms.txt'
+      preLoaderRoute: typeof LlmsDottxtRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mitmachen': {
@@ -469,11 +535,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TopActRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ueber-showly': {
+      id: '/ueber-showly'
+      path: '/ueber-showly'
+      fullPath: '/ueber-showly'
+      preLoaderRoute: typeof UeberShowlyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/widerruf': {
       id: '/widerruf'
       path: '/widerruf'
       fullPath: '/widerruf'
       preLoaderRoute: typeof WiderrufRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wie-funktioniert-showly': {
+      id: '/wie-funktioniert-showly'
+      path: '/wie-funktioniert-showly'
+      fullPath: '/wie-funktioniert-showly'
+      preLoaderRoute: typeof WieFunktioniertShowlyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/taeglich': {
@@ -543,7 +623,9 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   DashboardRoute: DashboardRoute,
   HilfeRoute: HilfeRoute,
+  IndexnowKeyDottxtRoute: IndexnowKeyDottxtRoute,
   KontoRoute: KontoRoute,
+  LlmsDottxtRoute: LlmsDottxtRoute,
   MitmachenRoute: MitmachenRoute,
   PasswortNeuRoute: PasswortNeuRoute,
   PasswortVergessenRoute: PasswortVergessenRoute,
@@ -552,7 +634,9 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TopActRoute: TopActRoute,
+  UeberShowlyRoute: UeberShowlyRoute,
   WiderrufRoute: WiderrufRoute,
+  WieFunktioniertShowlyRoute: WieFunktioniertShowlyRoute,
   ApiTaeglichRoute: ApiTaeglichRoute,
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,

@@ -317,6 +317,16 @@ Bis Google die Seite zeigt, vergehen meist einige Tage bis wenige Wochen.
 - In Lovable unter Secrets `INDEXNOW_KEY` setzen (32 Zeichen, z. B. `openssl rand -hex 16`). Dann meldet Showly neue und geänderte Künstlerprofile automatisch an Bing und Copilot. Anleitung: `docs/seo/BING-WEBMASTER-SETUP.md`.
 - Die robots.txt lässt Google, Bing und die KI-Suchen (ChatGPT, Claude, Perplexity) ausdrücklich zu und sperrt private Bereiche. Alles Weitere zu Sichtbarkeit: `docs/seo/`.
 
+## 15. Doppelbuchungen, Reservierung beim Bezahlen, Teilbestellungen, Kalender
+
+Migration `0012_buchungssicherheit.sql` (in Lovable eingespielt).
+
+- **Keine Doppelbuchung:** Jede belegte Zeit eines Künstlers steht genau einmal in `slot_claims`. Die Datenbank verbietet Überschneidungen selbst (Ausschlussregel, inkl. einer Stunde Fahrtzeit), und `claim_slots` sperrt vor dem Prüfen die Zeile des Künstlers (`SELECT … FOR UPDATE`). Getestet: 30 gleichzeitige Kassen für denselben Termin → genau eine bekommt ihn.
+- **Reservierung beim Bezahlen:** Wer an die Kasse geht, bekommt die Künstler-Termine 15 Minuten reserviert (`HOLD_MINUTES` in `src/lib/slots.server.ts`). Stripe lässt eine offene Kasse frühestens nach 30 Minuten ablaufen; bezahlt jemand nach Ablauf der Reservierung und ist der Termin inzwischen weg, wird die Buchung sofort abgelehnt und das Geld automatisch erstattet. Abbruch gibt den Termin sofort frei, sonst der tägliche Lauf bzw. der nächste Zugriff.
+- **Teilbestellungen:** Ein Warenkorb (ein Event) wird zur Bestellung `orders` mit einer Teilbestellung `sub_orders` je Anbieter (jeder Künstler, jede Konditorei, jeder Deko-Anbieter, Showly-Shop). Buchungen, Torten und Shop-Zeilen hängen über `sub_order_id` daran. Kunden sehen alle Teilbestellungen ihrer Bestellung, Anbieter nur ihre eigene.
+- **Kalender verbinden:** Künstler tragen im Portal unter „Verfügbarkeit“ (bzw. Dashboard → Kalender) den iCal-Link aus Google, Apple oder Outlook ein. Abgleich sofort, vor jeder Reservierung (wenn älter als 15 Minuten) und im täglichen Lauf. Gespeichert werden nur Beginn und Ende. Dazu gibt es einen geheimen Abo-Link mit allen Showly-Auftritten (`/api/kalender/<schlüssel>.ics`).
+- Nichts einzustellen; der tägliche Lauf (Abschnitt 13) erledigt Aufräumen und Abgleich mit.
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:

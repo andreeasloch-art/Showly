@@ -123,6 +123,8 @@ export type ArtistRow = {
 }
 
 export type BookingRow = {
+  /** Teilbestellung je Anbieter (0012) */
+  sub_order_id?: number | null;
   id: number;
   /** null, wenn das Kundenkonto gelöscht wurde */
   customer: string | null;
@@ -205,6 +207,8 @@ export type PayoutAccountRow = {
 }
 
 export type SweetRequestRow = {
+  /** Teilbestellung je Anbieter (0012) */
+  sub_order_id?: number | null;
   id: number;
   customer: string | null;
   baker_ref: number;
@@ -223,6 +227,8 @@ export type SweetRequestRow = {
 }
 
 export type ShopOrderRow = {
+  /** Teilbestellung je Anbieter (0012) */
+  sub_order_id?: number | null;
   id: number;
   customer: string | null;
   items: { shopId: number; mode: "rent" | "buy"; qty: number; price_cents: number }[];
@@ -369,6 +375,62 @@ export type Database = {
       /** Prüfwert aus der Ausweisprüfung, nur für den Server (0008) */
       notifications_sent: Table<{ key: string; created_at: string }>;
       /** Zähler für SMS-Codes (0010), nur gehashte Werte */
+      /** Belegte Zeiten (Reservierung beim Bezahlen oder Buchung), 0012 */
+      slot_claims: Table<{
+        id: number;
+        artist_id: number;
+        day: string;
+        slot: string;
+        hours: number;
+        starts_at: string;
+        ends_at: string;
+        guard: string;
+        kind: "hold" | "booking";
+        hold_key: string | null;
+        expires_at: string | null;
+        booking_id: number | null;
+        created_at: string;
+      }>;
+      calendar_feeds: Table<{
+        id: number;
+        artist_id: number;
+        url: string;
+        label: string | null;
+        last_synced_at: string | null;
+        last_error: string | null;
+        events_count: number;
+        created_at: string;
+      }>;
+      external_busy: Table<{
+        id: number;
+        feed_id: number;
+        artist_id: number;
+        starts_at: string;
+        ends_at: string;
+        all_day: boolean;
+      }>;
+      calendar_export: Table<{ artist_id: number; token: string; created_at: string }>;
+      orders: Table<{
+        id: number;
+        customer: string | null;
+        stripe_session_id: string | null;
+        event_day: string | null;
+        total_cents: number;
+        status: "pending" | "paid" | "cancelled";
+        created_at: string;
+      }>;
+      sub_orders: Table<{
+        id: number;
+        order_id: number;
+        provider_kind: "artist" | "baker" | "deco" | "showly";
+        provider_id: number | null;
+        provider_owner: string | null;
+        amount_cents: number;
+        fee_cents: number;
+        payout_cents: number;
+        status: "pending" | "paid" | "requested" | "confirmed" | "declined" | "cancelled" | "refunded" | "fulfilled";
+        created_at: string;
+      }>;
       sms_log: Table<{
         id: number;
         kind: "send" | "check";
@@ -417,6 +479,18 @@ export type Database = {
         Returns: undefined;
       };
       purge_sms_log: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
+      claim_slots: {
+        Args: { p_items: unknown; p_kind: "hold" | "booking"; p_hold_key?: string | null; p_minutes?: number };
+        Returns: { ok: boolean; index?: number; reason?: "busy" | "blocked" | "external" | "unknown" };
+      };
+      release_hold: {
+        Args: { p_hold_key: string };
+        Returns: number;
+      };
+      purge_slot_holds: {
         Args: Record<string, never>;
         Returns: undefined;
       };

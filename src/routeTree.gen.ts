@@ -38,6 +38,7 @@ import { Route as RechtlichesDocRouteImport } from './routes/rechtliches.$doc'
 import { Route as TortenIndexRouteImport } from './routes/torten.index'
 import { Route as TortenIdRouteImport } from './routes/torten.$id'
 import { Route as TortenAnbietenRouteImport } from './routes/torten.anbieten'
+import { Route as ApiKalenderTokenRouteImport } from './routes/api.kalender.$token'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -184,6 +185,11 @@ const TortenAnbietenRoute = TortenAnbietenRouteImport.update({
   path: '/torten/anbieten',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKalenderTokenRoute = ApiKalenderTokenRouteImport.update({
+  id: '/api/kalender/$token',
+  path: '/api/kalender/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -215,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten/': typeof TortenIndexRoute
+  '/api/kalender/$token': typeof ApiKalenderTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -246,6 +253,7 @@ export interface FileRoutesByTo {
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten': typeof TortenIndexRoute
+  '/api/kalender/$token': typeof ApiKalenderTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -278,6 +286,7 @@ export interface FileRoutesById {
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten/': typeof TortenIndexRoute
+  '/api/kalender/$token': typeof ApiKalenderTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -311,6 +320,7 @@ export interface FileRouteTypes {
     | '/torten/$id'
     | '/torten/anbieten'
     | '/torten/'
+    | '/api/kalender/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -342,6 +352,7 @@ export interface FileRouteTypes {
     | '/torten/$id'
     | '/torten/anbieten'
     | '/torten'
+    | '/api/kalender/$token'
   id:
     | '__root__'
     | '/'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/torten/$id'
     | '/torten/anbieten'
     | '/torten/'
+    | '/api/kalender/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -405,6 +417,7 @@ export interface RootRouteChildren {
   TortenIdRoute: typeof TortenIdRoute
   TortenAnbietenRoute: typeof TortenAnbietenRoute
   TortenIndexRoute: typeof TortenIndexRoute
+  ApiKalenderTokenRoute: typeof ApiKalenderTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -612,6 +625,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TortenAnbietenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/kalender/$token': {
+      id: '/api/kalender/$token'
+      path: '/api/kalender/$token'
+      fullPath: '/api/kalender/$token'
+      preLoaderRoute: typeof ApiKalenderTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -645,6 +665,7 @@ const rootRouteChildren: RootRouteChildren = {
   TortenIdRoute: TortenIdRoute,
   TortenAnbietenRoute: TortenAnbietenRoute,
   TortenIndexRoute: TortenIndexRoute,
+  ApiKalenderTokenRoute: ApiKalenderTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

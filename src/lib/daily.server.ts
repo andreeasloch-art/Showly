@@ -4,6 +4,8 @@
  *  2. Erinnerung an Anbieter, deren Anfrage seit über 24 Stunden wartet
  *  3. Fällige Auszahlungen an Anbieter überweisen (AGB § 21)
  *  4. Löschfristen aus der Datenschutzerklärung einhalten
+ *  5. Abgelaufene Termin-Reservierungen löschen, externe Kalender der
+ *     Künstler (Google, Apple, Outlook) abgleichen
  *
  * Aufruf: einmal täglich über /api/taeglich (mit CRON_SECRET, etwa aus
  * pg_cron oder einem Zeitplan-Dienst) oder per Knopf in der Verwaltung.
@@ -16,6 +18,7 @@ export interface DailyResult {
   lapsed: number;
   reminded: number;
   payouts: { paid: number; held: number; skipped: number; failed: number };
+  calendars: { ok: number; failed: number };
 }
 
 export async function runDaily(): Promise<DailyResult> {
@@ -44,11 +47,14 @@ export async function runDaily(): Promise<DailyResult> {
   const payouts = await runDuePayouts().catch(() => ({ paid: 0, held: 0, skipped: 0, failed: 0 }));
   await db.rpc("purge_old_data").then(undefined, () => null);
   await db.rpc("purge_sms_log").then(undefined, () => null);
+  await db.rpc("purge_slot_holds").then(undefined, () => null);
+  const { syncAllFeeds } = await import("./calsync.server");
+  const calendars = await syncAllFeeds().catch(() => ({ ok: 0, failed: 0 }));
   /* Merker für verschickte Mails nach 30 Tagen löschen */
   await db
     .from("notifications_sent")
     .delete()
     .lt("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
     .then(undefined, () => null);
-  return { lapsed, reminded, payouts };
+  return { lapsed, reminded, payouts, calendars };
 }

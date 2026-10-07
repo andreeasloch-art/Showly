@@ -6,6 +6,7 @@ import { useShowly } from "@/showly/store";
 import { CatIcon, Icon, bgOf, hasImg, shopBg } from "@/showly/ui";
 import { figName, figuresOf, realName } from "@/showly/figures";
 import { Calendar, useCalendar } from "@/components/showly/Calendar";
+import { CalendarSync } from "@/components/showly/CalendarSync";
 import { Footer } from "@/components/showly/Footer";
 import { ArtistCard } from "@/components/showly/ArtistCard";
 import { MyRequests } from "@/components/showly/Sweets";
@@ -835,6 +836,7 @@ function Dashboard() {
         {active === "calendar" && myProfile && (
           <div className="dash26-panel dash26-cal">
             <Calendar providerId={myProfile.id} owner {...cal} />
+            <CalendarSync />
           </div>
         )}
 

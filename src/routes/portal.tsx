@@ -28,6 +28,7 @@ import { useShowly } from "@/showly/store";
 import { ARTISTS } from "@/showly/data";
 import { Icon, SLOTS, todayISO } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
+import { CalendarSync } from "@/components/showly/CalendarSync";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { IdentityCheck } from "@/components/showly/IdentityCheck";
@@ -937,6 +938,7 @@ function Portal() {
               );
             })}
           </div>
+          <CalendarSync />
         </div>
       )}
 

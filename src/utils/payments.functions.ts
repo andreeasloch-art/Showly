@@ -5,7 +5,7 @@ import {
   getStripeErrorMessage,
 } from "@/lib/stripe.server";
 
-type CheckoutSessionResult = { clientSecret: string } | { error: string };
+type CheckoutSessionResult = { clientSecret: string; holdKey?: string; holdUntil?: string } | { error: string };
 
 export interface CheckoutLineInput {
   name: string;
@@ -192,42 +192,39 @@ export const createCartCheckout = createServerFn({ method: "POST" })
           unknown.join(", "),
       };
     }
-    /* Termine echter Künstler: noch frei, samt einer Stunde Fahrtzeit zu
-       anderen Shows (showly/schedule.ts)? Erst dann wird bezahlt. */
-    if (data.bookings.some((b) => b.artistId >= 100000)) {
-      try {
-        const { adminClient } = await import("@/lib/supabase.server");
-        const { scheduleEntries } = await import("@/lib/schedule.server");
-        const { firstClash } = await import("@/showly/schedule");
-        const days = data.bookings.map((b) => b.dateISO).sort();
-        const map = await scheduleEntries(
-          adminClient(),
-          data.bookings.map((b) => b.artistId),
-          days[0]!,
-          days[days.length - 1],
-        );
-        const real = data.bookings.filter((b) => b.artistId >= 100000);
-        const i = firstClash(
-          real.map((b) => ({ ...b, hours: Math.max(1, Math.round(b.hours) || 1) })),
-          (id, day) => map.get(`${id}|${day}`) ?? [],
-        );
-        if (i >= 0) {
-          const b = real[i]!;
-          return {
-            error:
-              lang === "en"
-                ? `The appointment on ${b.dateISO} at ${b.slot} is no longer available (one hour of travel time is kept free between shows). Please choose another time.`
-                : lang === "es"
-                  ? `La cita del ${b.dateISO} a las ${b.slot} ya no está libre (entre dos shows se deja una hora de desplazamiento). Elige otra hora.`
-                  : `Der Termin am ${b.dateISO} um ${b.slot} ist nicht mehr frei (zwischen zwei Shows bleibt eine Stunde Fahrtzeit). Bitte wähle eine andere Uhrzeit.`,
-          };
-        }
-      } catch {
-        /* Ohne Datenbank gibt es keine echten Termine zu prüfen */
-      }
-    }
     const total = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
     if (total < 50) return { error: "Amount must be at least 50 cents" };
+
+    /* Termine echter Künstler während des Bezahlens reservieren. Die
+       Datenbank sperrt dabei die Zeile des Künstlers und lässt keine
+       Überschneidung zu (inkl. einer Stunde Fahrtzeit, auch mit Terminen aus
+       seinem eigenen Kalender). Ist ein Termin belegt, gibt es keine
+       Zahlung. Die Reservierung läuft nach HOLD_MINUTES ab oder wird nach
+       der Zahlung zur Buchung (recordCart). */
+    let holdKey: string | null = null;
+    let holdUntil: string | null = null;
+    const real = data.bookings.filter((b) => b.artistId >= 100000);
+    if (real.length) {
+      try {
+        const { claimSlots, claimMessage, newHoldKey, HOLD_MINUTES } = await import("@/lib/slots.server");
+        const { syncStaleFeeds } = await import("@/lib/calsync.server");
+        /* Eigene Kalender der Künstler kurz vorher abgleichen */
+        await syncStaleFeeds(real.map((b) => b.artistId)).catch(() => 0);
+        holdKey = newHoldKey();
+        const r = await claimSlots(
+          real.map((b) => ({ artist_id: b.artistId, day: b.dateISO, slot: b.slot, hours: Math.max(1, Math.round(b.hours) || 1) })),
+          "hold",
+          holdKey,
+        );
+        if (!r.ok) {
+          const b = real[r.index] ?? real[0]!;
+          return { error: claimMessage(r.reason, lang, { day: b.dateISO, slot: b.slot }) };
+        }
+        holdUntil = new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
+      } catch {
+        holdKey = null; // ohne Datenbank (Vorschau) gibt es keine echten Termine
+      }
+    }
     try {
       const stripe = createStripeClient(data.environment);
       const session = await stripe.checkout.sessions.create({
@@ -245,9 +242,34 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         payment_intent_data: { description: "Showly Bestellung" },
         locale: lang,
         ...(data.customerEmail && { customer_email: data.customerEmail }),
+        /* Reservierung an die Zahlung hängen; Stripe lässt eine offene
+           Kasse frühestens nach 30 Minuten ablaufen */
+        ...(holdKey
+          ? { metadata: { hold_key: holdKey }, expires_at: Math.floor(Date.now() / 1000) + 30 * 60 }
+          : {}),
       });
-      return { clientSecret: session.client_secret ?? "" };
+      return { clientSecret: session.client_secret ?? "", ...(holdKey && holdUntil ? { holdKey, holdUntil } : {}) };
     } catch (error) {
+      if (holdKey) {
+        const { releaseHold } = await import("@/lib/slots.server");
+        await releaseHold(holdKey).catch(() => undefined);
+      }
       return { error: getStripeErrorMessage(error) };
     }
+  });
+
+/** Kasse abgebrochen: reservierte Termine sofort wieder freigeben */
+export const releaseCartHold = createServerFn({ method: "POST" })
+  .inputValidator((d: { holdKey: string }) => {
+    if (!/^[0-9a-f]{32}$/.test(String(d?.holdKey))) throw new Error("Ungültig");
+    return { holdKey: d.holdKey };
+  })
+  .handler(async ({ data }) => {
+    try {
+      const { releaseHold } = await import("@/lib/slots.server");
+      await releaseHold(data.holdKey);
+    } catch {
+      /* ohne Datenbank nichts zu tun */
+    }
+    return { ok: true as const };
   });

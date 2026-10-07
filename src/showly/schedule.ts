@@ -13,6 +13,8 @@
  * Im Kalender stehen zwei Arten von Einträgen (je Tag eine Liste Texte):
  *   "14:00"    vom Künstler gesperrt bzw. Startzeit einer Buchung
  *   "14:00+3"  Buchung um 14 Uhr für 3 Stunden
+ *   "14:30+1.5" Termin aus dem eigenen Kalender des Künstlers (Google,
+ *              Apple, Outlook), ebenfalls mit Fahrtzeit
  * Diese Datei ist rein und getestet (schedule.test.ts); Kalender, Warenkorb
  * und Server benutzen sie gleich. */
 
@@ -46,7 +48,8 @@ export function parseBusy(entries: readonly string[]): Busy[] {
       out.push({ slot: "00:00", hours: 24, kind: "block" });
       continue;
     }
-    const m = /^(\d{1,2}:\d{2})\+(\d{1,2})$/.exec(e);
+    /* Dauer auch mit Nachkommastellen (Termine aus fremden Kalendern) */
+    const m = /^(\d{1,2}:\d{2})\+(\d{1,2}(?:\.\d+)?)$/.exec(e);
     if (m) out.push({ slot: m[1]!, hours: Number(m[2]), kind: "booking" });
     else if (!Number.isNaN(hourOf(e))) out.push({ slot: e, hours: SLOT_STEP_H, kind: "block" });
   }

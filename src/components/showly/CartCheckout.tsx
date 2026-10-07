@@ -15,7 +15,7 @@ import { SHOP_ITEMS } from "@/showly/data";
 import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
-import { MAX_HOURS, bookingPrice, cartTotals, findArtist, minHoursOf, shopUnit } from "@/showly/pricing";
+import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopUnit, sweetPrice } from "@/showly/pricing";
 import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
@@ -66,6 +66,10 @@ const TEXT = {
     fixed: "Festpreis",
     sumTotal: "Jetzt zu zahlen",
     sumLater: "Torten-Anfragen (Preis folgt)",
+    splitH: "Aufgeteilt auf Anbieter",
+    splitP: "Du zahlst einmal; jeder Anbieter bekommt seine eigene Teilbestellung und kümmert sich um seinen Teil.",
+    splitOwn: "Showly-Shop",
+    splitReq: "Anfrage",
     secure: "Sichere Zahlung über Stripe. Showly sieht keine Kartendaten.",
     cancel: "Buchungen sind bis 24 Stunden vorher kostenlos stornierbar.",
     reqNote: "Einige Künstler bestätigen erst innerhalb von 48 Stunden. Für diese Buchungen wird erst bei Zusage abgebucht.",
@@ -126,6 +130,10 @@ const TEXT = {
     fixed: "Fixed price",
     sumTotal: "To pay now",
     sumLater: "Cake requests (price follows)",
+    splitH: "Split by provider",
+    splitP: "You pay once; each provider gets its own sub-order and takes care of its part.",
+    splitOwn: "Showly shop",
+    splitReq: "request",
     secure: "Secure payment via Stripe. Showly never sees card details.",
     cancel: "Bookings can be cancelled free of charge up to 24 hours before.",
     reqNote: "Some artists confirm within 48 hours. For those bookings, payment is only taken once they accept.",
@@ -186,6 +194,10 @@ const TEXT = {
     fixed: "Precio fijo",
     sumTotal: "A pagar ahora",
     sumLater: "Solicitudes de tartas (precio a confirmar)",
+    splitH: "Dividido por proveedor",
+    splitP: "Pagas una vez; cada proveedor recibe su propio pedido parcial y se ocupa de su parte.",
+    splitOwn: "Tienda Showly",
+    splitReq: "solicitud",
     secure: "Pago seguro con Stripe. Showly no ve los datos de la tarjeta.",
     cancel: "Las reservas se pueden cancelar gratis hasta 24 horas antes.",
     reqNote: "Algunos artistas confirman en 48 horas. En esas reservas solo se cobra cuando aceptan.",
@@ -267,6 +279,30 @@ export function CartCheckout() {
   }, [step]);
 
   const totals = cartTotals(cart, cartBookings, cartRequests);
+  /* Teilbestellungen je Anbieter, wie sie der Server anlegt (showly/subOrders.ts) */
+  const providers = (() => {
+    const m = new Map<string, { key: string; name: string; amount: number }>();
+    const add = (key: string, name: string, amount: number) => {
+      const cur = m.get(key) ?? { key, name, amount: 0 };
+      cur.amount += amount;
+      m.set(key, cur);
+    };
+    for (const b of cartBookings) {
+      const a = findArtist(b.artistId);
+      if (a) add(`artist:${a.id}`, String(L(a.name)), bookingPrice(a, b.hours, b.pkg).total);
+    }
+    for (const r of cartRequests) {
+      const bk = bakerOf(r.bakerId);
+      add(`baker:${r.bakerId}`, bk ? String(L(bk.name)) : "", r.direct ? (sweetPrice(r.sweetId, r.qty) ?? r.estimate) : 0);
+    }
+    for (const l of cart) {
+      const it = findItem(l.shopId);
+      if (!it) continue;
+      const vendor = it.vendor && it.section === "deko" ? it.vendor : null;
+      add(vendor ? `deco:${vendor}` : "showly", vendor ?? X.splitOwn, shopUnit(it, l.mode) * l.qty);
+    }
+    return [...m.values()];
+  })();
   /* Nur echte Anfragen haben einen Richtpreis; Festpreis-Pakete sind in totals */
   const askReqs = cartRequests.filter((r) => !r.direct);
   const reqSum = askReqs.reduce((s, r) => s + r.estimate, 0);
@@ -691,6 +727,21 @@ export function CartCheckout() {
                   </li>
                 )}
               </ul>
+              {/* Ein Warenkorb, mehrere Anbieter: so wird die Bestellung aufgeteilt (sub_orders) */}
+              {providers.length > 1 && (
+                <div className="co-split">
+                  <strong>{X.splitH}</strong>
+                  <ul>
+                    {providers.map((p) => (
+                      <li key={p.key}>
+                        <span>{p.name}</span>
+                        <span>{p.amount > 0 ? fmt(p.amount) : X.splitReq}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p>{X.splitP}</p>
+                </div>
+              )}
               <p className="co-side-note">
                 <Icon name="shield" /> {X.secure}
               </p>

@@ -166,9 +166,10 @@ export type RecordResult =
 
 export const recordCart = createServerFn({ method: "POST" })
   .inputValidator(
-    (data: { snapshot: Snapshot; sessionId?: string; environment?: StripeEnv }) => {
+    (data: { snapshot: Snapshot; sessionId?: string; environment?: StripeEnv; holdKey?: string }) => {
       if (data.sessionId !== undefined && !/^[a-zA-Z0-9_-]{8,200}$/.test(data.sessionId))
         throw new Error("Ungültige Sitzung");
+      if (data.holdKey !== undefined && !/^[0-9a-f]{32}$/.test(data.holdKey)) throw new Error("Ungültige Reservierung");
       if (data.environment !== undefined && data.environment !== "sandbox" && data.environment !== "live")
         throw new Error("Ungültige Umgebung");
       return { ...data, snapshot: cleanSnapshot(data.snapshot) };
@@ -194,24 +195,30 @@ export const recordCart = createServerFn({ method: "POST" })
     /* Bezahlt? Nur Stripe selbst gibt darüber Auskunft. Dieselbe Zahlung
        wird nur einmal eingetragen. */
     let paid = false;
+    let holdKey: string | null = data.holdKey ?? null;
     if (data.sessionId) {
       const { data: seen } = await admin
         .from("bookings")
         .select("id")
         .like("stripe_session_id", `${data.sessionId}:%`)
         .limit(1);
-      const { data: seenOrder } = await admin
+      /* Bestellung (orders) ist je Zahlung eindeutig; alte Shop-Zeilen ohne Bestellung zur Sicherheit auch */
+      const { data: seenOrder } = await admin.from("orders").select("id").eq("stripe_session_id", data.sessionId).limit(1);
+      const { data: seenShop } = await admin
         .from("shop_orders")
         .select("id")
-        .eq("stripe_session_id", data.sessionId)
+        .like("stripe_session_id", `${data.sessionId}%`)
         .limit(1);
-      if ((seen && seen.length) || (seenOrder && seenOrder.length)) return { ok: true, bookingIds: [], sweetIds: [], orderId: null };
+      if (seen?.length || seenOrder?.length || seenShop?.length) return { ok: true, bookingIds: [], sweetIds: [], orderId: null };
       let amount = -1;
       try {
         const stripe = createStripeClient(data.environment ?? "sandbox");
         const s = await stripe.checkout.sessions.retrieve(data.sessionId);
         paid = s.payment_status === "paid";
         amount = s.amount_total ?? -1;
+        /* Reservierung aus der Kasse (createCartCheckout) */
+        const hk = s.metadata?.["hold_key"];
+        if (typeof hk === "string" && /^[0-9a-f]{32}$/.test(hk)) holdKey = hk;
       } catch {
         return { error: "Zahlung konnte nicht geprüft werden" };
       }
@@ -232,26 +239,120 @@ export const recordCart = createServerFn({ method: "POST" })
       if (unknown.length || expected !== amount) return { error: "Betrag passt nicht zum Warenkorb" };
     }
 
+    /* ------------------------------------------------------------------
+       Ein Warenkorb für ein Event, aber verschiedene Anbieter: Bestellung
+       (orders) mit einer Teilbestellung je Anbieter (sub_orders). Jede
+       Buchung, Torte und Shop-Position hängt an ihrer Teilbestellung.
+       ------------------------------------------------------------------ */
+    const { splitIntoSubOrders } = await import("@/showly/subOrders");
+    const { FEE_RATE } = await import("@/showly/pricing");
+
+    const bk = (await Promise.all(snap.bookings.map((b) => artistTerms(admin, b.artistId, b.hours, b.pkg))))
+      .map((t, i) => ({ b: snap.bookings[i]!, t, i }))
+      .filter((x): x is { b: Snapshot["bookings"][number]; t: NonNullable<typeof x.t>; i: number } => !!x.t);
+    const artistIds = [...new Set(bk.map((x) => x.t.artist_id).filter((x): x is number => !!x))];
+    const artistOwner = new Map<number, string>();
+    if (artistIds.length) {
+      const { data: rows } = await admin.from("artists").select("id, owner").in("id", artistIds);
+      for (const r of rows || []) artistOwner.set(r.id, r.owner);
+    }
+
+    /* Besitzer echter Torten-Anbieter, damit sie die Anfrage sehen */
+    const bakerRefs = [...new Set(snap.requests.map((r) => r.bakerId).filter((x) => x >= 100000))];
+    const bakerOwner = new Map<number, string>();
+    if (bakerRefs.length) {
+      const { data: provs } = await admin.from("providers").select("id, owner").in("id", bakerRefs).eq("kind", "baker");
+      for (const p of provs || []) bakerOwner.set(p.id, p.owner);
+    }
+    const sw = snap.requests.map((r) => {
+      const fixed = r.direct ? sweetPrice(r.sweetId, r.qty, cat.extra) : null;
+      /* Direkt buchen geht nur mit Katalogpreis und nur bezahlt */
+      return { r, fixed, direct: fixed !== null && paid };
+    });
+
+    const sh = snap.shop
+      .map((l) => {
+        const it = findItem(l.shopId, cat.extra);
+        if (!it || it.own) return null;
+        return {
+          ...l,
+          price_cents: Math.round(shopUnit(it, l.mode) * l.qty * 100),
+          providerId: cat.offerProvider.get(l.shopId) ?? null,
+          owner: cat.offerOwner.get(l.shopId) ?? null,
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => !!x);
+
+    const drafts = splitIntoSubOrders({
+      paid,
+      feeRate: FEE_RATE,
+      bookings: bk.map((x) => ({
+        artistId: x.t.artist_id ?? x.b.artistId,
+        owner: x.t.artist_id ? (artistOwner.get(x.t.artist_id) ?? null) : null,
+        amountCents: x.t.amount_cents,
+        feeCents: x.t.fee_cents,
+        payoutCents: x.t.payout_cents,
+        request: !x.t.instant,
+      })),
+      sweets: sw.map((x) => ({
+        bakerId: x.r.bakerId,
+        owner: bakerOwner.get(x.r.bakerId) ?? null,
+        priceCents: Math.round((x.fixed ?? 0) * 100),
+        direct: x.direct,
+      })),
+      shop: sh.map((l) => ({ providerId: l.providerId, owner: l.owner, amountCents: l.price_cents })),
+    });
+
+    /* Bestellung und Teilbestellungen anlegen */
+    let orderId: number | null = null;
+    const subId = new Map<string, number>();
+    const partSub = new Map<string, number>();
+    if (drafts.length) {
+      const days = [...bk.map((x) => x.b.dateISO), ...sw.map((x) => x.r.dateISO)].sort();
+      const { data: order } = await admin
+        .from("orders")
+        .insert({
+          customer: uid,
+          stripe_session_id: data.sessionId ?? null,
+          event_day: days[0] ?? null,
+          total_cents: drafts.reduce((n, d) => n + d.amountCents, 0),
+          status: paid ? "paid" : "pending",
+        })
+        .select("id")
+        .single();
+      orderId = order?.id ?? null;
+      /* Gleichzeitig zweimal dieselbe Zahlung (z. B. Seite neu geladen):
+         die Bestellnummer je Zahlung ist eindeutig, der zweite Aufruf endet hier */
+      if (!orderId && data.sessionId) return { ok: true, bookingIds: [], sweetIds: [], orderId: null };
+      if (orderId) {
+        const { data: subs } = await admin
+          .from("sub_orders")
+          .insert(
+            drafts.map((d) => ({
+              order_id: orderId!,
+              provider_kind: d.kind,
+              provider_id: d.providerId,
+              provider_owner: d.owner,
+              amount_cents: d.amountCents,
+              fee_cents: d.feeCents,
+              payout_cents: d.payoutCents,
+              status: d.status,
+            })),
+          )
+          .select("id, provider_kind, provider_id");
+        for (const r of subs || []) subId.set(`${r.provider_kind}:${r.provider_id ?? "showly"}`, r.id);
+        for (const d of drafts) {
+          const id = subId.get(d.key);
+          if (id) for (const p of d.parts) partSub.set(`${p.type}:${p.index}`, id);
+        }
+      }
+    }
+
+    /* ---- Künstler ---- */
     const bookingIds: number[] = [];
-    /* Kalender der echten Künstler: Sperren und Buchungen samt Dauer */
-    const { scheduleEntries } = await import("@/lib/schedule.server");
-    const { bookingEntry, clashes, parseBusy } = await import("@/showly/schedule");
-    const sched = await scheduleEntries(
-      admin,
-      snap.bookings.map((b) => b.artistId),
-      snap.bookings.map((b) => b.dateISO).sort()[0] ?? new Date().toISOString().slice(0, 10),
-    );
-    for (const [i, b] of snap.bookings.entries()) {
-      const terms = await artistTerms(admin, b.artistId, b.hours, b.pkg);
-      if (!terms) continue;
-      /* Passt die Show samt einer Stunde Fahrtzeit nicht mehr (in der
-         Zwischenzeit hat jemand anderes gebucht), wird sie nicht einfach
-         bestätigt: Der Künstler entscheidet; lehnt er ab, geht das Geld
-         automatisch zurück. */
-      const key = `${terms.artist_id}|${b.dateISO}`;
-      const tight = !!terms.artist_id && clashes(b.slot, terms.hours, parseBusy(sched.get(key) ?? []));
-      const status = !terms.instant || tight ? "requested" : paid ? "confirmed" : "pending";
-      if (terms.artist_id) sched.set(key, [...(sched.get(key) ?? []), bookingEntry(b.slot, terms.hours)]);
+    const { claimSlots } = await import("@/lib/slots.server");
+    for (const [j, { b, t: terms, i }] of bk.entries()) {
+      const status = !terms.instant ? "requested" : paid ? "confirmed" : "pending";
       const row = {
         customer: uid,
         artist_id: terms.artist_id,
@@ -273,9 +374,34 @@ export const recordCart = createServerFn({ method: "POST" })
         customer_name: snap.contact.name || null,
         requested_at: status === "requested" ? new Date().toISOString() : null,
         stripe_session_id: data.sessionId ? `${data.sessionId}:${i}` : null,
+        sub_order_id: partSub.get(`booking:${j}`) ?? null,
       } as Partial<BookingRow>;
       const { data: ins, error } = await admin.from("bookings").insert(row).select("id").single();
       if (error || !ins) continue;
+
+      /* Termin fest belegen: die Reservierung aus der Kasse wird zur Buchung.
+         Ist sie abgelaufen und hat inzwischen jemand anderes gebucht, lehnt
+         die Datenbank ab (Zeilensperre + Ausschlussregel). Dann wird die
+         Buchung sofort abgelehnt und das Geld zurückgezahlt, statt den
+         Künstler doppelt zu buchen. */
+      if (terms.artist_id) {
+        const claim = await claimSlots(
+          [{ artist_id: terms.artist_id, day: b.dateISO, slot: b.slot, hours: terms.hours, booking_id: ins.id }],
+          "booking",
+          holdKey,
+        );
+        if (!claim.ok) {
+          await admin.from("bookings").update({ status: "declined" }).eq("id", ins.id);
+          if (paid) {
+            const { refundBooking } = await import("@/lib/money.server");
+            await refundBooking(ins.id, {
+              reason: "der Termin war beim Abschluss der Zahlung schon vergeben",
+              ...(data.environment ? { env: data.environment } : {}),
+            }).catch(() => null);
+          }
+          continue;
+        }
+      }
       bookingIds.push(ins.id);
       {
         const { notifyNewBooking } = await import("@/lib/notify.server");
@@ -293,23 +419,19 @@ export const recordCart = createServerFn({ method: "POST" })
           ...plannedPayout({ day: b.dateISO, amount_cents: terms.amount_cents, payout_cents: terms.payout_cents }, count || 0),
         });
       }
-      /* Termin im Kalender des Künstlers belegen */
+      /* Startzeit im Kalender des Künstlers anzeigen */
       if (terms.artist_id)
         await admin.from("availability").upsert({ artist_id: terms.artist_id, day: b.dateISO, slot: b.slot, blocked: true });
     }
-
-    /* Besitzer echter Torten-Anbieter, damit sie die Anfrage sehen */
-    const bakerRefs = [...new Set(snap.requests.map((r) => r.bakerId).filter((x) => x >= 100000))];
-    const bakerOwner = new Map<number, string>();
-    if (bakerRefs.length) {
-      const { data: provs } = await admin.from("providers").select("id, owner").in("id", bakerRefs).eq("kind", "baker");
-      for (const p of provs || []) bakerOwner.set(p.id, p.owner);
+    /* Nicht mehr gebrauchte Reservierungen (z. B. Anfrage-Künstler) freigeben */
+    if (holdKey) {
+      const { releaseHold } = await import("@/lib/slots.server");
+      await releaseHold(holdKey).catch(() => undefined);
     }
+
+    /* ---- Torten & Süßes ---- */
     const sweetIds: number[] = [];
-    for (const r of snap.requests) {
-      const fixed = r.direct ? sweetPrice(r.sweetId, r.qty, cat.extra) : null;
-      /* Direkt buchen geht nur mit Katalogpreis und nur bezahlt */
-      const direct = fixed !== null && paid;
+    for (const [j, { r, fixed, direct }] of sw.entries()) {
       const { data: ins } = await admin
         .from("sweet_requests")
         .insert({
@@ -326,6 +448,7 @@ export const recordCart = createServerFn({ method: "POST" })
           direct,
           status: direct ? "booked" : "sent",
           stripe_session_id: direct ? data.sessionId ?? null : null,
+          sub_order_id: partSub.get(`sweet:${j}`) ?? null,
         })
         .select("id")
         .single();
@@ -336,32 +459,32 @@ export const recordCart = createServerFn({ method: "POST" })
       }
     }
 
-    let orderId: number | null = null;
-    const items = snap.shop
-      .map((l) => {
-        const it = findItem(l.shopId, cat.extra);
-        return it && !it.own ? { ...l, price_cents: Math.round(shopUnit(it, l.mode) * l.qty * 100) } : null;
-      })
-      .filter((x): x is NonNullable<typeof x> => !!x);
-    const providerOwners = [...new Set(items.map((x) => cat.offerOwner.get(x.shopId)).filter((x): x is string => !!x))];
-    if (items.length) {
+    /* ---- Shop: eine Lieferung je Anbieter (Deko-Anbieter bzw. Showly) ---- */
+    const bySub = new Map<number | string, typeof sh>();
+    sh.forEach((l, j) => {
+      const k = partSub.get(`shop:${j}`) ?? `${l.providerId ?? "showly"}`;
+      bySub.set(k, [...(bySub.get(k) ?? []), l]);
+    });
+    for (const [k, lines] of bySub) {
+      const owners = [...new Set(lines.map((l) => l.owner).filter((x): x is string => !!x))];
       const { data: ins } = await admin
         .from("shop_orders")
         .insert({
           customer: uid,
-          items,
-          total_cents: items.reduce((s, x) => s + x.price_cents, 0),
+          items: lines.map(({ shopId, mode, qty, price_cents }) => ({ shopId, mode, qty, price_cents })),
+          total_cents: lines.reduce((n, x) => n + x.price_cents, 0),
           status: paid ? "paid" : "pending",
           ship_to: snap.contact.address ?? null,
-          stripe_session_id: data.sessionId ?? null,
-          provider_owners: providerOwners,
+          /* je Anbieter eine Zeile; die Zahlung ist dieselbe */
+          stripe_session_id: data.sessionId ? `${data.sessionId}:${k}` : null,
+          provider_owners: owners,
+          sub_order_id: typeof k === "number" ? k : null,
         })
         .select("id")
         .single();
-      orderId = ins?.id ?? null;
       if (ins && paid) {
         const { notify } = await import("@/lib/notify.server");
-        for (const owner of providerOwners)
+        for (const owner of owners)
           await notify(owner, "Neue Bestellung im Showly-Shop", [
             "Es gibt eine neue, bezahlte Bestellung für deine Artikel. Bitte verschick sie zeitnah; alle Angaben stehen in der App.",
           ]).catch(() => false);

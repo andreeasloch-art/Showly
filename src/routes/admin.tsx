@@ -169,7 +169,7 @@ function AdminPage() {
                   if (!r || "error" in r) return toast(r ? r.error : "Hat nicht geklappt");
                   const x = r.result;
                   toast(
-                    `Erledigt: ${x.lapsed} verfallen, ${x.reminded} erinnert, ${x.payouts.paid + x.payouts.held} ausgezahlt, ${x.payouts.failed} fehlgeschlagen`,
+                    `Erledigt: ${x.lapsed} verfallen, ${x.reminded} erinnert, ${x.payouts.paid + x.payouts.held} ausgezahlt, ${x.payouts.failed} fehlgeschlagen, ${x.calendars?.ok ?? 0} Kalender abgeglichen`,
                   );
                 }}
               >

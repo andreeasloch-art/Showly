@@ -257,22 +257,24 @@ Einmal am Tag muss der Server Folgendes erledigen
 
 Dafür:
 
-1. In Lovable unter Secrets `CRON_SECRET` anlegen, einen langen Zufallswert
-   (mindestens 16 Zeichen).
-2. Einen Zeitplan einrichten, der täglich, etwa um 6 Uhr, Folgendes aufruft:
-   `POST https://<deine-domain>/api/taeglich` mit dem Kopf
-   `Authorization: Bearer <CRON_SECRET>`. Geeignet sind pg_cron mit pg_net
-   in Supabase oder ein kostenloser Dienst wie cron-job.org.
+1. Der Zeitplan läuft schon in der Datenbank (Migration 0017, pg_cron mit
+   pg_net): alle 5 Minuten der Check-in-Wächter (`/api/checkin`), täglich
+   um 4:00 UTC (6 Uhr Sommerzeit) die täglichen Aufgaben (`/api/taeglich`).
+   Den Schlüssel erzeugt die Datenbank selbst; ein Secret ist nicht nötig.
+2. Solange die App nicht veröffentlicht ist, tun die Aufträge nichts. Nach
+   dem Veröffentlichen einmal in der Datenbank die Adresse eintragen:
+   `update private.cron_settings set base_url = 'https://<deine-domain>';`
 3. Ohne Zeitplan: In der Verwaltung unter Übersicht → „Tägliche Aufgaben“ auf
-   „Jetzt ausführen“ tippen.
-4. Check-in-Wächter: einen zweiten Zeitplan alle 5 Minuten auf
-   `POST https://<deine-domain>/api/checkin` (gleicher Kopf). Hat ein
-   Künstler 15 Minuten nach Beginn nicht eingecheckt, bekommen er und der
-   Kunde eine Nachricht; der Kunde kann dann „Künstler ist nicht erschienen“
-   melden. Ohne diesen Zeitplan läuft der Wächter nur einmal am Tag mit.
-5. Optional `SUPPORT_HOTLINE` als Secret setzen (Telefonnummer der
-   Notfall-Hotline am Wochenende). Sie steht dann in der Mail an Kunden,
-   deren Künstler weniger als 48 Stunden vorher ausfällt.
+   „Jetzt ausführen“ tippen. Ein externer Dienst (etwa cron-job.org) geht
+   auch: dann `CRON_SECRET` als Secret setzen und als
+   `Authorization: Bearer <CRON_SECRET>` mitschicken.
+4. Check-in-Wächter: Hat ein Künstler 15 Minuten nach Beginn nicht
+   eingecheckt, bekommen er und der Kunde eine Nachricht; der Kunde kann dann
+   „Künstler ist nicht erschienen“ melden.
+5. Eine Telefon-Hotline gibt es nicht. Fällt ein Künstler weniger als
+   48 Stunden vorher aus, legt der Server ein Ticket „Ersatzgarantie
+   DRINGEND“ an (Verwaltung → Hilfe-Anfragen); der Kundensupport
+   beantwortet es zuerst per E-Mail.
 
 Auszahlungen gehen per Stripe-Transfer auf das Connect-Konto der
 anbietenden Person, immer 7 Tage nach dem Termin; schneller auf Wunsch der

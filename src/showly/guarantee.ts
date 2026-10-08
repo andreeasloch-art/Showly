@@ -7,7 +7,8 @@
  *    gleiche Kategorie, gleiche Gegend, Springer zuerst). Kostet der Ersatz
  *    mehr, übernimmt Showly den Aufpreis bis 100 €.
  *  - Als Entschuldigung ein Gutschein über 15 % (policies.ts).
- *  - Unter 48 Stunden: persönlicher Anruf, Notfall-Hotline am Wochenende.
+ *  - Unter 48 Stunden: der Kundensupport bearbeitet den Fall zuerst und
+ *    meldet sich sofort per E-Mail (keine Telefon-Hotline).
  *
  * Finanziert aus den Vertragsstrafen der Künstler (AGB § 9 Abs. 2) und einem
  * kleinen Teil der Provision (GUARANTEE_FEE_SHARE). Die Verwaltung sieht den
@@ -31,7 +32,7 @@ export const GUARANTEE = {
       "Sagt der Künstler ab oder erscheint nicht, bekommst du sofort den vollen Betrag zurück.",
       "Du bekommst sofort drei passende Ersatz-Künstler für denselben Termin vorgeschlagen. Kostet der Ersatz mehr, übernehmen wir den Aufpreis bis 100 €.",
       "Als Entschuldigung bekommst du einen Gutschein über 15 % des Buchungsbetrags.",
-      "Unter 48 Stunden vor dem Event rufen wir dich persönlich an; am Wochenende gibt es eine Notfall-Hotline.",
+      "Unter 48 Stunden vor dem Event bearbeitet unser Kundensupport deinen Fall zuerst und meldet sich sofort per E-Mail.",
     ],
     why: "Bei Kleinanzeigen stehst du allein da, wenn jemand nicht kommt. Bei Showly haften die Künstler mit Vertragsstrafen, und daraus zahlen wir deinen Ersatz.",
     more: "So funktioniert die Garantie",
@@ -44,7 +45,7 @@ export const GUARANTEE = {
       "If the artist cancels or doesn't show, you get the full amount back immediately.",
       "You immediately get three suitable replacement artists for the same date. If the replacement costs more, we cover the difference up to €100.",
       "As an apology you get a voucher worth 15% of the booking.",
-      "Less than 48 hours before the event we call you personally; there is an emergency hotline at weekends.",
+      "Less than 48 hours before the event our customer support handles your case first and gets back to you by email right away.",
     ],
     why: "On classified ad sites you're on your own if someone doesn't show. At Showly, artists are liable through contractual penalties – and that's what pays for your replacement.",
     more: "How the guarantee works",
@@ -57,7 +58,7 @@ export const GUARANTEE = {
       "Si el artista cancela o no aparece, recibes el importe completo de inmediato.",
       "Recibes al instante tres artistas sustitutos para la misma fecha. Si el sustituto cuesta más, cubrimos la diferencia hasta 100 €.",
       "Como disculpa recibes un vale del 15 % de la reserva.",
-      "A menos de 48 horas del evento te llamamos personalmente; los fines de semana hay una línea de emergencia.",
+      "A menos de 48 horas del evento nuestro servicio de atención trata tu caso con prioridad y te escribe enseguida por correo.",
     ],
     why: "En los portales de anuncios estás solo si alguien no aparece. En Showly los artistas responden con penalizaciones, y con eso pagamos tu sustituto.",
     more: "Cómo funciona la garantía",

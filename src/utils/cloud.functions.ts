@@ -162,7 +162,7 @@ export const bookingAction = createServerFn({ method: "POST" })
           .update({ net_cents: Math.round(b.payout_cents * d.payoutShare), reserve_cents: 0 })
           .eq("id", po.id);
     }
-    /* Ersatzgarantie: drei Ersatz-Vorschläge, Ticket, unter 48 h Anruf (lib/fair.server.ts) */
+    /* Ersatzgarantie: drei Ersatz-Vorschläge, Ticket, unter 48 h vorrangig per E-Mail (lib/fair.server.ts) */
     if (data.action.kind === "cancelArtist" || data.action.kind === "reportNoShow") {
       const { guaranteeCase } = await import("@/lib/fair.server");
       await guaranteeCase(admin, b, data.action.kind).catch(() => null);

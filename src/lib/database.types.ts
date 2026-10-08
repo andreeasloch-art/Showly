@@ -595,6 +595,11 @@ export type Database = {
       >;
     };
     Functions: {
+      /** Schlüssel des Datenbank-Zeitplans prüfen (0017) */
+      cron_token_ok: {
+        Args: { p_token: string };
+        Returns: boolean;
+      };
       hit_rate_limit: {
         Args: { p_bucket: string; p_max: number; p_seconds: number };
         Returns: boolean;

@@ -72,7 +72,6 @@ export async function guaranteeCase(db: Db, b: BookingRow, why: "cancelArtist" |
   const reps = await findReplacements(db, b).catch(() => []);
   await db.from("bookings").update({ replacements: reps }).eq("id", b.id);
   const urgent = berlinStart(b.day, b.slot) - Date.now() < URGENT_HOURS * 3600000;
-  const hotline = process.env["SUPPORT_HOTLINE"] || "";
   const when = `${dateDe(b.day)}${b.slot ? `, ${b.slot} Uhr` : ""}`;
   const { SITE } = await import("@/showly/seo");
   await db.from("support_tickets").insert({
@@ -81,7 +80,7 @@ export async function guaranteeCase(db: Db, b: BookingRow, why: "cancelArtist" |
     name: urgent ? "Ersatzgarantie DRINGEND" : "Ersatzgarantie",
     topic: "booking",
     body:
-      `${urgent ? "DRINGEND (unter 48 Stunden): Kunden bitte persönlich anrufen. " : ""}` +
+      `${urgent ? "DRINGEND (unter 48 Stunden): bitte zuerst bearbeiten und dem Kunden sofort per E-Mail antworten. " : ""}` +
       `Buchung ${b.id} (${why === "cancelArtist" ? "Absage durch Künstler" : "Nichterscheinen gemeldet"}), Termin ${when}, Ort ${b.address ?? "–"}, Betrag ${euro(b.amount_cents)}. ` +
       `Vorschläge: ${reps.map((r) => `${r.name} (#${r.id}, ${euro(r.price_cents)}${r.standby ? ", Springer" : ""})`).join("; ") || "keine freien gefunden, bitte Springer-Liste anfragen"}. ` +
       `Aufpreis bis ${UPGRADE_CAP_EUR} € übernehmen, Gutschein ${euro(apologyVoucherCents(b.amount_cents))} ist ausgestellt.`,
@@ -95,7 +94,7 @@ export async function guaranteeCase(db: Db, b: BookingRow, why: "cancelArtist" |
         ? `Diese Künstler sind am ${when} frei: ${reps.map((r) => `${r.name} (${euro(r.price_cents)}) ${SITE}/kuenstler/${r.id}`).join(" · ")}`
         : "Unser Team sucht gerade freien Ersatz für deinen Termin und meldet sich.",
       `Kostet der Ersatz mehr, übernehmen wir den Aufpreis bis ${UPGRADE_CAP_EUR} €. Als Entschuldigung bekommst du einen Gutschein über ${euro(apologyVoucherCents(b.amount_cents))}.`,
-      ...(urgent ? [`Wir rufen dich in Kürze an.${hotline ? ` Notfall-Hotline (auch am Wochenende): ${hotline}` : ""}`] : []),
+      ...(urgent ? ["Weil dein Event so bald ist, bearbeitet unser Kundensupport deinen Fall zuerst und meldet sich gleich per E-Mail. Antworte einfach auf diese Mail oder schreib über Hilfe in der App."] : []),
     ],
     { key: `guarantee:${b.id}`, path: "/dashboard" },
   ).catch(() => false);

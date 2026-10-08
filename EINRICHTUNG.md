@@ -212,6 +212,16 @@ nichts verschickt, der Rest läuft weiter.
 - `SHOWLY_MAIL_FROM`: Absender, z. B. `Showly <hallo@showly.eu>` (die Domain showly.eu vorher bei Resend bestätigen)
   (die Domain muss bei Resend bestätigt sein)
 
+**Damit nichts im Spam landet** (bei Resend → Domains → showly.eu die angezeigten DNS-Einträge beim Domain-Anbieter eintragen):
+- **SPF:** TXT-Eintrag für die Absender-Subdomain (z. B. `send.showly.eu`) mit dem Wert, den Resend anzeigt (`v=spf1 include:amazonses.com ~all`).
+- **DKIM:** den TXT-Eintrag `resend._domainkey` genau wie angezeigt.
+- **DMARC:** TXT-Eintrag `_dmarc.showly.eu` mit `v=DMARC1; p=quarantine; rua=mailto:dmarc@showly.eu` (anfangs `p=none` zum Beobachten).
+Erst wenn Resend alle drei als „verified“ zeigt, `SHOWLY_MAIL_FROM` auf die eigene Domain umstellen.
+
+**Automatische Mails:** Anbieter bei neuer Anfrage (mit 48-Stunden-Frist) und Erinnerung nach 24 Stunden; Kunde nach der Zahlung (Bestätigung mit Zahlungsbeleg), 2 Tage vor dem Event (auch an den Künstler), am Tag danach (Bewertung) und am letzten Miettag (Rückgabe). Die zeitgesteuerten laufen im täglichen Lauf (§ 13). Ein Konto nur mit Handynummer bekommt keine Mails, sieht aber alles in der App.
+
+**Push-Nachrichten in der App** kommen mit der App-Store-Version (Capacitor + Firebase Cloud Messaging / Apple Push). Dafür braucht es ein Firebase-Projekt und ein Apple-Entwicklerkonto; SMS/WhatsApp-Erinnerungen bewusst nicht, weil sie pro Nachricht kosten und eine eigene Einwilligung brauchen.
+
 ## 11. Datensicherung
 
 - **Automatisch:** Im Supabase-Dashboard unter **Database → Backups** die

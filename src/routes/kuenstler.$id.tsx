@@ -457,7 +457,7 @@ function Detail() {
             </div>
           )}
 
-          <section className="detail-block">
+          <section className="detail-block" id="bewertungen">
             <h2 className="detail-section-title">{t("detail.reviews", { n: a.reviews })}</h2>
             {a.reviews > 0 ? (
             <div className="rev-summary">

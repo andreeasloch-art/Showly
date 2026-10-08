@@ -43,7 +43,90 @@ async function roleIn(ref: ThreadRef, uid: string, isAdmin: boolean): Promise<Ro
 const col = (ref: ThreadRef) => ("bookingId" in ref ? "booking_id" : "sweet_request_id");
 const idOf = (ref: ThreadRef) => ("bookingId" in ref ? ref.bookingId : ref.sweetId);
 
-export type ChatMessage = Pick<MessageRow, "id" | "sender_role" | "body" | "created_at" | "read_at"> & { mine: boolean };
+export type ChatAttachment = { name: string; mime: string; bytes: number; url: string | null };
+export type ChatMessage = Pick<MessageRow, "id" | "sender_role" | "body" | "created_at" | "read_at"> & {
+  mine: boolean;
+  attachment?: ChatAttachment | null;
+};
+
+/* ---------------------------------------------------------------------------
+ * Anhänge: Fotos jederzeit (vorher im Browser auf Kontaktdaten geprüft, auf
+ * dem Server von Standortdaten befreit), PDFs erst nach bestätigter Buchung
+ * bzw. angenommener Torten-Anfrage, damit vorher keine Kontaktdaten über
+ * Dokumente laufen (AGB § 20 Abs. 4). Privater Speicher "chat", Zugriff nur
+ * über kurzlebige signierte Adressen für die Beteiligten.
+ * ------------------------------------------------------------------------ */
+const CHAT_BUCKET = "chat";
+const MAX_ATTACH = 10 * 1024 * 1024;
+const ATTACH_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+};
+const threadKey = (ref: ThreadRef) => ("bookingId" in ref ? `b${ref.bookingId}` : `s${ref.sweetId}`);
+
+/** Sind Dokumente in diesem Verlauf schon erlaubt (Buchung fest)? */
+async function documentsAllowed(ref: ThreadRef): Promise<boolean> {
+  const admin = adminClient();
+  if ("bookingId" in ref) {
+    const { data: b } = await admin.from("bookings").select("status, paid").eq("id", ref.bookingId).maybeSingle();
+    return !!b && (b.status === "confirmed" || b.status === "completed");
+  }
+  const { data: r } = await admin.from("sweet_requests").select("status").eq("id", ref.sweetId).maybeSingle();
+  return !!r && (r.status === "confirmed" || r.status === "booked");
+}
+
+export const chatUploadUrl = createServerFn({ method: "POST" })
+  .inputValidator((d: { ref: ThreadRef; mime: string; bytes: number }) => ({
+    ref: checkRef(d.ref),
+    mime: String(d.mime || ""),
+    bytes: Math.round(Number(d.bytes) || 0),
+  }))
+  .handler(async ({ data }): Promise<{ path: string; token: string } | { error: string }> => {
+    let ctx;
+    try {
+      ctx = await requireUser();
+    } catch {
+      return { error: "Bitte melde dich an" };
+    }
+    if (!(await allow("upload", ctx.user.id))) return { error: TOO_MANY };
+    const role = await roleIn(data.ref, ctx.user.id, ctx.profile?.role === "admin");
+    if (!role) return { error: "Keine Berechtigung" };
+    const ext = ATTACH_MIME[data.mime];
+    if (!ext) return { error: "Erlaubt sind Fotos (JPEG, PNG, WebP) und PDF." };
+    if (data.bytes < 1 || data.bytes > MAX_ATTACH) return { error: "Die Datei ist zu groß (höchstens 10 MB)." };
+    if (ext === "pdf" && role !== "admin" && !(await documentsAllowed(data.ref)))
+      return { error: "Dokumente gehen erst nach der bestätigten Buchung. Fotos kannst du schon jetzt schicken." };
+    const path = `${threadKey(data.ref)}/${crypto.randomUUID()}.${ext}`;
+    const { data: up, error } = await adminClient().storage.from(CHAT_BUCKET).createSignedUploadUrl(path);
+    if (error || !up) return { error: "Hochladen ist gerade nicht möglich" };
+    return { path, token: up.token };
+  });
+
+/** Hochgeladene Datei prüfen (echte Art, Größe) und Fotos säubern */
+async function checkAttachment(ref: ThreadRef, a: { path: string; name: string }) {
+  const admin = adminClient();
+  if (!a.path.startsWith(threadKey(ref) + "/") || a.path.includes("..")) return { error: "Ungültiger Anhang" } as const;
+  const { data: blob } = await admin.storage.from(CHAT_BUCKET).download(a.path);
+  if (!blob) return { error: "Anhang nicht gefunden" } as const;
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  const { sniffType, stripImageMetadata } = await import("@/showly/imageSafety");
+  const kind = sniffType(bytes);
+  const isPdf = String.fromCharCode(...bytes.subarray(0, 5)) === "%PDF-";
+  const want = a.path.split(".").pop();
+  const ok = want === "pdf" ? isPdf : (want === "jpg" && kind === "jpeg") || (want === "png" && kind === "png") || (want === "webp" && kind === "webp");
+  if (!ok || bytes.length > MAX_ATTACH) {
+    await admin.storage.from(CHAT_BUCKET).remove([a.path]);
+    return { error: "Die Datei passt nicht zu ihrer Art und wurde nicht gesendet." } as const;
+  }
+  const mime = want === "pdf" ? "application/pdf" : `image/${want === "jpg" ? "jpeg" : want}`;
+  if (!isPdf) {
+    const clean = stripImageMetadata(bytes);
+    if (clean.changed) await admin.storage.from(CHAT_BUCKET).upload(a.path, clean.bytes, { upsert: true, contentType: mime });
+  }
+  return { path: a.path, name: a.name.replace(/[^\p{L}\p{N} ._()-]/gu, "").slice(0, 120) || "Datei", mime, bytes: bytes.length } as const;
+}
 
 export const listMessages = createServerFn({ method: "POST" })
   .inputValidator((d: { ref: ThreadRef }) => ({ ref: checkRef(d.ref) }))
@@ -60,7 +143,7 @@ export const listMessages = createServerFn({ method: "POST" })
     const admin = adminClient();
     const { data: rows } = await admin
       .from("messages")
-      .select("id, sender, sender_role, body, created_at, read_at")
+      .select("id, sender, sender_role, body, created_at, read_at, attachment")
       .eq(col(data.ref), idOf(data.ref))
       .order("created_at", { ascending: true })
       .limit(500);
@@ -72,6 +155,13 @@ export const listMessages = createServerFn({ method: "POST" })
         .eq(col(data.ref), idOf(data.ref))
         .neq("sender_role", role)
         .is("read_at", null);
+    /* Anhänge: signierte Adressen, eine Stunde gültig */
+    const paths = (rows || []).map((m) => m.attachment?.path).filter((x): x is string => !!x);
+    const urls = new Map<string, string>();
+    if (paths.length) {
+      const { data: signed } = await admin.storage.from(CHAT_BUCKET).createSignedUrls(paths, 3600);
+      for (const x of signed || []) if (x.path && x.signedUrl) urls.set(x.path, x.signedUrl);
+    }
     return {
       role,
       messages: (rows || []).map((m) => ({
@@ -81,15 +171,19 @@ export const listMessages = createServerFn({ method: "POST" })
         created_at: m.created_at,
         read_at: m.read_at,
         mine: m.sender === uid,
+        attachment: m.attachment
+          ? { name: m.attachment.name, mime: m.attachment.mime, bytes: m.attachment.bytes, url: urls.get(m.attachment.path) ?? null }
+          : null,
       })),
     };
   });
 
 export const sendMessage = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: ThreadRef; body: string }) => {
-    const body = String(d.body || "").trim();
+  .inputValidator((d: { ref: ThreadRef; body: string; attachment?: { path: string; name: string } }) => {
+    const att = d.attachment && typeof d.attachment.path === "string" ? { path: d.attachment.path.slice(0, 200), name: String(d.attachment.name || "") } : null;
+    const body = String(d.body || "").trim() || (att ? att.name.slice(0, 120) || "Datei" : "");
     if (!body) throw new Error("Leere Nachricht");
-    return { ref: checkRef(d.ref), body: body.slice(0, 2000) };
+    return { ref: checkRef(d.ref), body: body.slice(0, 2000), attachment: att };
   })
   .handler(async ({ data }): Promise<{ ok: true } | { error: string; contact?: string[] }> => {
     let ctx;
@@ -108,6 +202,14 @@ export const sendMessage = createServerFn({ method: "POST" })
       const found = findContact(data.body);
       if (found.length) return { error: "Bitte keine Kontaktdaten", contact: found };
     }
+    let attachment: { path: string; name: string; mime: string; bytes: number } | null = null;
+    if (data.attachment) {
+      const a = await checkAttachment(data.ref, data.attachment);
+      if ("error" in a) return { error: a.error ?? "Ungültiger Anhang" };
+      if (role !== "admin" && a.mime === "application/pdf" && !(await documentsAllowed(data.ref)))
+        return { error: "Dokumente gehen erst nach der bestätigten Buchung." };
+      attachment = { path: a.path, name: a.name, mime: a.mime, bytes: a.bytes };
+    }
     const { error } = await adminClient()
       .from("messages")
       .insert({
@@ -115,6 +217,7 @@ export const sendMessage = createServerFn({ method: "POST" })
         sender: uid,
         sender_role: role,
         body: data.body,
+        attachment,
       });
     if (error) return { error: "Nachricht konnte nicht gesendet werden" };
     /* Die andere Seite per Mail informieren (höchstens alle 30 Minuten) */

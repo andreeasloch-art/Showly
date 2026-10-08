@@ -305,6 +305,8 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         return_url: data.returnUrl,
         /* Bestell-Button eindeutig („Bezahlen“, § 312j Abs. 3 BGB) */
         submit_type: "pay",
+        /* Rabattcodes und Geschenkgutscheine (in der Verwaltung angelegt) */
+        allow_promotion_codes: true,
         payment_intent_data: { description: "Showly Bestellung" },
         locale: lang,
         ...(data.customerEmail && { customer_email: data.customerEmail }),

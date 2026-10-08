@@ -35,6 +35,8 @@ export interface SubOrderDraft {
 export interface SplitInput {
   paid: boolean;
   feeRate: number;
+  /** Provision je Anbieter (feeRules.ts); ohne Angabe gilt feeRate */
+  rateFor?: ((kind: "baker" | "deco", providerId: number | null) => number) | undefined;
   bookings: { artistId: number; owner: string | null; amountCents: number; feeCents: number; payoutCents: number; request: boolean }[];
   /** Torten: direkt gebucht (Festpreis, bezahlt) oder Anfrage (noch kein Preis) */
   sweets: { bakerId: number; owner: string | null; priceCents: number; direct: boolean }[];
@@ -53,7 +55,8 @@ export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
     }
     return d;
   };
-  const fee = (cents: number) => Math.round(cents * input.feeRate);
+  const fee = (cents: number, kind: "baker" | "deco", id: number | null) =>
+    Math.round(cents * (input.rateFor ? input.rateFor(kind, id) : input.feeRate));
 
   input.bookings.forEach((b, index) => {
     const d = get("artist", b.artistId, b.owner);
@@ -73,8 +76,9 @@ export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
     const booked = s.direct && input.paid;
     if (booked) {
       d.amountCents += s.priceCents;
-      d.feeCents += fee(s.priceCents);
-      d.payoutCents += s.priceCents - fee(s.priceCents);
+      const f = fee(s.priceCents, "baker", s.bakerId);
+      d.feeCents += f;
+      d.payoutCents += s.priceCents - f;
     }
     d.parts.push({ type: "sweet", index });
   });
@@ -89,7 +93,7 @@ export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
     const d = get(own ? "showly" : "deco", l.providerId, own ? null : l.owner);
     d.amountCents += l.amountCents;
     /* Eigene Katalogartikel: alles bleibt bei Showly, keine Auszahlung */
-    const f = own ? l.amountCents : fee(l.amountCents);
+    const f = own ? l.amountCents : fee(l.amountCents, "deco", l.providerId);
     d.feeCents += f;
     d.payoutCents += l.amountCents - f;
     d.parts.push({ type: "shop", index });

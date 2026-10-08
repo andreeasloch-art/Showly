@@ -19,6 +19,7 @@ export interface DailyResult {
   reminded: number;
   payouts: { paid: number; held: number; skipped: number; failed: number };
   calendars: { ok: number; failed: number };
+  mails: { reminders: number; reviews: number; returns: number };
 }
 
 export async function runDaily(): Promise<DailyResult> {
@@ -44,6 +45,9 @@ export async function runDaily(): Promise<DailyResult> {
   }
 
   const reminded = await remindOpenRequests().catch(() => 0);
+  /* Erinnerung vor dem Event, Bewertungsanfrage danach, Rückgabe beim Verleih */
+  const { eventMails } = await import("./notify.server");
+  const mails = await eventMails().catch(() => ({ reminders: 0, reviews: 0, returns: 0 }));
   const payouts = await runDuePayouts().catch(() => ({ paid: 0, held: 0, skipped: 0, failed: 0 }));
   await db.rpc("purge_old_data").then(undefined, () => null);
   await db.rpc("purge_sms_log").then(undefined, () => null);
@@ -62,5 +66,5 @@ export async function runDaily(): Promise<DailyResult> {
     .delete()
     .lt("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
     .then(undefined, () => null);
-  return { lapsed, reminded, payouts, calendars };
+  return { lapsed, reminded, payouts, calendars, mails };
 }

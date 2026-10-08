@@ -13,7 +13,13 @@ import type { Snapshot } from "@/showly/cartSnapshot";
  * ------------------------------------------------------------------------ */
 const REAL_ARTIST_FROM = 100000;
 
-async function artistTerms(admin: ReturnType<typeof adminClient>, artistId: number, hours: number, pkg?: string) {
+async function artistTerms(
+  admin: ReturnType<typeof adminClient>,
+  artistId: number,
+  hours: number,
+  pkg?: string,
+  rules: import("@/showly/feeRules").FeeRule[] = [],
+) {
   const { bookingPrice, findArtist, FEE_RATE, MAX_HOURS } = await import("@/showly/pricing");
   const { isInstant, standingOf } = await import("@/showly/booking");
   if (artistId < REAL_ARTIST_FROM) {
@@ -32,7 +38,7 @@ async function artistTerms(admin: ReturnType<typeof adminClient>, artistId: numb
   }
   const { data: a } = await admin
     .from("artists")
-    .select("id, price_cents, instant_book, published")
+    .select("id, cat, price_cents, instant_book, published")
     .eq("id", artistId)
     .maybeSingle();
   if (!a || !a.published) return null;
@@ -53,7 +59,8 @@ async function artistTerms(admin: ReturnType<typeof adminClient>, artistId: numb
   if (!standing.bookable) return null;
   const h = Math.min(MAX_HOURS, Math.max(1, Math.round(hours) || 1));
   const base = a.price_cents * h;
-  const fee = Math.round(base * FEE_RATE);
+  const { pickRate } = await import("@/showly/feeRules");
+  const fee = Math.round(base * pickRate(rules, { kind: "artist", providerId: a.id, category: a.cat }, FEE_RATE));
   return {
     artist_id: a.id as number | null,
     catalog_artist: null as number | null,
@@ -93,6 +100,7 @@ export async function recordCartCore(
   /* Bezahlt? Nur Stripe selbst gibt darüber Auskunft. Dieselbe Zahlung
      wird nur einmal eingetragen. */
   let paid = false;
+  let discount = 0;
   let holdKey: string | null = data.holdKey ?? null;
   if (data.sessionId) {
     const { data: seen } = await admin
@@ -113,7 +121,10 @@ export async function recordCartCore(
       const stripe = createStripeClient(data.environment ?? "sandbox");
       const s = await stripe.checkout.sessions.retrieve(data.sessionId);
       paid = s.payment_status === "paid";
-      amount = s.amount_total ?? -1;
+      /* Rabattcodes (Stripe-Promotion-Codes) trägt Showly: verglichen wird
+         der Betrag vor Rabatt, die Anbieter bekommen den vollen Anteil */
+      amount = s.amount_subtotal ?? s.amount_total ?? -1;
+      discount = Math.max(0, (s.amount_subtotal ?? 0) - (s.amount_total ?? 0));
       /* Reservierung aus der Kasse (createCartCheckout) */
       const hk = s.metadata?.["hold_key"];
       if (typeof hk === "string" && /^[0-9a-f]{32}$/.test(hk)) holdKey = hk;
@@ -153,7 +164,10 @@ export async function recordCartCore(
   const { splitIntoSubOrders } = await import("@/showly/subOrders");
   const { FEE_RATE } = await import("@/showly/pricing");
 
-  const bk = (await Promise.all(snap.bookings.map((b) => artistTerms(admin, b.artistId, b.hours, b.pkg))))
+  const { loadFeeRules } = await import("@/lib/fees.server");
+  const { pickRate } = await import("@/showly/feeRules");
+  const feeRules = await loadFeeRules(admin);
+  const bk = (await Promise.all(snap.bookings.map((b) => artistTerms(admin, b.artistId, b.hours, b.pkg, feeRules))))
     .map((t, i) => ({ b: snap.bookings[i]!, t, i }))
     .filter((x): x is { b: Snapshot["bookings"][number]; t: NonNullable<typeof x.t>; i: number } => !!x.t);
   const artistIds = [...new Set(bk.map((x) => x.t.artist_id).filter((x): x is number => !!x))];
@@ -195,6 +209,7 @@ export async function recordCartCore(
   const drafts = splitIntoSubOrders({
     paid,
     feeRate: FEE_RATE,
+    rateFor: (kind, providerId) => pickRate(feeRules, { kind, providerId }, FEE_RATE),
     bookings: bk.map((x) => ({
       artistId: x.t.artist_id ?? x.b.artistId,
       owner: x.t.artist_id ? (artistOwner.get(x.t.artist_id) ?? null) : null,
@@ -225,6 +240,7 @@ export async function recordCartCore(
         stripe_session_id: data.sessionId ?? null,
         event_day: days[0] ?? null,
         total_cents: drafts.reduce((n, d) => n + d.amountCents, 0),
+        discount_cents: discount,
         status: paid ? "paid" : "pending",
       })
       .select("id")
@@ -422,6 +438,24 @@ export async function recordCartCore(
         ]).catch(() => false);
     }
   }
+  /* Bestätigung mit Zahlungsbeleg an den Kunden (einmal je Zahlung) */
+  if (paid && data.sessionId) {
+    const itemName = (id: number) => {
+      const n = findItem(id, cat.extra)?.name;
+      return typeof n === "string" ? n : (n?.de ?? `Artikel ${id}`);
+    };
+    const sum = [
+      ...bk.map((x) => ({ label: `Auftritt am ${x.b.dateISO.split("-").reverse().join(".")}, ${x.b.slot} Uhr`, cents: x.t.amount_cents })),
+      ...sw.filter((x) => x.direct && x.fixed).map((x) => ({ label: `Torte/Süßes am ${x.r.dateISO.split("-").reverse().join(".")}`, cents: Math.round(x.fixed! * 100) })),
+      ...sh.map((l) => ({
+        label: `${itemName(l.shopId)} (${l.mode === "rent" ? "Miete" : "Kauf"}, ${l.qty}×)${l.deposit_cents ? ` inkl. Kaution ${(l.deposit_cents / 100).toFixed(2).replace(".", ",")} €` : ""}`,
+        cents: l.price_cents + l.deposit_cents,
+      })),
+    ];
+    const { notifyOrderConfirmation } = await import("@/lib/notify.server");
+    await notifyOrderConfirmation(uid, data.sessionId, sum, sum.reduce((n, x) => n + x.cents, 0)).catch(() => false);
+  }
+
   /* Was von der Reservierung übrig ist, wird frei */
   if (holdKey) {
     const { releaseHold } = await import("@/lib/slots.server");

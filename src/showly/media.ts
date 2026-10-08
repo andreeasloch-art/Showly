@@ -101,6 +101,11 @@ async function shrinkImage(file: File): Promise<{ blob: Blob; ratio: number }> {
   }
 }
 
+/** Foto verkleinern und neu zeichnen (ohne EXIF/GPS), z. B. für Chat-Anhänge */
+export async function cleanImage(file: File): Promise<Blob> {
+  return (await shrinkImage(file)).blob;
+}
+
 export class MediaError extends Error {
   constructor(public reason: "type" | "size" | "store") {
     super(reason);

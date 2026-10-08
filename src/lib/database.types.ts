@@ -282,6 +282,8 @@ export type ProviderOfferRow = {
 }
 
 export type MessageRow = {
+  /** Anhang im privaten Speicher "chat" (0014) */
+  attachment?: { path: string; name: string; mime: string; bytes: number } | null;
   id: number;
   booking_id: number | null;
   sweet_request_id: number | null;
@@ -434,6 +436,8 @@ export type Database = {
         event_day: string | null;
         total_cents: number;
         status: "pending" | "paid" | "cancelled";
+        /** Rabatt aus einem Code, trägt Showly (0014) */
+        discount_cents?: number;
         /** Rückbuchung bei der Bank des Kunden (0013) */
         dispute_status?: "open" | "won" | "lost" | null;
         created_at: string;
@@ -447,6 +451,10 @@ export type Database = {
         hold_key: string | null;
         created_at: string;
       }>;
+      /** Provision je Kategorie oder Anbieter (0014) */
+      fee_rules: Table<{ id: number; scope: "category" | "artist" | "baker" | "deco"; ref: string; rate: number; created_at: string }>;
+      /** Protokoll aller Aktionen der Verwaltung (0014) */
+      admin_audit: Table<{ id: number; actor: string | null; action: string; target: string | null; detail: Record<string, unknown> | null; created_at: string }>;
       /** Belegte Mietartikel je Zeitraum (0013) */
       rental_claims: Table<{
         id: number;

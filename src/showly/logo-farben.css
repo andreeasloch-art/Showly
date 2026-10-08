@@ -707,3 +707,21 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .co-withdraw ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .co-withdraw a{color:#5B3FD6;font-weight:600}
 .checkout-pay-note{margin:0 0 8px;font-size:13px;color:var(--h-muted,#6B6480)}
+
+/* Chat-Anhänge */
+.chat26-attach{flex:none;width:44px;height:44px;border-radius:12px;border:1px solid #DCD3F2;background:#fff;display:grid;place-items:center;cursor:pointer;color:#5B3FD6}
+.chat26-attach svg{width:20px;height:20px}
+.chat26-attach:disabled{opacity:.5}
+.chat26-img img{display:block;max-width:220px;max-height:220px;border-radius:12px;margin:4px 0;object-fit:cover}
+.chat26-file{display:inline-flex;align-items:center;gap:6px;margin:4px 0;padding:6px 10px;border-radius:10px;background:rgba(91,63,214,.08);color:inherit;font-size:13px;text-decoration:none;overflow-wrap:anywhere}
+.chat26-file svg{width:14px;height:14px}
+.chat26-why{opacity:.85}
+
+/* Verwaltung: Provision, Rabattcodes, Berichte, Audit-Log */
+.admin26-panel{display:flex;flex-direction:column;gap:12px}
+.admin26-panel h2{margin:0;font:600 20px/1.2 'Outfit',system-ui,sans-serif}
+.admin26-panel h3{margin:8px 0 0;font:600 16px/1.2 'Outfit',system-ui,sans-serif}
+.admin26-hint{margin:0;font-size:14px;color:var(--h-muted,#6B6480)}
+.admin26-form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.admin26-form input,.admin26-form select{height:42px;border-radius:12px;border:1px solid #DCD3F2;padding:0 12px;background:#fff;min-width:0;flex:1 1 140px}
+.admin26-top{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;font-size:14px}

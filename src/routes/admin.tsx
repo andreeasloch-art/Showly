@@ -13,6 +13,7 @@ import { isBackendConfigured } from "@/lib/supabase";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { adminAct, adminExport, adminList, adminOverview, adminRunDaily, type AdminSection } from "@/utils/admin.functions";
 import { AdminMedia } from "@/components/showly/AdminMedia";
+import { AdminAuditView, AdminFees, AdminPromos, AdminReportView } from "@/components/showly/AdminExtras";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Verwaltung – Showly" }, { name: "robots", content: "noindex" }] }),
@@ -21,7 +22,9 @@ export const Route = createFileRoute("/admin")({
 
 type Row = Record<string, unknown> & { id: number };
 
-const TABS: { id: AdminSection | "overview" | "export" | "media"; label: string; icon: string }[] = [
+type Extra = "overview" | "export" | "media" | "report" | "fees" | "promos" | "audit";
+const EXTRA = new Set<string>(["overview", "export", "media", "report", "fees", "promos", "audit"]);
+const TABS: { id: AdminSection | Extra; label: string; icon: string }[] = [
   { id: "overview", label: "Übersicht", icon: "chart" },
   { id: "media", label: "Fotos & Videos", icon: "image" },
   { id: "reports", label: "Meldungen", icon: "shield" },
@@ -31,6 +34,10 @@ const TABS: { id: AdminSection | "overview" | "export" | "media"; label: string;
   { id: "refunds", label: "Erstattungen", icon: "money" },
   { id: "tickets", label: "Hilfe-Anfragen", icon: "mail" },
   { id: "errors", label: "Fehler", icon: "server" },
+  { id: "report", label: "Berichte", icon: "chart" },
+  { id: "fees", label: "Provision", icon: "money" },
+  { id: "promos", label: "Rabattcodes", icon: "gift" },
+  { id: "audit", label: "Audit-Log", icon: "clipboard" },
   { id: "export", label: "Datensicherung", icon: "lock" },
 ];
 
@@ -53,8 +60,8 @@ function AdminPage() {
       else if (r) toast(r.error);
       return;
     }
-    if (tab === "export" || tab === "media") return;
-    const r = await adminList({ data: { section: tab } }).catch(() => null);
+    if (EXTRA.has(tab)) return;
+    const r = await adminList({ data: { section: tab as AdminSection } }).catch(() => null);
     if (!r) return;
     if ("error" in r) return toast(r.error);
     setRows(JSON.parse(r.json) as Row[]);
@@ -169,7 +176,7 @@ function AdminPage() {
                   if (!r || "error" in r) return toast(r ? r.error : "Hat nicht geklappt");
                   const x = r.result;
                   toast(
-                    `Erledigt: ${x.lapsed} verfallen, ${x.reminded} erinnert, ${x.payouts.paid + x.payouts.held} ausgezahlt, ${x.payouts.failed} fehlgeschlagen, ${x.calendars?.ok ?? 0} Kalender abgeglichen`,
+                    `Erledigt: ${x.lapsed} verfallen, ${x.reminded} erinnert, ${x.payouts.paid + x.payouts.held} ausgezahlt, ${x.payouts.failed} fehlgeschlagen, ${x.calendars?.ok ?? 0} Kalender abgeglichen, ${x.mails?.reminders ?? 0} Event-Erinnerungen, ${x.mails?.reviews ?? 0} Bewertungsanfragen, ${x.mails?.returns ?? 0} Rückgabe-Erinnerungen`,
                   );
                 }}
               >
@@ -180,6 +187,10 @@ function AdminPage() {
         )}
 
         {tab === "media" && <AdminMedia />}
+        {tab === "report" && <AdminReportView />}
+        {tab === "fees" && <AdminFees />}
+        {tab === "promos" && <AdminPromos />}
+        {tab === "audit" && <AdminAuditView />}
 
         {tab === "reports" && (
           <ul className="admin26-list">

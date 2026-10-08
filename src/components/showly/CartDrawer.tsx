@@ -8,6 +8,8 @@ import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { CartAddOns } from "@/components/showly/AddOns";
 import { bookingPrice, findArtist } from "@/showly/pricing";
 import { bakerOf, sweetBg, SWEETS } from "@/showly/sweets";
+import { useRentCopy } from "./Rental";
+import { depositOf } from "@/showly/rental";
 
 const TEXT = {
   de: {
@@ -67,6 +69,7 @@ const TEXT = {
 };
 
 export function CartDrawer() {
+  const R = useRentCopy();
   const {
     t,
     L,
@@ -164,6 +167,13 @@ export function CartDrawer() {
                         {c.mode === "rent" ? t("shop.addRent") : t("shop.addBuy")}
                         {c.mode === "rent" && c.from && c.to ? ` · ${fmtDate(c.from)} – ${fmtDate(c.to)}` : ""}
                       </div>
+                      {c.mode === "rent" && item.rent > 0 && (
+                        <div className="cart-mode">
+                          {fmt(item.rent)} {R.perDay}
+                          {depositOf(item) > 0 ? ` + ${R.depositL} ${fmt(depositOf(item))}` : ""}
+                          {!c.from ? ` · ${R.needDates.split(" (")[0]}` : ""}
+                        </div>
+                      )}
                       <div className="cart-price">{fmt(cartPrice(c))}</div>
                       <div className="qty-row">
                         <button className="qty-btn" onClick={() => changeQty(idx, -1)} aria-label="−">

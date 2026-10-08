@@ -13,7 +13,7 @@ import { Icon } from "@/showly/ui";
 import { ContactHint, useContactCheck } from "./ContactHint";
 import { dbIdOf } from "@/showly/cloudMap";
 import { loadJSON, saveJSON } from "@/showly/persist";
-import { listMessages, sendMessage, unreadCounts, type ChatMessage, type ThreadRef } from "@/utils/chat.functions";
+import { chatUploadUrl, listMessages, sendMessage, unreadCounts, type ChatMessage, type ThreadRef } from "@/utils/chat.functions";
 
 const COPY = {
   de: {
@@ -30,6 +30,10 @@ const COPY = {
     read: "gelesen",
     failed: "Nachricht konnte nicht gesendet werden",
     practice: "Übungsbetrieb: Nachrichten bleiben auf diesem Gerät.",
+    attach: "Foto oder PDF anhängen",
+    tooBig: "Die Datei ist zu groß (höchstens 10 MB).",
+    checking: "Wird geprüft …",
+    why: "Warum? So greifen Zahlungsschutz, Stornoregeln und Bewertungen (AGB § 20). Nach der Zusage dürft ihr auch Dokumente (PDF) schicken.",
   },
   en: {
     title: "Messages",
@@ -45,6 +49,10 @@ const COPY = {
     read: "read",
     failed: "Message could not be sent",
     practice: "Practice mode: messages stay on this device.",
+    attach: "Attach photo or PDF",
+    tooBig: "The file is too large (max. 10 MB).",
+    checking: "Checking …",
+    why: "Why? This keeps payment protection, cancellation rules and reviews in place (terms § 20). After confirmation you can also send documents (PDF).",
   },
   es: {
     title: "Mensajes",
@@ -60,6 +68,10 @@ const COPY = {
     read: "leído",
     failed: "No se pudo enviar el mensaje",
     practice: "Modo de prueba: los mensajes se quedan en este dispositivo.",
+    attach: "Adjuntar foto o PDF",
+    tooBig: "El archivo es demasiado grande (máx. 10 MB).",
+    checking: "Comprobando …",
+    why: "¿Por qué? Así se mantienen la protección de pago, las reglas de cancelación y las reseñas (condiciones § 20). Tras la confirmación también podéis enviar documentos (PDF).",
   },
 } as const;
 
@@ -93,7 +105,45 @@ export function Chat(props: ChatProps) {
   const [text, setText] = useState("");
   const [msgs, setMsgs] = useState<ChatMessage[]>([]);
   const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  /* Anhang: Foto neu zeichnen (ohne Standortdaten), auf Kontaktdaten prüfen,
+     direkt in den privaten Speicher laden, dann als Nachricht senden */
+  async function attach(file: File | undefined) {
+    if (!file || !ref || busy) return;
+    if (file.size > 10 * 1024 * 1024) return toast(C.tooBig);
+    setBusy(true);
+    setNote(C.checking);
+    try {
+      let blob: Blob = file;
+      let mime = file.type;
+      if (file.type.startsWith("image/")) {
+        const { cleanImage } = await import("@/showly/media");
+        blob = await cleanImage(file);
+        mime = blob.type || "image/jpeg";
+        const { checkMedia, mediaCheckMessage } = await import("@/showly/mediaCheck");
+        const chk = await checkMedia(Object.assign(blob, { type: mime }) as Blob & { type: string });
+        if (!chk.ok) return toast(mediaCheckMessage(chk, file.name, lang));
+      }
+      const up = await chatUploadUrl({ data: { ref, mime, bytes: blob.size } });
+      if ("error" in up) return toast(up.error);
+      const { supabase } = await import("@/lib/supabase");
+      const put = await supabase().storage.from("chat").uploadToSignedUrl(up.path, up.token, blob, { contentType: mime });
+      if (put.error) return toast(C.failed);
+      const r = await sendMessage({ data: { ref, body: text.trim(), attachment: { path: up.path, name: file.name } } });
+      if ("error" in r) return toast(r.error || C.failed);
+      setText("");
+      await load();
+    } catch {
+      toast(C.failed);
+    } finally {
+      setBusy(false);
+      setNote("");
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
 
   const load = async () => {
     if (ref) {
@@ -184,12 +234,25 @@ export function Chat(props: ChatProps) {
                 })}
                 {m.mine && m.read_at ? ` · ${C.read}` : ""}
               </small>
-              <p>{m.body}</p>
+              {m.attachment?.url && m.attachment.mime.startsWith("image/") ? (
+                <a href={m.attachment.url} target="_blank" rel="noopener noreferrer" className="chat26-img">
+                  <img src={m.attachment.url} alt={m.attachment.name} loading="lazy" />
+                </a>
+              ) : m.attachment?.url ? (
+                <a href={m.attachment.url} target="_blank" rel="noopener noreferrer" className="chat26-file">
+                  <Icon name="clipboard" /> {m.attachment.name} · {Math.max(1, Math.round(m.attachment.bytes / 1024))} KB
+                </a>
+              ) : null}
+              {(!m.attachment || m.body !== m.attachment.name) && <p>{m.body}</p>}
             </div>
           ))}
         </div>
         <div className="chat26-foot">
-          <p className="chat26-rule">{ref ? C.rule : C.practice}</p>
+          <p className="chat26-rule">
+            {ref ? C.rule : C.practice}
+            {ref && <span className="chat26-why"> {C.why}</span>}
+          </p>
+          {note && <p className="chat26-rule" role="status">{note}</p>}
           <ContactHint text={text} />
           <div className="chat26-input">
             <textarea
@@ -205,6 +268,27 @@ export function Chat(props: ChatProps) {
                 }
               }}
             />
+            {ref && (
+              <>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  hidden
+                  onChange={(e) => void attach(e.target.files?.[0])}
+                />
+                <button
+                  type="button"
+                  className="chat26-attach"
+                  aria-label={C.attach}
+                  title={C.attach}
+                  disabled={busy}
+                  onClick={() => fileRef.current?.click()}
+                >
+                  <Icon name="image" />
+                </button>
+              </>
+            )}
             <button type="button" className="home-btn primary" disabled={busy || !text.trim()} onClick={() => void send()}>
               {C.send}
             </button>

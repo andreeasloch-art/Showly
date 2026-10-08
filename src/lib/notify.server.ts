@@ -84,7 +84,7 @@ export async function notifyNewSweet(owner: string | null, day: string, direct: 
   return notify(owner, direct ? "Neue Bestellung bei Showly" : "Neue Anfrage bei Showly", [
     direct
       ? `Es gibt eine neue, bezahlte Bestellung für den ${dateDe(day)}.`
-      : `Es gibt eine neue Anfrage für den ${dateDe(day)}. Bitte antworte in der App mit einem Angebot oder einer Absage.`,
+      : `Es gibt eine neue Anfrage für den ${dateDe(day)}. Bitte antworte innerhalb von 48 Stunden in der App mit einem Angebot oder einer Absage.`,
   ]);
 }
 
@@ -117,4 +117,108 @@ export async function remindOpenRequests(): Promise<number> {
     if (ok) n++;
   }
   return n;
+}
+
+const euro = (cents: number) => (cents / 100).toFixed(2).replace(".", ",") + " €";
+const isoDay = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+
+/** Bestätigung mit Zahlungsbeleg an den Kunden, einmal je Zahlung */
+export async function notifyOrderConfirmation(
+  customer: string,
+  sessionId: string,
+  lines: { label: string; cents: number }[],
+  totalCents: number,
+) {
+  return notify(
+    customer,
+    "Buchungsbestätigung und Zahlungsbeleg",
+    [
+      "Danke für deine Buchung bei Showly. Deine Zahlung ist eingegangen.",
+      lines.map((l) => `• ${l.label}: ${euro(l.cents)}`).join("\n"),
+      `Bezahlt: ${euro(totalCents)} · Zahlungsnummer ${sessionId.slice(-12)}`,
+      "Künstler-Anfragen werden erst mit der Zusage verbindlich; bis dahin ist der Betrag nur vorgemerkt bzw. wird bei Absage vollständig erstattet. Kautionen bekommst du nach der Rückgabe zurück.",
+      "Rechnungen über die Leistungen stellen die jeweiligen Anbieter aus; du findest alle Angaben und deine Buchungen in der App.",
+    ],
+    { key: `order:${sessionId}`, path: "/dashboard" },
+  );
+}
+
+/** Tägliche Mails rund um das Event: Erinnerung 2 Tage vorher, Bewertung am
+ *  Tag danach, Rückgabe-Erinnerung am letzten Miettag. Jede Mail nur einmal. */
+export async function eventMails(): Promise<{ reminders: number; reviews: number; returns: number }> {
+  const db = adminClient();
+  let reminders = 0;
+  let reviews = 0;
+  let returns = 0;
+  const soon = isoDay(2);
+  const { data: upcoming } = await db
+    .from("bookings")
+    .select("id, customer, artist_id, day, slot, address")
+    .eq("day", soon)
+    .eq("status", "confirmed")
+    .limit(500);
+  for (const b of upcoming || []) {
+    const when = `${dateDe(b.day)}${b.slot ? `, ${b.slot} Uhr` : ""}`;
+    if (
+      await notify(b.customer, "Erinnerung: dein Event in 2 Tagen", [
+        `Am ${when} ist es so weit. Bitte sorg dafür, dass der Künstler am Ort gut ankommt (Parkplatz, Klingel, Ansprechperson).`,
+        "Fragen kannst du im Chat zur Buchung stellen. Den Check-in-Code zeigst du beim Auftritt vor.",
+      ], { key: `ev-remind-c:${b.id}`, path: "/dashboard" })
+    )
+      reminders++;
+    await notify(await ownerOfArtist(b.artist_id), "Erinnerung: Auftritt in 2 Tagen", [
+      `Du trittst am ${when} auf${b.address ? ` (${b.address})` : ""}. Plane eine Stunde Fahrtzeit ein und lass dir vor Ort den Check-in-Code zeigen.`,
+    ], { key: `ev-remind-a:${b.id}`, path: "/portal" });
+  }
+  const { data: sweets } = await db
+    .from("sweet_requests")
+    .select("id, customer, day")
+    .eq("day", soon)
+    .in("status", ["confirmed", "booked"])
+    .limit(500);
+  for (const s of sweets || [])
+    if (
+      await notify(s.customer, "Erinnerung: deine Torte in 2 Tagen", [
+        `Deine Bestellung für den ${dateDe(s.day)} ist eingeplant. Abholung oder Lieferung stimmst du bei Bedarf im Chat ab. Bitte gekühlt lagern, wie auf dem Angebot angegeben.`,
+      ], { key: `sw-remind:${s.id}` })
+    )
+      reminders++;
+
+  const yesterday = isoDay(-1);
+  const { data: past } = await db
+    .from("bookings")
+    .select("id, customer, artist_id, day")
+    .eq("day", yesterday)
+    .in("status", ["confirmed", "completed"])
+    .limit(500);
+  for (const b of past || [])
+    if (
+      b.artist_id &&
+      (await notify(b.customer, "Wie war dein Event?", [
+        "Wir hoffen, es war ein tolles Fest! Hilf anderen bei der Wahl und bewerte den Auftritt mit ein paar Worten.",
+        "Bewerten können nur Kunden mit einer echten Buchung über Showly.",
+      ], { key: `review:${b.id}`, path: `/kuenstler/${b.artist_id}#bewertungen` }))
+    )
+      reviews++;
+
+  /* Verleih: am letzten Miettag an die Rückgabe erinnern */
+  const today = isoDay(0);
+  const { data: rentals } = await db
+    .from("shop_orders")
+    .select("id, customer, items, status")
+    .in("status", ["paid", "shipped"])
+    .gte("created_at", new Date(Date.now() - 60 * 86_400_000).toISOString())
+    .limit(1000);
+  for (const o of rentals || []) {
+    const due = (o.items || []).filter((i) => i.mode === "rent" && i.to === today);
+    if (!due.length) continue;
+    if (
+      await notify(o.customer, "Erinnerung: Rückgabe deiner Miete", [
+        "Heute ist der letzte Miettag. Bitte gib die Artikel bis spätestens zum nächsten Werktag zurück bzw. schick sie mit dem Rücksendeschein los, sauber und vollständig.",
+        "Die Kaution bekommst du zurück, sobald der Anbieter die Rückgabe bestätigt hat. Bei verspäteter Rückgabe fällt je weiterem Tag der Tagesmietpreis an (AGB § 14).",
+      ], { key: `return:${o.id}:${today}` })
+    )
+      returns++;
+  }
+  return { reminders, reviews, returns };
 }

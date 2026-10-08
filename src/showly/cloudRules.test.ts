@@ -23,18 +23,20 @@ describe("berlinStart", () => {
 });
 
 describe("Absage durch den Künstler (§ 9)", () => {
-  it("bis 24 Stunden vorher folgenlos", () => {
-    const d = decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 30 * H);
+  it("ab 14 Tagen vorher folgenlos", () => {
+    const d = decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 15 * 24 * H);
     expect(d).toMatchObject({ result: "free", payout: "cancel", booking: { status: "declined", cancelled_by: "artist" } });
     expect("newPenalty" in d && d.newPenalty).toBeFalsy();
   });
-  it("später: 50 % Strafe und Gutschein", () => {
-    const d = decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 5 * H);
-    expect(d).toMatchObject({ result: "penalty", voucher: true, newPenalty: { reason: "late", status: "due", amount_cents: 10000 } });
+  it("unter 14 Tagen: 15 % Strafe, unter 48 Stunden 25 %, Gutschein", () => {
+    const d = decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 5 * 24 * H);
+    expect(d).toMatchObject({ result: "penalty", voucher: true, newPenalty: { reason: "late", status: "due", amount_cents: 3000 } });
+    const u = decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 5 * H);
+    expect(u).toMatchObject({ newPenalty: { amount_cents: 5000 } });
   });
-  it("später mit Notfall: Nachweis wird geprüft, noch kein Gutschein", () => {
+  it("später mit Notfall: Nachweis wird geprüft, Kunde bekommt trotzdem den Gutschein", () => {
     const d = decide({ kind: "cancelArtist", emergency: true }, "artist", base, START - 5 * H);
-    expect(d).toMatchObject({ result: "proof", voucher: false, newPenalty: { status: "proof" } });
+    expect(d).toMatchObject({ result: "proof", voucher: true, newPenalty: { status: "proof" } });
   });
   it("Privatanbieter: Eintrag fürs Stufenmodell, aber keine Geldstrafe; Kunde bekommt Gutschein", () => {
     const priv = { ...base, business: false };
@@ -53,13 +55,22 @@ describe("Absage durch den Künstler (§ 9)", () => {
 });
 
 describe("Stornierung durch den Kunden (§ 8)", () => {
-  it("bis 24 Stunden vorher kostenlos, Auszahlung entfällt", () => {
+  it("ältere Buchung ohne Stufe: bis 24 Stunden vorher kostenlos, Auszahlung entfällt", () => {
     expect(decide({ kind: "cancelCustomer" }, "customer", base, START - 25 * H)).toMatchObject({ result: "free", payout: "cancel" });
   });
   it("später bleibt die Gage geschuldet", () => {
     const d = decide({ kind: "cancelCustomer" }, "customer", base, START - 2 * H);
-    expect(d).toMatchObject({ result: "late" });
+    expect(d).toMatchObject({ result: "late", payoutShare: 1 });
     expect("payout" in d && d.payout).toBeFalsy();
+  });
+  it("gespeicherte Stufe Moderat: 10 Tage vorher 50 % zurück, Auszahlung halbiert", () => {
+    const m = { ...base, amount_cents: 25000, policy: { kind: "artist", tier: "moderat", free: 336, half: 168, midRate: 0.5, rebook: true } };
+    expect(decide({ kind: "cancelCustomer" }, "customer", m, START - 10 * 24 * H)).toMatchObject({
+      result: "late",
+      refundCents: 12500,
+      payoutShare: 0.5,
+    });
+    expect(decide({ kind: "cancelCustomer" }, "customer", m, START - 15 * 24 * H)).toMatchObject({ result: "free", refund: true });
   });
   it("offene Anfrage immer kostenlos", () => {
     expect(decide({ kind: "cancelCustomer" }, "customer", { ...base, status: "requested" }, START - 2 * H)).toMatchObject({ result: "free" });
@@ -103,7 +114,7 @@ describe("Anfrage beantworten", () => {
 });
 
 describe("Auszahlung (§ 21)", () => {
-  it("5 Werktage nach dem Termin, Einbehalt bei den ersten 5 Buchungen", () => {
+  it("7 Tage nach dem Termin, Einbehalt bei den ersten 5 Buchungen", () => {
     const p = plannedPayout({ day: "2026-09-25", amount_cents: 30000, payout_cents: 20000 }, 0);
     expect(p).toMatchObject({ payout_on: "2026-10-02", reserve_cents: 4000, net_cents: 20000, fee_cents: 10000 });
     expect(plannedPayout({ day: "2026-09-25", amount_cents: 30000, payout_cents: 20000 }, 5).reserve_cents).toBe(0);
@@ -119,7 +130,7 @@ describe("Erstattung (§ 8 Abs. 1, § 9 Abs. 1 und 4)", () => {
     expect("refund" in d && d.refund).toBeFalsy();
   });
   it("Absage durch den Künstler, auch spät: alles zurück", () => {
-    expect(decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 30 * H)).toMatchObject({ refund: true });
+    expect(decide({ kind: "cancelArtist", emergency: false }, "artist", base, START - 30 * 24 * H)).toMatchObject({ refund: true });
     expect(decide({ kind: "cancelArtist", emergency: true }, "artist", base, START - 5 * H)).toMatchObject({ refund: true });
   });
   it("Nichterscheinen gemeldet: alles zurück", () => {

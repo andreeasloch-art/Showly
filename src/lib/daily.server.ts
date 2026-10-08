@@ -4,6 +4,7 @@
  *  2. Erinnerung an Anbieter, deren Anfrage seit über 24 Stunden wartet
  *  3. Fällige Auszahlungen an Anbieter überweisen (AGB § 21)
  *  4. Löschfristen aus der Datenschutzerklärung einhalten
+ *  4b. Faire Regeln (fair.server.ts): Kaution, Bewertungen, Reklamationen
  *  5. Abgelaufene Termin-Reservierungen löschen, externe Kalender der
  *     Künstler (Google, Apple, Outlook) abgleichen
  *
@@ -20,6 +21,7 @@ export interface DailyResult {
   payouts: { paid: number; held: number; skipped: number; failed: number };
   calendars: { ok: number; failed: number };
   mails: { reminders: number; reviews: number; returns: number };
+  fair: { deposits: number; reviews: number; escalated: number; reminders: number; checkins: number };
 }
 
 export async function runDaily(): Promise<DailyResult> {
@@ -48,6 +50,12 @@ export async function runDaily(): Promise<DailyResult> {
   /* Erinnerung vor dem Event, Bewertungsanfrage danach, Rückgabe beim Verleih */
   const { eventMails } = await import("./notify.server");
   const mails = await eventMails().catch(() => ({ reminders: 0, reviews: 0, returns: 0 }));
+  /* Faire Regeln: Kaution nach 72 h frei, Bewertungen veröffentlichen,
+     Reklamationen ohne Stellungnahme ans Team, Check-in-Wächter */
+  const { runFairDaily, runCheckinWatch } = await import("./fair.server");
+  const fairDaily = await runFairDaily().catch(() => ({ deposits: 0, reviews: 0, escalated: 0, reminders: 0 }));
+  const checkins = await runCheckinWatch().catch(() => 0);
+  const fair = { ...fairDaily, checkins };
   const payouts = await runDuePayouts().catch(() => ({ paid: 0, held: 0, skipped: 0, failed: 0 }));
   await db.rpc("purge_old_data").then(undefined, () => null);
   await db.rpc("purge_sms_log").then(undefined, () => null);
@@ -66,5 +74,5 @@ export async function runDaily(): Promise<DailyResult> {
     .delete()
     .lt("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
     .then(undefined, () => null);
-  return { lapsed, reminded, payouts, calendars, mails };
+  return { lapsed, reminded, payouts, calendars, mails, fair };
 }

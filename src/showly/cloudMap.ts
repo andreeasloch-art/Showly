@@ -45,6 +45,11 @@ export function bookingFromRow(r: BookingRow, code?: string): Booking {
     ...(r.pkg ? { pkg: r.pkg } : {}),
     hours: r.hours,
     ...(r.address ? { address: r.address } : {}),
+    ...(r.policy ? { policy: r.policy } : {}),
+    ...(r.rebooked_at ? { rebookedAt: r.rebooked_at } : {}),
+    ...(r.replacements?.length
+      ? { replacements: r.replacements.map((x) => ({ id: x.id, name: x.name, price: euro(x.price_cents), standby: x.standby })) }
+      : {}),
   };
 }
 
@@ -85,6 +90,10 @@ export function payoutFromRow(r: PayoutRow, dayOf: (bookingId: number) => string
     payoutOn: r.payout_on,
     ...(r.reserve_cents ? { reserve: euro(r.reserve_cents) } : {}),
     ...(r.reserve_until ? { reserveUntil: r.reserve_until } : {}),
+    ...(r.speed && r.speed !== "standard" ? { speed: r.speed } : {}),
+    ...(r.express_fee_cents ? { expressFee: euro(r.express_fee_cents) } : {}),
+    ...(r.frozen ? { frozen: true } : {}),
+    ...(r.offset_cents ? { offset: euro(r.offset_cents) } : {}),
   };
 }
 
@@ -113,6 +122,18 @@ export function orderFromRow(r: ShopOrderRow): Order {
     items: r.items.map((i) => ({ shopId: i.shopId, mode: i.mode, qty: i.qty, price: euro(i.price_cents) })),
     total: euro(r.total_cents),
     status: r.status === "paid" ? "confirmed" : r.status,
+    ...(r.items.some((i) => i.mode === "rent")
+      ? {
+          rent: {
+            deposit: euro(r.deposit_cents),
+            carefree: r.carefree === true,
+            handover: r.handover || {},
+            ...(r.returned_at ? { returnedAt: r.returned_at } : {}),
+            ...(r.damage ? { damage: { cents: r.damage.cents, items: r.damage.items, objected: !!r.damage.objected_at } } : {}),
+            released: !!r.deposit_released_at,
+          },
+        }
+      : {}),
   };
 }
 

@@ -25,6 +25,7 @@ import { ProfileVideos } from "@/components/showly/MediaView";
 import type { MediaRef } from "@/showly/media";
 import { TIERS, TIER_ICON, TIER_LABEL, isPlannerCat, type Tier } from "@/showly/plannerPackages";
 import { GuaranteeBadge } from "@/components/showly/Guarantee";
+import { CancelPolicyNote } from "@/components/showly/Fair";
 
 export const Route = createFileRoute("/kuenstler/$id")({
   /* Echte Profile schon beim Rendern auf dem Server laden, damit
@@ -702,6 +703,7 @@ function Detail() {
           </div>
           )}
           <GuaranteeBadge className="in-side" />
+          <CancelPolicyNote tier={a.cancelTier} cancelRate={a.cancelRate} />
         </aside>
       </div>
 

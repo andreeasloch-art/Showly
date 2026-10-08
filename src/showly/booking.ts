@@ -92,14 +92,15 @@ export function checkinOpen(b: { dateISO: string; slot?: string }, now = Date.no
   return now >= s - 2 * 3600000 && now <= s + 6 * 3600000;
 }
 
-/** 30 Minuten nach Beginn ohne Check-in: Kunde wird gefragt, ob der Künstler da ist */
+/** 15 Minuten nach Beginn ohne Check-in: Kunde wird gefragt, ob der Künstler da ist,
+ *  und kann "Künstler ist nicht erschienen" melden */
 export function presenceQuestion(
   b: { dateISO: string; slot?: string; status: string; checkedInAt?: string },
   now = Date.now(),
 ): boolean {
   if (b.checkedInAt || (b.status !== "confirmed" && b.status !== "pending")) return false;
   const s = startOf(b);
-  return now >= s + 30 * 60000 && now <= s + DAY;
+  return now >= s + 15 * 60000 && now <= s + DAY;
 }
 
 export interface StrikePenalty {
@@ -111,7 +112,7 @@ export interface StrikePenalty {
 }
 
 export interface Standing {
-  /** Anzahl fälliger Strafen wegen Nichterscheinens in den letzten 12 Monaten */
+  /** Verwarnungen (fällige Strafen wegen später Absage oder Nichterscheinens) in 12 Monaten */
   strikes: number;
   /** darf gebucht werden (nicht gesperrt, nicht entfernt) */
   bookable: boolean;
@@ -124,14 +125,15 @@ export interface Standing {
   until?: string;
 }
 
-/** Stufenmodell (AGB § 23 Abs. 2), gezählt werden fällige Strafen wegen
- *  Nichterscheinens in den letzten 12 Monaten:
+/** Stufenmodell (AGB § 23 Abs. 2). Jede fällige Strafe wegen später Absage
+ *  (unter 14 Tagen, ohne belegten Notfall) oder Nichterscheinens ist eine
+ *  Verwarnung; gezählt wird über 12 Monate:
  *   1 → Verwarnung, 30 Tage nur Anfragen und weiter unten in der Suche
  *   2 → zusätzlich 60 Tage gesperrt
  *   3 → dauerhaft entfernt */
 export function standingOf(artistId: number, penalties: StrikePenalty[], now = Date.now()): Standing {
   const strikes = penalties
-    .filter((p) => p.artistId === artistId && p.reason === "noshow" && p.status === "due")
+    .filter((p) => p.artistId === artistId && p.status === "due")
     .map((p) => new Date(p.dueAt || p.dateISO).getTime())
     .filter((t) => now - t < 365 * DAY)
     .sort((a, b) => a - b);
@@ -157,23 +159,16 @@ export const RESERVE_DAYS = 30;
  * Auszahlung an Anbietende (AGB § 21)
  * ------------------------------------------------------------------------ */
 
-/** Werktage nach dem Termin bis zur Auszahlung */
-export const PAYOUT_WORKDAYS = 5;
+/** Tage nach dem Termin bis zur Auszahlung. Schneller geht gegen Gebühr
+ *  (showly/policies.ts: PAYOUT_SPEED). */
+export const PAYOUT_DAYS = 7;
 
-/** Datum der Auszahlung: Termin plus 5 Werktage (Montag bis Freitag).
- *  Feiertage sind nicht berücksichtigt; fällt einer dazwischen, zahlt der
- *  Zahlungsdienst am nächsten Bankarbeitstag aus. */
-export function payoutDate(
-  eventISO: string,
-  workdays = PAYOUT_WORKDAYS,
-): string {
-  const d = new Date(eventISO.slice(0, 10) + "T12:00:00");
-  let left = workdays;
-  while (left > 0) {
-    d.setDate(d.getDate() + 1);
-    const wd = d.getDay();
-    if (wd !== 0 && wd !== 6) left--;
-  }
+/** Datum der Auszahlung: immer 7 Tage nach dem Event. Fällt der Tag auf ein
+ *  Wochenende oder einen Feiertag, zahlt der Zahlungsdienst am nächsten
+ *  Bankarbeitstag aus. */
+export function payoutDate(eventISO: string, days = PAYOUT_DAYS): string {
+  const d = new Date(eventISO.slice(0, 10) + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 

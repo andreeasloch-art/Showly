@@ -1,6 +1,7 @@
 /* Verleih: Angaben des Anbieters (RentTermsFields), Mietzeitraum, Größe und
  * Übergabe im Warenkorb (RentLineEditor) und Hinweise vor dem Kauf
  * (RentFacts). Regeln in showly/rental.ts. */
+import { CarefreeToggle, DamageCatalog } from "./Fair";
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { DateField } from "@/components/showly/DateField";
@@ -269,7 +270,9 @@ export function RentLineEditor({ i, l, idx }: { i: ShopItem; l: CartShopLine; id
       <p className={"rent-sum" + (!days || busy ? " warn" : "")} role={!days || busy ? "alert" : undefined}>
         {!days ? C.needDates : busy ? C.busy : `${C.days(days)} · ${C.bufferL(bufferOf(i))}`}
       </p>
+      <CarefreeToggle on={l.care === true} qty={l.qty} onChange={(v) => updateCartLine(idx, { care: v || undefined })} />
       <RentFacts i={i} />
+      <DamageCatalog deposit={depositOf(i) * l.qty} />
     </div>
   );
 }

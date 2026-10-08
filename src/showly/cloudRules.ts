@@ -5,21 +5,22 @@
  * hier ohne Datenbankzugriff, damit sie sich prüfen lassen
  * (cloudRules.test.ts) und genau den AGB folgen:
  *
- *   § 8  Kunde storniert: bis 24 Stunden vorher kostenlos
- *   § 9  Künstler sagt ab: bis 24 Stunden vorher folgenlos, danach 50 %
- *        der Gage als Vertragsstrafe (Notfall mit Nachweis ausgenommen);
- *        nicht erschienen: 100 %, erst nach 7 Tagen Anhörung;
- *        Kunde bekommt bei fälliger Strafe einen Gutschein über 50 €
+ *   § 8  Kunde storniert: nach der Stornostufe, die mit der Buchung
+ *        gespeichert ist (policies.ts: Flexibel, Moderat, Streng)
+ *   § 9  Künstler sagt ab: ab 14 Tagen vorher folgenlos, darunter 15 %,
+ *        unter 48 Stunden 25 % der Gage als Vertragsstrafe (Notfall mit
+ *        Nachweis ausgenommen); nicht erschienen: 100 %, erst nach 7 Tagen
+ *        Anhörung; Kunde bekommt einen Gutschein über 15 %
  *   § 7  Check-in-Code als Nachweis, dass der Künstler da war
- *   § 21 Auszahlung 5 Werktage nach dem Termin, Einbehalt bei den ersten 5
+ *   § 21 Auszahlung 7 Tage nach dem Termin, Einbehalt bei den ersten 5
  *
  * Uhrzeiten von Terminen gelten in deutscher Zeit. Der Server läuft in UTC;
  * ohne Umrechnung läge die 24-Stunden-Grenze dort ein bis zwei Stunden
  * daneben. */
+import { ARTIST_PENALTY, artistCancelStage, cleanSnapshot, customerCancel, type PolicySnapshot } from "./policies";
 import {
   FREE_CANCEL_HOURS,
   HEARING_DAYS,
-  PENALTY_RATE,
   RESERVE_DAYS,
   RESERVE_FIRST_BOOKINGS,
   RESERVE_RATE,
@@ -80,6 +81,9 @@ export interface BookingFacts {
   slot: string | null;
   paid: boolean;
   payout_cents: number;
+  amount_cents?: number;
+  /** mit der Buchung gespeicherte Stornoregel (0016); ältere Buchungen: 24 Stunden */
+  policy?: unknown;
   /** aus booking_codes, nur der Server kennt ihn beim Künstler-Check-in */
   checkin_code?: string | null;
   checked_in_at: string | null;
@@ -112,6 +116,10 @@ export interface Decision {
   payout?: "create" | "cancel";
   /** gezahlten Betrag vollständig erstatten (AGB § 8 Abs. 1, § 9 Abs. 1 und 4) */
   refund?: true;
+  /** nur einen Teil erstatten (Stornostufe, Cent) */
+  refundCents?: number;
+  /** Auszahlung an den Anbieter auf diesen Anteil kürzen (0..1) */
+  payoutShare?: number;
   /** Ergebnis für die Anzeige */
   result: "ok" | "free" | "penalty" | "proof" | "late";
 }
@@ -120,9 +128,23 @@ export type Refusal = { error: string };
 
 const OPEN = new Set(["confirmed", "pending"]);
 
-function penaltyCents(b: BookingFacts, reason: "late" | "noshow") {
+function penaltyCents(b: BookingFacts, rate: number) {
   if (b.business === false) return 0;
-  return Math.round(b.payout_cents * PENALTY_RATE[reason]);
+  return Math.round(b.payout_cents * rate);
+}
+
+/** Stornoregel der Buchung; Buchungen vor 0016: kostenlos bis 24 Stunden vorher */
+export function policyOf(b: { policy?: unknown }): PolicySnapshot {
+  return (
+    cleanSnapshot(b.policy) ?? {
+      kind: "artist",
+      tier: "flexibel",
+      free: FREE_CANCEL_HOURS,
+      half: FREE_CANCEL_HOURS,
+      midRate: 0.5,
+      rebook: false,
+    }
+  );
 }
 
 /** Entscheidet eine Aktion an einer Buchung. Gibt nie etwas zurück, das
@@ -136,7 +158,6 @@ export function decide(
 ): Decision | Refusal {
   const iso = new Date(now).toISOString();
   const start = berlinStart(b.day, b.slot);
-  const late = start - now < FREE_CANCEL_HOURS * HOUR;
 
   switch (action.kind) {
     case "respond": {
@@ -156,7 +177,8 @@ export function decide(
       if (now >= start) return { error: "Termin hat schon begonnen" };
       const booking = { status: "declined", cancelled_by: "artist", cancelled_at: iso };
       const refund = b.paid ? { refund: true as const } : {};
-      if (b.status === "requested" || !late) return { booking, payout: "cancel", ...refund, result: "free" };
+      const stage = artistCancelStage(start, now);
+      if (b.status === "requested" || stage === "free") return { booking, payout: "cancel", ...refund, result: "free" };
       const status = action.emergency ? "proof" : "due";
       return {
         booking,
@@ -164,10 +186,11 @@ export function decide(
         newPenalty: {
           reason: "late",
           status,
-          amount_cents: penaltyCents(b, "late"),
+          amount_cents: penaltyCents(b, ARTIST_PENALTY[stage]),
           ...(status === "due" ? { due_at: iso } : {}),
         },
-        voucher: status === "due",
+        /* Entschuldigungs-Gutschein für den Kunden, auch beim Notfall */
+        voucher: true,
         ...refund,
         result: action.emergency ? "proof" : "penalty",
       };
@@ -177,12 +200,18 @@ export function decide(
       if (role !== "customer") return { error: "Nur der Kunde kann so stornieren" };
       if (!OPEN.has(b.status) && b.status !== "requested") return { error: "Buchung ist nicht mehr offen" };
       if (now >= start) return { error: "Termin hat schon begonnen" };
-      const lateCancel = b.status !== "requested" && late;
+      const booking = { status: "cancelled", cancelled_by: "customer", cancelled_at: iso };
+      const free = { booking, payout: "cancel" as const, ...(b.paid ? { refund: true as const } : {}), result: "free" as const };
+      if (b.status === "requested") return free;
+      /* Stornostufe aus der Buchung (§ 8 Abs. 2); der Kunde darf einen
+         geringeren Schaden nachweisen (§ 8 Abs. 4) */
+      const c = customerCancel(policyOf(b), start, now, b.amount_cents ?? b.payout_cents);
+      if (c.stage === "free") return free;
       return {
-        booking: { status: "cancelled", cancelled_by: "customer", cancelled_at: iso },
-        /* Bei später Stornierung bleibt die Gage geschuldet (§ 8 Abs. 2) */
-        ...(lateCancel ? {} : { payout: "cancel" as const, ...(b.paid ? { refund: true as const } : {}) }),
-        result: lateCancel ? "late" : "free",
+        booking,
+        ...(b.paid && c.refundCents > 0 ? { refundCents: c.refundCents } : {}),
+        payoutShare: c.rate,
+        result: "late",
       };
     }
 
@@ -199,7 +228,7 @@ export function decide(
         newPenalty: {
           reason: "noshow",
           status: "hearing",
-          amount_cents: penaltyCents(b, "noshow"),
+          amount_cents: penaltyCents(b, ARTIST_PENALTY.noshow),
           hearing_until: new Date(now + HEARING_DAYS * DAY).toISOString(),
         },
         result: "ok",

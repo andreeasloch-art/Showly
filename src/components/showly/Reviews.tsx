@@ -15,6 +15,7 @@ import { MediaGrid } from "./MediaView";
 import { ReportMenu, useModeration } from "./ReportMenu";
 import { isHidden } from "@/showly/moderation";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { SUB_LABEL, SUB_RATINGS, reviewWindow } from "@/showly/policies";
 
 const EMPTY: UserReview[] = [];
 
@@ -36,7 +37,7 @@ const TEXT = {
     own: "Von dir",
     at: "Event am",
     photos: "Fotos vom Event",
-    onlyBooked: "Bewerten können nur Kunden, die dieses Profil über Showly gebucht haben, nach dem Termin.",
+    onlyBooked: "Bewerten können nur Kunden, die dieses Profil über Showly gebucht haben, bis 14 Tage nach dem Termin.",
     publish: "Ich willige ein, dass meine Bewertung mit dem angegebenen Namen und den Fotos öffentlich im Profil erscheint. Ich kann sie jederzeit löschen.",
     needPublish: "Bitte bestätige, dass die Bewertung öffentlich erscheinen darf.",
   },
@@ -110,10 +111,12 @@ export function UserReviewList({ artistId }: { artistId: number }) {
      Knopf unter jeder Bewertung, auch der Künstler hätte sie entfernen können. */
   const mine = (r: { author: string; mine?: boolean }) =>
     r.mine ?? (!!session && r.author.trim().toLowerCase() === session.name.trim().toLowerCase());
-  if (!list.length) return null;
+  const owner = !!session?.providerId && session.providerId === artistId;
+  if (!list.length) return <ReviewRules />;
 
   return (
     <div className="rev-list">
+      <ReviewRules />
       {list.map((r) => (
         <div className="review-card review-own" key={r.id}>
           <div className="rev-head">
@@ -130,7 +133,33 @@ export function UserReviewList({ artistId }: { artistId: number }) {
             <div className="rev-mark">{"★".repeat(r.rating)}</div>
             {!mine(r) && <ReportMenu target="review" id={r.id} author={r.author} className="small" />}
           </div>
+          {(r.verified || r.hidden) && (
+            <p className="rev-verified">
+              {r.verified && (
+                <span>
+                  <Icon name="verified" /> Verifizierte Buchung
+                </span>
+              )}
+              {r.hidden && <span className="fair-muted"> · noch verdeckt, bis der Künstler dich auch bewertet hat oder 14 Tage um sind</span>}
+            </p>
+          )}
+          {r.sub && Object.keys(r.sub).length > 0 && (
+            <ul className="rev-sub">
+              {SUB_RATINGS.filter((k) => r.sub![k]).map((k) => (
+                <li key={k}>
+                  {SUB_LABEL[k]} <b>{"★".repeat(r.sub![k]!)}</b>
+                </li>
+              ))}
+            </ul>
+          )}
           <p className="rev-text">{r.text}</p>
+          {r.reply && (
+            <div className="rev-reply">
+              <b>Antwort des Anbieters</b>
+              <p>{r.reply}</p>
+            </div>
+          )}
+          {owner && r.id.startsWith("db:") && <ReplyBox id={Number(r.id.slice(3))} current={r.reply ?? ""} />}
           {r.media.length > 0 && (
             <>
               <div className="rev-photos-h">
@@ -158,11 +187,18 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
   /* Nur echte Kunden nach dem Termin (§ 5b Abs. 3 UWG: Bewertungen müssen
      von Personen stammen, die das Angebot tatsächlich genutzt haben). */
   const today = new Date().toISOString().slice(0, 10);
-  const mayReview = bookings.some((b) => b.artistId === artistId && b.status === "confirmed" && b.dateISO < today);
+  /* Bewerten geht 14 Tage lang nach dem Termin */
+  const past = bookings
+    .filter((b) => b.artistId === artistId && (b.status === "confirmed" || b.status === "completed") && b.dateISO < today)
+    .map((b) => b.dateISO)
+    .sort();
+  const lastEvent = past[past.length - 1];
+  const mayReview = !!lastEvent && reviewWindow(lastEvent, Date.now()) === "open";
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(session?.name ?? "");
   const [rating, setRating] = useState(5);
+  const [sub, setSub] = useState<Record<string, number>>({});
   const [text, setText] = useState("");
   const [when, setWhen] = useState("");
   const [media, setMedia] = useState<MediaRef[]>([]);
@@ -188,7 +224,8 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
       rating,
       text: text.trim(),
       media,
-      ...(when ? { eventDate: when } : {}),
+      sub,
+      ...(when ? { eventDate: when } : lastEvent ? { eventDate: lastEvent } : {}),
     });
     setBusy(false);
     if ("error" in res) return setErr(res.error);
@@ -228,6 +265,26 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
           >
             ★
           </button>
+        ))}
+      </div>
+
+      <div className="rev-sub-pick">
+        {SUB_RATINGS.map((k) => (
+          <div key={k} className="rev-sub-row" role="group" aria-label={SUB_LABEL[k]}>
+            <span>{SUB_LABEL[k]}</span>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <button
+                key={n}
+                type="button"
+                className={"rev-star small" + (n <= (sub[k] ?? 0) ? " on" : "")}
+                onClick={() => setSub({ ...sub, [k]: n })}
+                aria-label={`${SUB_LABEL[k]}: ${n}`}
+                aria-pressed={sub[k] === n}
+              >
+                ★
+              </button>
+            ))}
+          </div>
         ))}
       </div>
 
@@ -275,6 +332,54 @@ export function ReviewComposer({ artistId }: { artistId: number }) {
           ✕
         </button>
       </div>
+    </div>
+  );
+}
+
+/** So prüfen wir Bewertungen (Pflichtangabe nach § 5b Abs. 3 UWG) */
+function ReviewRules() {
+  return (
+    <details className="rev-rules">
+      <summary>
+        <Icon name="shield" /> So prüfen wir Bewertungen
+      </summary>
+      <p>
+        Bewerten kann nur, wer dieses Angebot über Showly gebucht und bezahlt hat und dessen Termin stattgefunden hat; solche Bewertungen tragen „Verifizierte
+        Buchung“. Bewertet wird bis 14 Tage nach dem Event. Kunde und Anbieter bewerten sich gegenseitig und verdeckt: Sichtbar wird beides erst, wenn beide
+        bewertet haben oder die Frist um ist. Anbieter können öffentlich antworten. Gelöscht wird nur bei Verstößen (Beleidigung, Kontaktdaten, nachweislich
+        falsche Tatsachen), nie wegen einer schlechten Note. Für Bewertungen gibt es keine Gegenleistung, keine Rabatte und keine Gutscheine.
+      </p>
+    </details>
+  );
+}
+
+/** Anbieter antwortet öffentlich auf eine Bewertung */
+function ReplyBox({ id, current }: { id: number; current: string }) {
+  const { toast } = useShowly();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(current);
+  if (!open)
+    return (
+      <button className="rev-del" onClick={() => setOpen(true)}>
+        <Icon name="comment" /> {current ? "Antwort ändern" : "Öffentlich antworten"}
+      </button>
+    );
+  return (
+    <div className="rev-reply-form">
+      <textarea rows={2} value={text} onChange={(e) => setText(e.target.value)} aria-label="Antwort" />
+      <button
+        className="dash26-mini"
+        onClick={async () => {
+          const { replyReview } = await import("@/utils/fair.functions");
+          const r = await replyReview({ data: { reviewId: id, text } }).catch(() => ({ error: "Hat nicht geklappt" }));
+          if ("error" in r) return toast(r.error);
+          const { syncCommunity } = await import("@/showly/community");
+          await syncCommunity();
+          setOpen(false);
+        }}
+      >
+        Antwort speichern
+      </button>
     </div>
   );
 }

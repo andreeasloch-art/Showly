@@ -1,3 +1,4 @@
+import { rankingPenalty } from "@/showly/policies";
 import { headLang, seoHead } from "@/showly/seo";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -106,8 +107,13 @@ function Home() {
             catLabel,
           }),
       )
-        /* Nach einem Nichterscheinen 30 Tage weiter unten (AGB § 22) */
-        .sort((x, y) => Number(standing(x.id).demoted) - Number(standing(y.id).demoted)),
+        /* Nach einem Verstoß 30 Tage weiter unten (AGB § 23); eine hohe
+           Stornoquote kostet zusätzlich Plätze (policies.ts) */
+        .sort(
+          (x, y) =>
+            Number(standing(x.id).demoted) - Number(standing(y.id).demoted) ||
+            rankingPenalty(x.cancelRate ?? 0) - rankingPenalty(y.cancelRate ?? 0),
+        ),
     [cat, query, city, L, catLabel, standing],
   );
   const filtered = cat !== "all" || query || city;

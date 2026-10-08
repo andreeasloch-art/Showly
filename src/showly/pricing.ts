@@ -7,6 +7,7 @@
 import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
 import { BAKERS, SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
 import { depositOf, rentDays, shipFee, type Ship } from "./rental";
+import { CAREFREE_EUR } from "./policies";
 
 const bakerIsDemo = (id: number) => !!BAKERS.find((b) => b.id === id)?.demo;
 
@@ -37,6 +38,8 @@ export interface CartShopLine {
   size?: string | undefined;
   /** Übergabe: Abholung, Lieferung oder Versand inkl. Rückversand */
   ship?: Ship | undefined;
+  /** Miete: Sorglos-Paket (+5 € je Stück), deckt kleine Schäden (policies.ts) */
+  care?: boolean | undefined;
 }
 
 export interface CartBookingLine {
@@ -98,12 +101,13 @@ const isRent = (i: ShopItem, l: { mode: Mode }) => l.mode === "rent" && i.rent >
  *  kann sie erst mit Zeitraum (priceLines meldet sie sonst als unbekannt). */
 export function shopLineParts(i: ShopItem, l: CartShopLine) {
   const qty = Math.min(99, Math.max(1, Math.round(l.qty) || 1));
-  if (!isRent(i, l)) return { goods: i.buy * qty, deposit: 0, ship: 0, days: 0, qty };
+  if (!isRent(i, l)) return { goods: i.buy * qty, deposit: 0, ship: 0, care: 0, days: 0, qty };
   const days = rentDays(l.from, l.to);
   return {
     goods: i.rent * Math.max(1, days) * qty,
     deposit: depositOf(i) * qty,
     ship: shipFee(i, l.ship) ?? 0,
+    care: l.care ? CAREFREE_EUR * qty : 0,
     days,
     qty,
   };
@@ -112,7 +116,7 @@ export function shopLineParts(i: ShopItem, l: CartShopLine) {
 /** Summe einer Shop-Zeile (inkl. Kaution und Übergabe) */
 export function shopLineTotal(i: ShopItem, l: CartShopLine) {
   const p = shopLineParts(i, l);
-  return p.goods + p.deposit + p.ship;
+  return p.goods + p.deposit + p.ship + p.care;
 }
 
 export function findArtist(id: number, extra?: Extra) {
@@ -239,6 +243,8 @@ export function priceLines(
         amountInCents: Math.round(fee * 100),
         quantity: 1,
       });
+    if (l.care)
+      lines.push({ name: `Sorglos-Paket · ${name(i.name)} (kleine Schäden abgedeckt)`, amountInCents: CAREFREE_EUR * 100, quantity: qty });
   }
   for (const x of sweets) {
     const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);

@@ -7,6 +7,7 @@ import { adminClient } from "@/lib/supabase.server";
 import type { BookingRow } from "@/lib/database.types";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import type { Snapshot } from "@/showly/cartSnapshot";
+import { policySnapshot } from "@/showly/policies";
 
 /* ---------------------------------------------------------------------------
  * Preise eines Künstlers: Katalog (Beispielprofile) oder Datenbank
@@ -22,6 +23,7 @@ async function artistTerms(
 ) {
   const { bookingPrice, findArtist, FEE_RATE, MAX_HOURS } = await import("@/showly/pricing");
   const { isInstant, standingOf } = await import("@/showly/booking");
+  const { tierOf } = await import("@/showly/policies");
   if (artistId < REAL_ARTIST_FROM) {
     const a = findArtist(artistId);
     if (!a || a.demo) return null; // Beispielprofile sind nicht buchbar
@@ -34,11 +36,12 @@ async function artistTerms(
       fee_cents: Math.round(p.fee * 100),
       payout_cents: Math.round(p.payout * 100),
       instant: isInstant(a),
+      tier: tierOf((a as { cancelTier?: string }).cancelTier),
     };
   }
   const { data: a } = await admin
     .from("artists")
-    .select("id, cat, price_cents, instant_book, published, packages")
+    .select("id, cat, price_cents, instant_book, published, packages, cancel_tier")
     .eq("id", artistId)
     .maybeSingle();
   if (!a || !a.published) return null;
@@ -74,6 +77,7 @@ async function artistTerms(
     fee_cents: fee,
     payout_cents: base - fee,
     instant: a.instant_book && standing.instantAllowed,
+    tier: tierOf(a.cancel_tier),
   };
 }
 
@@ -202,7 +206,7 @@ export async function recordCartCore(
       return {
         ...l,
         /* Ware bzw. Miete samt Übergabe; die Kaution steht extra */
-        price_cents: Math.round((parts.goods + parts.ship) * 100),
+        price_cents: Math.round((parts.goods + parts.ship + parts.care) * 100),
         deposit_cents: Math.round(parts.deposit * 100),
         providerId: cat.offerProvider.get(l.shopId) ?? null,
         owner: cat.offerOwner.get(l.shopId) ?? null,
@@ -304,6 +308,8 @@ export async function recordCartCore(
       requested_at: status === "requested" ? new Date().toISOString() : null,
       stripe_session_id: data.sessionId ? `${data.sessionId}:${i}` : null,
       sub_order_id: partSub.get(`booking:${j}`) ?? null,
+      /* Stornostufe zum Zeitpunkt der Buchung; spätere Änderungen gelten nicht */
+      policy: policySnapshot("artist", terms.tier),
     } as Partial<BookingRow>;
     const { data: ins, error } = await admin.from("bookings").insert(row).select("id").single();
     if (error || !ins) continue;
@@ -415,6 +421,9 @@ export async function recordCartCore(
         stripe_session_id: data.sessionId ? `${data.sessionId}:${k}` : null,
         provider_owners: owners,
         sub_order_id: typeof k === "number" ? k : null,
+        /* Stornoregel Verleih und Sorglos-Paket mit der Bestellung speichern */
+        ...(lines.some((l) => l.mode === "rent") ? { policy: policySnapshot("rental", "moderat") } : {}),
+        carefree: lines.some((l) => l.mode === "rent" && l.care === true),
       })
       .select("id")
       .single();

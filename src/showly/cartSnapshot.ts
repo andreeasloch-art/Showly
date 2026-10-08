@@ -32,6 +32,7 @@ export type Snapshot = {
     to?: string | undefined;
     size?: string | undefined;
     ship?: "pickup" | "delivery" | "shipping" | undefined;
+    care?: boolean | undefined;
   }[];
   contact: { name: string; address?: string | undefined };
 };
@@ -84,6 +85,7 @@ export function cleanSnapshot(s: Snapshot): Snapshot {
         ...(l.mode === "rent" && typeof l.to === "string" && DATE.test(l.to) ? { to: l.to } : {}),
         ...(typeof l.size === "string" && l.size ? { size: l.size.slice(0, 20) } : {}),
         ...(l.ship === "pickup" || l.ship === "delivery" || l.ship === "shipping" ? { ship: l.ship } : {}),
+        ...(l.mode === "rent" && l.care === true ? { care: true } : {}),
       };
     }),
     contact: { name: text(s.contact?.name, 120) ?? "", address: text(s.contact?.address, 300) },

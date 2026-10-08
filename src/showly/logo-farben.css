@@ -782,3 +782,61 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .guar-why{margin:0;font-size:14px;color:var(--h-muted,#6B6480)}
 @media (max-width:640px){.guar-card{flex-direction:column;padding:18px}.guar-seal{width:52px;height:52px}}
 .guar-body .home-eyebrow{display:inline-block;color:#1E7A46;font:600 13px/1 "Outfit",system-ui,sans-serif;letter-spacing:.02em;text-transform:none;opacity:1;background:none;-webkit-text-fill-color:#1E7A46}
+
+/* ---------- Faire Regeln: Stornostufe, Reklamation, Auszahlung, Verleih (Fair.tsx) ---------- */
+.fair-policy{margin:12px 0;border:1px solid #E4DDF5;background:#FBF9FF;border-radius:16px;padding:12px 14px;font-size:14px;line-height:1.45;color:var(--h-ink2,#3A3350)}
+.fair-policy p{margin:6px 0 0}
+.fair-policy-head{display:flex;gap:8px;align-items:center}
+.fair-policy-head [data-icon],.fair-policy-head span:first-child{color:#6B4FD8;display:inline-flex}
+.fair-policy.compact{margin:4px 0;padding:6px 10px;border-radius:10px;font-size:12.5px;display:block}
+.fair-policy.compact span:first-child{display:inline-flex;vertical-align:-2px;color:#6B4FD8}
+.fair-muted{color:var(--sh-muted,#554B6B);font-size:12.5px}
+.fair-tiers{display:grid;gap:10px}
+.fair-tier-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.fair-tier{text-align:left;border:1.5px solid #E4DDF5;background:#fff;border-radius:14px;padding:10px 12px;cursor:pointer;display:grid;gap:4px;font:inherit;color:inherit}
+.fair-tier small{font-size:12.5px;line-height:1.4;color:var(--sh-muted,#554B6B)}
+.fair-tier.on{border-color:#6B4FD8;background:#F4F0FF;box-shadow:0 0 0 3px rgba(107,79,216,.12)}
+.fair-tier:focus-visible,.fair-chip:focus-visible{outline:2px solid #6B4FD8;outline-offset:2px}
+.fair-check{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;line-height:1.45;margin:8px 0}
+.fair-check input{margin-top:3px;width:18px;height:18px;flex:0 0 auto;accent-color:#6B4FD8}
+.fair-box{grid-column:1/-1;width:100%;box-sizing:border-box;margin:10px 0 0;border:1px solid #ECE7F6;background:#fff;border-radius:14px;padding:12px 14px;display:grid;gap:8px;font-size:14px;line-height:1.45}
+.fair-box p{margin:0}
+.fair-box input,.fair-box textarea,.fair-box select{width:100%;box-sizing:border-box;border:1px solid #DDD5EE;border-radius:10px;padding:9px 11px;font:inherit;background:#fff;min-height:42px}
+.fair-row{display:flex;gap:8px;align-items:center}
+.fair-row.wrap{flex-wrap:wrap}
+.fair-row.wrap input{flex:1 1 160px;width:auto}
+.fair-row.space{justify-content:space-between}
+.fair-row input{flex:1;min-width:0}
+.fair-chips{display:flex;flex-wrap:wrap;gap:6px}
+.fair-chip{border:1.5px solid #E4DDF5;background:#fff;border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;font-weight:700;color:inherit;cursor:pointer;min-height:36px}
+.fair-chip.on{border-color:#6B4FD8;background:#F4F0FF;color:#4A32B5}
+.fair-tag{font-size:12px;font-weight:800;background:#F4F0FF;color:#4A32B5;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.fair-speed{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.fair-speed .fair-chip{text-align:left;border-radius:12px;font-weight:600}
+.fair-evidence{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fair-evidence label{cursor:pointer;display:inline-flex;gap:6px;align-items:center}
+.fair-repl{border-color:#CDEBD8;background:#F2FBF5}
+.fair-repl ul{margin:0;padding-left:18px}
+.fair-complaints{margin:0 0 14px;display:grid;gap:8px}
+.fair-complaints h3{margin:0;font-size:16px}
+.fair-catalog{margin:8px 0;border:1px dashed #DDD5EE;border-radius:12px;padding:8px 12px;font-size:13px}
+.fair-catalog summary{cursor:pointer;font-weight:700}
+.fair-catalog ul{margin:8px 0;padding:0;list-style:none;display:grid;gap:4px}
+.fair-catalog li{display:flex;justify-content:space-between;gap:10px}
+.fair-catalog-pick{margin:0;padding:0;list-style:none;display:grid;gap:6px;font-size:13.5px}
+.rev-verified{margin:4px 0 0;font-size:12.5px;font-weight:700;color:#1E7A46;display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.rev-verified span{display:inline-flex;gap:4px;align-items:center}
+.rev-sub{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--sh-muted,#554B6B)}
+.rev-sub b{color:#E8A317;font-weight:400;letter-spacing:1px}
+.rev-reply{margin:8px 0 0;border-left:3px solid #6B4FD8;background:#FBF9FF;padding:8px 12px;border-radius:0 10px 10px 0;font-size:13.5px}
+.rev-reply p{margin:4px 0 0}
+.rev-reply-form{display:grid;gap:6px;margin-top:8px}
+.rev-reply-form textarea{border:1px solid #DDD5EE;border-radius:10px;padding:8px;font:inherit}
+.rev-rules{margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--sh-muted,#554B6B)}
+.rev-rules summary{cursor:pointer;font-weight:700;display:flex;gap:6px;align-items:center;color:var(--h-ink2,#3A3350)}
+.rev-rules p{margin:6px 0 0}
+.rev-sub-pick{display:grid;gap:4px;margin:6px 0 10px}
+.rev-sub-row{display:flex;align-items:center;gap:2px;flex-wrap:wrap;font-size:13.5px}
+.rev-sub-row span{min-width:160px}
+.rev-star.small{font-size:20px;min-width:32px;min-height:32px}
+@media (max-width:520px){.fair-row{flex-wrap:wrap}.fair-row input{flex:1 1 100%}.rev-sub-row span{min-width:100%}}

@@ -30,6 +30,7 @@ import { Route as TopActRouteImport } from './routes/top-act'
 import { Route as UeberShowlyRouteImport } from './routes/ueber-showly'
 import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as WieFunktioniertShowlyRouteImport } from './routes/wie-funktioniert-showly'
+import { Route as ApiCheckinRouteImport } from './routes/api.checkin'
 import { Route as ApiStatusRouteImport } from './routes/api.status'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
@@ -147,6 +148,11 @@ const WieFunktioniertShowlyRoute = WieFunktioniertShowlyRouteImport.update({
   path: '/wie-funktioniert-showly',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCheckinRoute = ApiCheckinRouteImport.update({
+  id: '/api/checkin',
+  path: '/api/checkin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStatusRoute = ApiStatusRouteImport.update({
   id: '/api/status',
   path: '/api/status',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
@@ -330,6 +339,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
@@ -364,6 +374,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
@@ -398,6 +409,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
@@ -433,6 +445,7 @@ export interface RootRouteChildren {
   UeberShowlyRoute: typeof UeberShowlyRoute
   WiderrufRoute: typeof WiderrufRoute
   WieFunktioniertShowlyRoute: typeof WieFunktioniertShowlyRoute
+  ApiCheckinRoute: typeof ApiCheckinRoute
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTaeglichRoute: typeof ApiTaeglichRoute
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
@@ -595,6 +608,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WieFunktioniertShowlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/checkin': {
+      id: '/api/checkin'
+      path: '/api/checkin'
+      fullPath: '/api/checkin'
+      preLoaderRoute: typeof ApiCheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/status': {
       id: '/api/status'
       path: '/api/status'
@@ -697,6 +717,7 @@ const rootRouteChildren: RootRouteChildren = {
   UeberShowlyRoute: UeberShowlyRoute,
   WiderrufRoute: WiderrufRoute,
   WieFunktioniertShowlyRoute: WieFunktioniertShowlyRoute,
+  ApiCheckinRoute: ApiCheckinRoute,
   ApiStatusRoute: ApiStatusRoute,
   ApiTaeglichRoute: ApiTaeglichRoute,
   AuthRueckkehrRoute: AuthRueckkehrRoute,

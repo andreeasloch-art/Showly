@@ -94,6 +94,10 @@ export type ArtistRow = {
   packages?: { id: string; name: string; price: number; dur: string; inc: string[]; text: string; popular?: boolean }[] | null;
   /** Arbeitszeiten je Wochentag (0013), showly/workHours.ts */
   work_hours?: Record<string, [number, number]> | null;
+  /** Stornostufe, Springer-Liste, Stornoquote (0016), showly/policies.ts */
+  cancel_tier?: "flexibel" | "moderat" | "streng";
+  standby?: boolean;
+  cancel_rate?: number;
   owner: string;
   cat: string;
   name: LText;
@@ -160,6 +164,12 @@ export type BookingRow = {
   checked_in_by: "artist" | "customer" | null;
   refunded_cents: number;
   refunded_at: string | null;
+  /** gespeicherte Stornoregel, Umbuchung, Check-in-Hinweis, Ersatz (0016) */
+  policy?: PolicyJson | null;
+  rebooked_at?: string | null;
+  rebooked_from?: string | null;
+  checkin_alert_at?: string | null;
+  replacements?: { id: number; name: string; price_cents: number; rating: number; standby: boolean }[] | null;
   created_at: string;
 }
 
@@ -173,6 +183,8 @@ export type PenaltyRow = {
   hearing_until: string | null;
   due_at: string | null;
   statement: string | null;
+  /** schon mit Auszahlungen verrechnet (0016) */
+  offset_cents?: number;
   created_at: string;
   updated_at: string;
 }
@@ -200,6 +212,11 @@ export type PayoutRow = {
   status: PayoutStatus;
   stripe_transfer_id: string | null;
   last_error: string | null;
+  /** Geschwindigkeit und Gebühr, eingefroren bei Reklamation, verrechnete Strafen (0016) */
+  speed?: "standard" | "fast" | "express";
+  express_fee_cents?: number;
+  frozen?: boolean;
+  offset_cents?: number;
   created_at: string;
 }
 
@@ -256,6 +273,41 @@ export type ShopOrderRow = {
   deposit_refunded_cents?: number;
   returned_at?: string | null;
   condition_note?: string | null;
+  /** Stornoregel, Sorglos-Paket, Übergabeprotokoll, Schaden (0016) */
+  policy?: PolicyJson | null;
+  carefree?: boolean;
+  handover?: HandoverRow;
+  damage?: { items: { key: string; qty?: number }[]; cents: number; note?: string; objected_at?: string } | null;
+  damage_reported_at?: string | null;
+  deposit_released_at?: string | null;
+  created_at: string;
+}
+
+export type PolicyJson = { kind: "artist" | "cake" | "rental"; tier: "flexibel" | "moderat" | "streng"; free: number; half: number; midRate: number; rebook: boolean };
+export type HandoverStep = { photos: string[]; at: string; by: string; note?: string; confirmed_at?: string };
+export type HandoverRow = { out?: HandoverStep; back?: HandoverStep };
+
+export type ComplaintRow = {
+  id: number;
+  booking_id: number | null;
+  shop_order_id: number | null;
+  sweet_request_id: number | null;
+  customer: string;
+  provider_owner: string | null;
+  category: "late" | "short" | "different" | "rude" | "cake" | "item" | "damage";
+  body: string;
+  evidence: string[];
+  amount_cents: number;
+  status: "open" | "offer" | "agreed" | "escalated" | "decided" | "withdrawn";
+  statement: string | null;
+  statement_at: string | null;
+  statement_due: string;
+  offer_cents: number | null;
+  offer_by: "customer" | "provider" | null;
+  refund_cents: number | null;
+  decision: string | null;
+  decide_by: string;
+  decided_at: string | null;
   created_at: string;
 }
 
@@ -330,6 +382,13 @@ export type ReviewRow = {
   event_date: string | null;
   media: MediaRefRow[];
   author_name: string | null;
+  /** verifizierte Buchung, Teilnoten, Antwort, verdeckt bis veröffentlicht (0016) */
+  booking_id?: number | null;
+  verified?: boolean;
+  sub?: Record<string, number>;
+  reply?: string | null;
+  reply_at?: string | null;
+  published_at?: string | null;
   created_at: string;
 }
 
@@ -381,6 +440,19 @@ export type Database = {
       }>;
       bookings: Table<BookingRow>;
       reviews: Table<ReviewRow>;
+      /** Reklamationen (0016) */
+      complaints: Table<ComplaintRow>;
+      /** Bewertung des Kunden durch den Künstler, verdeckt (0016) */
+      guest_reviews: Table<{
+        id: number;
+        booking_id: number;
+        artist_id: number;
+        customer: string;
+        rating: number;
+        body: string | null;
+        published_at: string | null;
+        created_at: string;
+      }>;
       posts: Table<PostRow>;
       post_artists: Table<{ post_id: number; artist_id: number }>;
       post_likes: Table<{ post_id: number; profile_id: string; created_at: string }>;

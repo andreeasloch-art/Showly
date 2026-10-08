@@ -43,15 +43,13 @@ import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopLineTot
 import { demoRentTerms, type Ship } from "./rental";
 import {
   HEARING_DAYS,
-  PENALTY_RATE,
   RESERVE_DAYS,
   RESERVE_FIRST_BOOKINGS,
   RESERVE_RATE,
-  VOUCHER_EUR,
   checkinCodeOf,
   isInstant,
-  isLateCancel,
   newCheckinCode,
+  startOf,
   payoutDate,
   requestExpired,
   standingOf,
@@ -60,6 +58,19 @@ import {
   type Standing,
 } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
+import {
+  ARTIST_PENALTY,
+  apologyVoucherCents,
+  artistCancelStage,
+  canRebook,
+  customerCancel,
+  payoutFor,
+  policySnapshot,
+  rebookTargetOk,
+  type PolicySnapshot,
+} from "./policies";
+import { choosePayoutSpeed as choosePayoutSpeedCloud, rebookBooking as rebookBookingCloud } from "@/utils/fair.functions";
+import { policyOf } from "./cloudRules";
 import { isBot, localeFor, pickLang, serverCountry } from "./geoLang";
 
 /* Beispielartikel zeigen, wie Größe, Hygiene, Kaution und Übergabe beim
@@ -147,6 +158,12 @@ export interface Booking {
   pkg?: string;
   hours?: number;
   address?: string;
+  /** Stornoregel zum Zeitpunkt der Buchung (policies.ts) */
+  policy?: PolicySnapshot;
+  /** schon einmal umgebucht (nur einmal kostenlos) */
+  rebookedAt?: string;
+  /** Ersatz-Vorschläge nach Absage oder Nichterscheinen */
+  replacements?: { id: number; name: string; price: number; standby: boolean }[];
 }
 export interface Order {
   id: number;
@@ -154,6 +171,15 @@ export interface Order {
   items: { shopId: number; mode: Mode; qty: number; price: number }[];
   total: number;
   status: string;
+  /** Miete: Kaution, Sorglos-Paket, Übergabeprotokoll, Schaden (aus der Datenbank) */
+  rent?: {
+    deposit: number;
+    carefree: boolean;
+    handover: import("@/lib/database.types").HandoverRow;
+    returnedAt?: string;
+    damage?: { cents: number; items: { key: string; qty?: number }[]; objected: boolean };
+    released: boolean;
+  };
 }
 export interface Payout {
   id: number;
@@ -167,8 +193,14 @@ export interface Payout {
   /** Sicherheitseinbehalt der ersten Buchungen, wird später ausgezahlt */
   reserve?: number;
   reserveUntil?: string;
-  /** Auszahlung 5 Werktage nach dem Termin */
+  /** Auszahlung 7 Tage nach dem Termin, schneller gegen Gebühr */
   payoutOn?: string;
+  speed?: "standard" | "fast" | "express";
+  expressFee?: number;
+  /** angehalten wegen offener Reklamation */
+  frozen?: boolean;
+  /** mit Vertragsstrafen verrechnet */
+  offset?: number;
 }
 /** Auszahlungskonto eines Anbieters. Im Echtbetrieb erfasst Stripe Connect
  *  diese Daten, Showly speichert dann keine IBAN selbst. */
@@ -308,6 +340,12 @@ interface Ctx {
   hydrated: boolean;
   /** Daten aus der Datenbank neu laden (bei Anmeldung über Supabase) */
   refreshCloud: () => Promise<void>;
+  /** über die Datenbank angemeldet (Serverfunktionen verfügbar) */
+  cloudOn: boolean;
+  /** einmal kostenlos umbuchen (policies.ts) */
+  rebook: (id: number, day: string, slot: string) => Promise<string | null>;
+  /** Auszahlung schneller gegen Gebühr */
+  setPayoutSpeed: (id: number, speed: "standard" | "fast" | "express") => Promise<string | null>;
   /** Künstler-Registrierung, die nach der Anmeldung an den Server geht */
   queueArtistSignup: (s: ArtistSignup) => void;
   /** Eigene Anbieterprofile in der Datenbank (Torten, Deko) */
@@ -871,6 +909,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
             ...(b.figure ? { figure: b.figure } : {}),
             ...(b.pkg ? { pkg: b.pkg } : {}),
             ...(b.address ? { address: b.address } : {}),
+            policy: policySnapshot("artist", a.cancelTier),
           },
           ...x,
         ]);
@@ -1062,7 +1101,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [L],
   );
 
-  const issueVoucher = useCallback((bookingId: number) => {
+  const issueVoucher = useCallback((bookingId: number, amount: number) => {
     /* Gutscheine zu Buchungen aus der Datenbank stellt der Server aus */
     if (cloudOn && isDbId(bookingId)) return;
     setVouchers((x) =>
@@ -1071,7 +1110,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         : [
             {
               code: voucherCode(),
-              amount: VOUCHER_EUR,
+              amount: apologyVoucherCents(Math.round(amount * 100)) / 100,
               bookingId,
               dateISO: new Date().toISOString(),
               validUntil: voucherValidUntil(),
@@ -1082,14 +1121,14 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   }, [cloudOn]);
 
   /* Vertragsstrafe anlegen. Gutschein für den Kunden, sobald sie fällig ist */
-  const penalize = useCallback((b: Booking, reason: Penalty["reason"], status: Penalty["status"]) => {
+  const penalize = useCallback((b: Booking, reason: Penalty["reason"], status: Penalty["status"], rate: number) => {
     /* Strafen zu Buchungen aus der Datenbank legt der Server an */
     if (cloudOn && isDbId(b.id)) return;
     const a = findArtist(b.artistId);
     const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount * (1 - FEE_RATE));
     /* Privatanbieter: keine Geldstrafe, der Eintrag zählt nur für das
        Stufenmodell (AGB § 9 Abs. 6) */
-    const amount = isBusiness(a) ? Math.round(net * PENALTY_RATE[reason]) : 0;
+    const amount = isBusiness(a) ? Math.round(net * rate) : 0;
     setPenalties((x) => [
       {
         id: Date.now(),
@@ -1106,17 +1145,19 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       },
       ...x,
     ]);
-    if (status === "due") issueVoucher(b.id);
+    if (status === "due" && reason === "noshow") issueVoucher(b.id, b.amount);
   }, [issueVoucher, cloudOn]);
 
-  /* Künstler sagt ab (AGB § 9). Bis 24 Stunden vorher ohne Grund und ohne
-     Folgen. Danach Vertragsstrafe, außer bei einem belegten Notfall; dann
-     wird der Nachweis geprüft. Der Kunde bekommt in jedem Fall alles zurück. */
+  /* Künstler sagt ab (AGB § 9). Ab 14 Tagen vorher ohne Folgen. Darunter
+     Vertragsstrafe (15 %, unter 48 Stunden 25 %), außer bei einem belegten
+     Notfall; dann wird der Nachweis geprüft. Der Kunde bekommt in jedem Fall
+     alles zurück und einen Gutschein über 15 %. */
   const cancelByArtist = useCallback(
     (id: number, emergency = false): "free" | "penalty" | "proof" => {
       const b = bookings.find((x) => x.id === id);
       if (!b) return "free";
-      const late = (b.status === "confirmed" || b.status === "pending") && isLateCancel(b);
+      const stage = artistCancelStage(startOf(b), Date.now());
+      const late = (b.status === "confirmed" || b.status === "pending") && stage !== "free";
       setBookings((list) =>
         list.map((x) => (x.id === id ? { ...x, status: "declined", cancelledBy: "artist" } : x)),
       );
@@ -1126,10 +1167,11 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       );
       void cloudAct(id, { kind: "cancelArtist", emergency });
       if (!late) return "free";
-      penalize(b, "late", emergency ? "proof" : "due");
+      penalize(b, "late", emergency ? "proof" : "due", ARTIST_PENALTY[stage === "urgent" ? "urgent" : "late"]);
+      issueVoucher(b.id, b.amount);
       return emergency ? "proof" : "penalty";
     },
-    [bookings, shiftSlot, penalize, cloudAct],
+    [bookings, shiftSlot, penalize, cloudAct, issueVoucher],
   );
 
   const reportNoShow = useCallback(
@@ -1141,7 +1183,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
       );
       /* Erst anhören: 7 Tage für Stellungnahme oder Notfall-Nachweis */
-      penalize(b, "noshow", "hearing");
+      penalize(b, "noshow", "hearing", ARTIST_PENALTY.noshow);
       void cloudAct(id, { kind: "reportNoShow" });
     },
     [bookings, penalize, cloudAct],
@@ -1166,8 +1208,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     if (!over.length) return;
     const ids = new Set(over.map((p) => p.id));
     setPenalties((x) => x.map((p) => (ids.has(p.id) ? { ...p, status: "due", dueAt: new Date().toISOString() } : p)));
-    for (const p of over) issueVoucher(p.bookingId);
-  }, [hydrated, penalties, issueVoucher]);
+    for (const p of over) issueVoucher(p.bookingId, bookings.find((b) => b.id === p.bookingId)?.amount ?? 0);
+  }, [hydrated, penalties, issueVoucher, bookings]);
 
   const checkIn = useCallback(
     async (bookingId: number, code: string) => {
@@ -1221,19 +1263,91 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [penalties],
   );
 
-  /* Stornierung durch den Kunden (AGB § 8): bis 24 Stunden vor Beginn
-     kostenlos, danach bleibt die Gage für den Künstler vorgemerkt. Eine
+  /* Einmal kostenlos umbuchen (AGB § 8 Abs. 5): neuer Termin höchstens
+     6 Monate nach dem alten, bis 48 Stunden vor Beginn. Gibt eine
+     Fehlermeldung zurück oder null. */
+  const rebook = useCallback(
+    async (id: number, day: string, slot: string): Promise<string | null> => {
+      const b = bookings.find((x) => x.id === id);
+      if (!b) return "Buchung nicht gefunden";
+      const today = new Date().toISOString().slice(0, 10);
+      if (!canRebook(b.policy ?? null, { status: b.status, rebooked_at: b.rebookedAt ?? null }, startOf(b), Date.now()))
+        return "Umbuchen geht einmal und bis 48 Stunden vor Beginn.";
+      if (!rebookTargetOk(b.dateISO, day, today)) return "Der neue Termin muss in der Zukunft und höchstens 6 Monate nach dem alten liegen.";
+      const dbId = dbIdOf(id);
+      if (cloudOn && dbId !== null) {
+        const r = await rebookBookingCloud({ data: { bookingId: dbId, day, slot } }).catch(() => ({ error: "Umbuchen hat nicht geklappt" }));
+        if ("error" in r) return r.error;
+        await refreshCloud();
+        return null;
+      }
+      shiftSlot(b.artistId, b.dateISO, b.slot, false);
+      shiftSlot(b.artistId, day, slot, true);
+      setBookings((list) =>
+        list.map((x) => (x.id === id ? { ...x, dateISO: day, slot, rebookedAt: new Date().toISOString() } : x)),
+      );
+      setPayouts((x) =>
+        x.map((p) =>
+          p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending"
+            ? { ...p, dateISO: day, payoutOn: payoutDate(day) }
+            : p,
+        ),
+      );
+      return null;
+    },
+    [bookings, cloudOn, refreshCloud, shiftSlot],
+  );
+
+  /* Auszahlung: Standard 7 Tage nach dem Event; schneller gegen 10 bzw. 20 % */
+  const setPayoutSpeed = useCallback(
+    async (id: number, speed: "standard" | "fast" | "express"): Promise<string | null> => {
+      const p = payouts.find((x) => x.id === id);
+      if (!p || p.status !== "pending") return "Diese Auszahlung läuft schon";
+      if (p.frozen) return "Bei einer offenen Reklamation geht keine schnellere Auszahlung";
+      const dbId = dbIdOf(id);
+      if (cloudOn && dbId !== null) {
+        const r = await choosePayoutSpeedCloud({ data: { payoutId: dbId, speed } }).catch(() => ({ error: "Speichern hat nicht geklappt" }));
+        if ("error" in r) return r.error;
+        await refreshCloud();
+        return null;
+      }
+      const base = Math.round((p.net + (p.expressFee ?? 0)) * 100);
+      const next = payoutFor(p.dateISO, base, speed);
+      setPayouts((x) =>
+        x.map((q) =>
+          q.id === id
+            ? { ...q, payoutOn: next.payout_on, net: next.net_cents / 100, expressFee: next.express_fee_cents / 100, speed }
+            : q,
+        ),
+      );
+      return null;
+    },
+    [payouts, cloudOn, refreshCloud],
+  );
+
+  /* Stornierung durch den Kunden (AGB § 8) nach der mit der Buchung
+     gespeicherten Stornostufe (Flexibel, Moderat, Streng). Eine
      unbeantwortete Anfrage lässt sich immer kostenlos zurückziehen. */
   const cancelByCustomer = useCallback(
     (id: number) => {
       const b = bookings.find((x) => x.id === id);
       if (!b) return false;
-      const late = b.status !== "requested" && isLateCancel(b);
+      /* Stornostufe aus der Buchung; ältere Buchungen: 24 Stunden */
+      const c = customerCancel(policyOf(b), startOf(b), Date.now(), Math.round(b.amount * 100));
+      const late = b.status !== "requested" && c.stage !== "free";
       setBookings((list) => list.map((x) => (x.id === id ? { ...x, status: "cancelled" } : x)));
       shiftSlot(b.artistId, b.dateISO, b.slot, false);
       if (!late)
         setPayouts((x) =>
           x.filter((p) => !(p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending")),
+        );
+      else if (c.rate < 1)
+        setPayouts((x) =>
+          x.map((p) =>
+            p.artistId === b.artistId && p.dateISO === b.dateISO && p.status === "pending"
+              ? { ...p, net: Math.round(p.net * c.rate * 100) / 100, reserve: 0 }
+              : p,
+          ),
         );
       void cloudAct(id, { kind: "cancelCustomer" });
       return late;
@@ -1531,6 +1645,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     toast,
     toastMsg,
     refreshCloud,
+    cloudOn,
+    rebook,
+    setPayoutSpeed,
     queueArtistSignup,
     myProviders,
     queueBakerSignup,

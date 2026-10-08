@@ -27,8 +27,8 @@ describe("Check-in", () => {
     expect(checkinOpen(b, new Date("2026-09-24T11:30:00").getTime())).toBe(false);
     expect(checkinOpen(b, new Date("2026-09-24T12:30:00").getTime())).toBe(true);
   });
-  it("fragt den Kunden 30 Minuten nach Beginn, wenn niemand eingecheckt hat", () => {
-    expect(presenceQuestion(b, new Date("2026-09-24T14:20:00").getTime())).toBe(false);
+  it("fragt den Kunden 15 Minuten nach Beginn, wenn niemand eingecheckt hat", () => {
+    expect(presenceQuestion(b, new Date("2026-09-24T14:10:00").getTime())).toBe(false);
     expect(presenceQuestion(b, new Date("2026-09-24T14:40:00").getTime())).toBe(true);
     expect(presenceQuestion({ ...b, checkedInAt: "x" }, new Date("2026-09-24T14:40:00").getTime())).toBe(false);
   });
@@ -49,6 +49,10 @@ describe("Stufenmodell", () => {
   it("3. Verstoß in 12 Monaten: dauerhaft entfernt", () => {
     expect(standingOf(1, [strike(200), strike(100), strike(300)], now)).toMatchObject({ removed: true, bookable: false });
   });
+  it("späte Absage zählt als Verwarnung, 3 in 12 Monaten sperren", () => {
+    const late = (d: number) => ({ ...strike(d), reason: "late" as const });
+    expect(standingOf(1, [late(200), strike(100), late(300)], now)).toMatchObject({ removed: true });
+  });
   it("Verstöße älter als 12 Monate zählen nicht, offene Anhörungen auch nicht", () => {
     expect(standingOf(1, [strike(400), strike(500), strike(10)], now).strikes).toBe(1);
     expect(standingOf(1, [{ ...strike(3), status: "hearing" }], now).strikes).toBe(0);
@@ -59,10 +63,10 @@ describe("Stufenmodell", () => {
 import { isValidIban, maskIban, payoutDate } from "./booking";
 
 describe("Auszahlung", () => {
-  it("5 Werktage nach dem Termin, Wochenende zählt nicht", () => {
-    expect(payoutDate("2026-09-25")).toBe("2026-10-02"); // Freitag -> Freitag
-    expect(payoutDate("2026-09-26")).toBe("2026-10-02"); // Samstag -> Freitag
-    expect(payoutDate("2026-09-28")).toBe("2026-10-05"); // Montag -> Montag
+  it("immer 7 Tage nach dem Termin", () => {
+    expect(payoutDate("2026-09-25")).toBe("2026-10-02");
+    expect(payoutDate("2026-09-26")).toBe("2026-10-03");
+    expect(payoutDate("2026-12-28")).toBe("2027-01-04");
   });
   it("prüft die IBAN", () => {
     expect(isValidIban("DE89 3704 0044 0532 0130 00")).toBe(true);

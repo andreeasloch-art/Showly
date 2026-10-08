@@ -61,6 +61,11 @@ export interface CloudReview {
   eventDate?: string;
   media: MediaRefRow[];
   mine: boolean;
+  /** Verifizierte Buchung, Teilnoten, Antwort des Anbieters, noch verdeckt (0016) */
+  verified?: boolean;
+  sub?: Record<string, number>;
+  reply?: string;
+  hidden?: boolean;
 }
 export interface CloudComment {
   id: number;
@@ -93,7 +98,9 @@ export const listCommunity = createServerFn({ method: "GET" }).handler(
     const [{ data: revs }, { data: posts }] = await Promise.all([
       db
         .from("reviews")
-        .select("id, artist_id, author, author_name, rating, body, event_date, media, created_at")
+        .select("id, artist_id, author, author_name, rating, body, event_date, media, created_at, verified, sub, reply, reply_at, published_at")
+        /* Doppelt verdeckt: öffentlich nur veröffentlichte, die eigene immer */
+        .or(uid ? `published_at.not.is.null,author.eq.${uid}` : "published_at.not.is.null")
         .order("created_at", { ascending: false })
         .limit(500),
       db
@@ -127,6 +134,10 @@ export const listCommunity = createServerFn({ method: "GET" }).handler(
         ...(r.event_date ? { eventDate: r.event_date } : {}),
         media: toApp(r.media),
         mine: r.author === uid,
+        verified: r.verified === true,
+        sub: r.sub || {},
+        ...(r.reply ? { reply: r.reply } : {}),
+        hidden: !r.published_at,
       })),
       posts: (posts || []).map((p) => ({
         id: p.id,
@@ -159,16 +170,17 @@ export const listCommunity = createServerFn({ method: "GET" }).handler(
  * ------------------------------------------------------------------------ */
 export const addReviewCloud = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { artistId: number; name: string; rating: number; text: string; eventDate?: string; media: unknown }) => ({
+    (d: { artistId: number; name: string; rating: number; text: string; eventDate?: string; media: unknown; sub?: unknown }) => ({
       artistId: Number.isInteger(d.artistId) && d.artistId > 0 ? d.artistId : 0,
       name: s(d.name, 60),
       rating: Math.max(1, Math.min(5, Math.round(Number(d.rating)) || 5)),
       text: s(d.text, 4000),
       eventDate: /^\d{4}-\d{2}-\d{2}$/.test(String(d.eventDate || "")) ? String(d.eventDate) : null,
       media: cleanMedia(d.media),
+      sub: d.sub,
     }),
   )
-  .handler(async ({ data }): Promise<{ id: number } | { error: string }> => {
+  .handler(async ({ data }): Promise<{ id: number; hidden: boolean } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
     const uid = ctx.user.id;
@@ -179,15 +191,23 @@ export const addReviewCloud = createServerFn({ method: "POST" })
 
     const db = adminClient();
     const today = new Date().toISOString().slice(0, 10);
+    /* Nur nach echter, stattgefundener Buchung, bis 14 Tage danach */
     const { data: booked } = await db
       .from("bookings")
-      .select("id")
+      .select("id, day")
       .eq("customer", uid)
       .eq("artist_id", data.artistId)
       .in("status", ["confirmed", "completed"])
       .lt("day", today)
+      .order("day", { ascending: false })
       .limit(1);
-    if (!booked?.length) return { error: "Bewerten können nur Kunden nach einem gebuchten Termin." };
+    const bk = booked?.[0];
+    if (!bk) return { error: "Bewerten können nur Kunden nach einem gebuchten Termin." };
+    const { cleanSubRatings, reviewWindow } = await import("@/showly/policies");
+    if (reviewWindow(bk.day, Date.now()) === "closed") return { error: "Bewerten geht bis 14 Tage nach dem Termin." };
+    /* Doppelt verdeckt: sichtbar erst, wenn auch der Künstler bewertet hat oder die Frist um ist */
+    const { data: guest } = await db.from("guest_reviews").select("id").eq("booking_id", bk.id).maybeSingle();
+    const now = new Date().toISOString();
 
     const { data: ins, error } = await db
       .from("reviews")
@@ -198,15 +218,20 @@ export const addReviewCloud = createServerFn({ method: "POST" })
           author_name: data.name,
           rating: data.rating,
           body: data.text,
-          event_date: data.eventDate,
+          event_date: bk.day,
           media: data.media,
+          booking_id: bk.id,
+          verified: true,
+          sub: cleanSubRatings(data.sub),
+          published_at: guest ? now : null,
         },
         { onConflict: "artist_id,author" },
       )
       .select("id")
       .single();
     if (error || !ins) return { error: "Bewertung konnte nicht gespeichert werden" };
-    return { id: ins.id };
+    if (guest) await db.from("guest_reviews").update({ published_at: now }).eq("id", guest.id).is("published_at", null);
+    return { id: ins.id, hidden: !guest };
   });
 
 export const deleteReviewCloud = createServerFn({ method: "POST" })

@@ -10,6 +10,8 @@ import { saveArtistMedia } from "@/utils/media.functions";
 import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
 import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { updateArtistProfile } from "@/showly/persist";
+import { TierPicker } from "./Fair";
+import { tierOf, type CancelTier } from "@/showly/policies";
 import { PackagesEditor, draftsFrom, draftsToRaw, usePkgCopy, type PkgDrafts } from "@/components/showly/PackagesEditor";
 import { TIERS, cleanPackages, fromPrice, isPlannerCat, packagesProblem, type PlannerPackage } from "@/showly/plannerPackages";
 import { isInstant } from "@/showly/booking";
@@ -282,6 +284,9 @@ type Draft = {
   contact: Contact;
   /** Pakete Basic/Premium/Luxus (nur Planer) */
   pkgs: PkgDrafts;
+  /** Stornostufe und Springer-Liste (policies.ts) */
+  cancelTier: CancelTier;
+  standby: boolean;
 };
 
 /* Pakete aus dem Profil (auch Beispielprofile mit mehrsprachigen Texten),
@@ -349,6 +354,8 @@ function initialDraft(a: Artist, lang: string): Draft {
     figures: figuresOf(a).slice(),
     figureImages: { ...((a["figureImages"] as Record<string, MediaRef> | undefined) || {}) },
     pkgs: draftsFrom(packagesOf(a, lang), (lang as "de" | "en" | "es") ?? "de"),
+    cancelTier: tierOf(a.cancelTier),
+    standby: a.standby === true,
     contact: {
       email: c.email || "",
       phone: c.phone || "",
@@ -464,6 +471,8 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       packages: cleanPackages(draftsToRaw(draft.pkgs)),
       minHours: draft.minHours,
       instantBook: draft.instantBook,
+      cancelTier: draft.cancelTier,
+      standby: draft.standby,
       loc: draft.loc.trim(),
       radiusKm: draft.radiusKm,
       photos: draft.photos,
@@ -522,6 +531,30 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       void saveArtistMedia({ data: { items } }).then((r) => {
         if ("error" in r) toast(r.error);
       });
+      /* Alle öffentlichen Felder in der Datenbank speichern, nicht nur im Browser */
+      void import("@/utils/fair.functions")
+        .then(({ saveArtistProfileCloud }) =>
+          saveArtistProfileCloud({
+            data: {
+              artistId: a.id,
+              name: patch.name,
+              desc: patch.desc,
+              loc: patch.loc,
+              tags: patch.tags,
+              langs: patch.langs,
+              includes: patch.includes,
+              specs: [...new Set([...patch.specs, ...patch.figures])],
+              price: patch.price,
+              instantBook: patch.instantBook,
+              cancelTier: patch.cancelTier,
+              standby: patch.standby,
+            },
+          }),
+        )
+        .then((r) => {
+          if ("error" in r) toast(r.error);
+        })
+        .catch(() => undefined);
       if (isPlanner)
         void import("@/utils/community.functions")
           .then(({ setPackagesCloud }) => setPackagesCloud({ data: { artistId: a.id, packages: patch.packages } }))
@@ -896,6 +929,25 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
           </fieldset>
         </section>
         )}
+
+        {/* Stornostufe und Springer-Liste */}
+        <section className="pe-card">
+          <div className="pe-card-head">
+            <span className="pe-ic">
+              <Icon name="shield" />
+            </span>
+            <div>
+              <h3>Stornobedingungen</h3>
+              <p>Kunden sehen die Stufe im Profil und an der Kasse; sie wird mit jeder Buchung gespeichert.</p>
+            </div>
+          </div>
+          <TierPicker
+            value={draft.cancelTier}
+            onChange={(t) => set("cancelTier", t)}
+            standby={draft.standby}
+            onStandby={(v) => set("standby", v)}
+          />
+        </section>
 
         {/* Kontakt */}
         <section className="pe-card">

@@ -265,9 +265,20 @@ Dafür:
    in Supabase oder ein kostenloser Dienst wie cron-job.org.
 3. Ohne Zeitplan: In der Verwaltung unter Übersicht → „Tägliche Aufgaben“ auf
    „Jetzt ausführen“ tippen.
+4. Check-in-Wächter: einen zweiten Zeitplan alle 5 Minuten auf
+   `POST https://<deine-domain>/api/checkin` (gleicher Kopf). Hat ein
+   Künstler 15 Minuten nach Beginn nicht eingecheckt, bekommen er und der
+   Kunde eine Nachricht; der Kunde kann dann „Künstler ist nicht erschienen“
+   melden. Ohne diesen Zeitplan läuft der Wächter nur einmal am Tag mit.
+5. Optional `SUPPORT_HOTLINE` als Secret setzen (Telefonnummer der
+   Notfall-Hotline am Wochenende). Sie steht dann in der Mail an Kunden,
+   deren Künstler weniger als 48 Stunden vorher ausfällt.
 
 Auszahlungen gehen per Stripe-Transfer auf das Connect-Konto der
-anbietenden Person, 5 Werktage nach dem Termin. Den Sicherheitseinbehalt
+anbietenden Person, immer 7 Tage nach dem Termin; schneller auf Wunsch der
+anbietenden Person gegen 10 % (3 Tage) bzw. 20 % (48 Stunden) Gebühr.
+Fällige Vertragsstrafen werden mit der nächsten Auszahlung verrechnet, bei
+einer offenen Reklamation ist die Auszahlung eingefroren. Den Sicherheitseinbehalt
 der ersten Buchungen überweist der Server nach Ablauf seiner Frist. Keine
 Auszahlung gibt es bei Storno, Nichterscheinen, Erstattung oder einer
 offenen Meldung. Erstattungen laufen sofort und automatisch, wenn die AGB es

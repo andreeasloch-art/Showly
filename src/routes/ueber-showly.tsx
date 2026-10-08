@@ -13,7 +13,7 @@ import { headLang, seoHead } from "@/showly/seo";
 import { BRAND_DEFINITION, aboutGraph } from "@/showly/schema";
 import { catName } from "@/showly/catName";
 import { FEE_RATE } from "@/showly/pricing";
-import { FREE_CANCEL_HOURS, PAYOUT_WORKDAYS, RESPOND_HOURS, VOUCHER_EUR } from "@/showly/booking";
+import { PAYOUT_DAYS, RESPOND_HOURS } from "@/showly/booking";
 
 const PATH = "/ueber-showly";
 
@@ -69,7 +69,7 @@ function copy(lang: Lang) {
             `Artists with instant booking are confirmed immediately. Request-based artists answer within ${RESPOND_HOURS} hours; the payment is only charged once they accept.`,
             "Showly keeps one hour of travel time free before and after every show, so artists arrive on time.",
             "At the event the customer gives the artist a check-in code; this confirms that the show took place.",
-            `Cancellation is free up to ${FREE_CANCEL_HOURS} hours before the start. If an artist cancels late without an emergency or does not show up, the customer gets everything back plus a ${VOUCHER_EUR} € voucher.`,
+            "Each provider chooses a cancellation tier (flexible, moderate, strict) that is saved with the booking. If an artist cancels or does not show up, the customer gets everything back immediately, replacement suggestions and a 15 % voucher.",
           ],
         },
         {
@@ -83,7 +83,7 @@ function copy(lang: Lang) {
           list: [
             "Registration is free. Before a profile goes live, the person behind it verifies their identity; one person can have one profile.",
             "Artists manage prices, packages and their availability calendar themselves.",
-            `Artists receive ${keep} % of the fee; Showly keeps a ${pct} % commission. The payout follows ${PAYOUT_WORKDAYS} working days after the event.`,
+            `Artists receive ${keep} % of the fee; Showly keeps a ${pct} % commission. The payout follows ${PAYOUT_DAYS} days after the event.`,
             "Both businesses and private individuals can offer their services; the profile shows which applies.",
           ],
         },
@@ -143,7 +143,7 @@ function copy(lang: Lang) {
             `Los artistas con reserva inmediata quedan confirmados al momento. Los demás responden en ${RESPOND_HOURS} horas; el pago solo se cobra cuando aceptan.`,
             "Showly deja libre una hora de desplazamiento antes y después de cada show para que el artista llegue a tiempo.",
             "En el evento, el cliente da al artista un código de check-in que confirma que la actuación tuvo lugar.",
-            `La cancelación es gratuita hasta ${FREE_CANCEL_HOURS} horas antes. Si el artista cancela tarde sin emergencia o no aparece, el cliente recupera todo y recibe un vale de ${VOUCHER_EUR} €.`,
+            "Cada proveedor elige un nivel de cancelación (flexible, moderado, estricto) que se guarda con la reserva. Si el artista cancela o no aparece, el cliente recupera todo al instante, recibe propuestas de sustitución y un vale del 15 %.",
           ],
         },
         {
@@ -157,7 +157,7 @@ function copy(lang: Lang) {
           list: [
             "El registro es gratuito. Antes de publicar el perfil, la persona verifica su identidad; cada persona puede tener un perfil.",
             "Los artistas gestionan sus precios, paquetes y su calendario de disponibilidad.",
-            `Los artistas reciben el ${keep} % del caché; Showly se queda una comisión del ${pct} %. El pago llega ${PAYOUT_WORKDAYS} días hábiles después del evento.`,
+            `Los artistas reciben el ${keep} % del caché; Showly se queda una comisión del ${pct} %. El pago llega ${PAYOUT_DAYS} días después del evento.`,
             "Pueden ofrecer sus servicios tanto empresas como particulares; el perfil indica cuál es el caso.",
           ],
         },
@@ -216,7 +216,7 @@ function copy(lang: Lang) {
           `Künstler mit Sofortbuchung sind sofort bestätigt. Künstler, die auf Anfrage arbeiten, antworten innerhalb von ${RESPOND_HOURS} Stunden; abgebucht wird erst bei Zusage.`,
           "Showly hält vor und nach jeder Show eine Stunde Fahrtzeit frei, damit der Künstler pünktlich ankommt.",
           "Beim Event nennt der Kunde dem Künstler einen Check-in-Code; damit ist bestätigt, dass der Auftritt stattgefunden hat.",
-          `Stornieren ist bis ${FREE_CANCEL_HOURS} Stunden vor Beginn kostenlos. Sagt ein Künstler kurzfristig ohne Notfall ab oder erscheint nicht, bekommt der Kunde alles zurück und zusätzlich einen Gutschein über ${VOUCHER_EUR} €.`,
+          "Jeder Anbieter wählt eine Stornostufe (Flexibel, Moderat, Streng), die mit der Buchung gespeichert wird. Sagt ein Künstler ab oder erscheint nicht, bekommt der Kunde sofort alles zurück, Ersatz-Vorschläge und einen Gutschein über 15 %.",
         ],
       },
       {
@@ -230,7 +230,7 @@ function copy(lang: Lang) {
         list: [
           "Die Registrierung ist kostenlos. Bevor ein Profil sichtbar wird, bestätigt die Person dahinter ihre Identität; eine Person hat ein Profil.",
           "Künstler pflegen Preise, Pakete und ihren Verfügbarkeitskalender selbst.",
-          `Künstler erhalten ${keep} % der Gage, Showly behält ${pct} % Provision. Ausgezahlt wird ${PAYOUT_WORKDAYS} Werktage nach dem Event.`,
+          `Künstler erhalten ${keep} % der Gage, Showly behält ${pct} % Provision. Ausgezahlt wird ${PAYOUT_DAYS} Tage nach dem Event.`,
           "Anbieten können gewerbliche und private Anbieter; im Profil steht, was zutrifft.",
         ],
       },

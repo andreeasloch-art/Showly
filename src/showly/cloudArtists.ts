@@ -11,6 +11,7 @@ import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { preloadMedia } from "./media";
 import { cleanWorkHours } from "./workHours";
 import { cleanPackages } from "./plannerPackages";
+import { tierOf } from "./policies";
 
 /* Titelbilder werden synchron als Hintergrund gesetzt; deshalb ihre Adressen
    gleich nach dem Laden der Profile holen (nur freigegebene kommen zurück). */
@@ -70,6 +71,9 @@ export function artistFromRow(r: PublicRow): Artist {
     })),
     workHours: cleanWorkHours(r.work_hours),
     packages: cleanPackages(r.packages),
+    cancelTier: tierOf(r.cancel_tier),
+    standby: r.standby === true,
+    cancelRate: Number(r.cancel_rate) || 0,
     fromDb: true,
   };
 }

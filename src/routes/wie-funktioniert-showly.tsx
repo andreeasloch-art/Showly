@@ -8,7 +8,7 @@ import { useShowly } from "@/showly/store";
 import { headLang, seoHead } from "@/showly/seo";
 import { pageGraph } from "@/showly/schema";
 import { FEE_RATE } from "@/showly/pricing";
-import { FREE_CANCEL_HOURS, PAYOUT_WORKDAYS, RESPOND_HOURS, VOUCHER_EUR } from "@/showly/booking";
+import { PAYOUT_DAYS, RESPOND_HOURS } from "@/showly/booking";
 
 const PATH = "/wie-funktioniert-showly";
 
@@ -57,8 +57,8 @@ function copy(lang: Lang) {
         {
           h: "Cancellation and protection",
           list: [
-            `Free cancellation up to ${FREE_CANCEL_HOURS} hours before the start.`,
-            `If the artist cancels late without an emergency or does not show up, you get your money back plus a ${VOUCHER_EUR} € voucher.`,
+            "Each provider shows a cancellation tier (flexible, moderate, strict) in the profile and at checkout; it is saved with your booking. One free rebooking within 6 months.",
+            "If the artist cancels or does not show up, you get everything back immediately, three replacement suggestions and a 15 % voucher.",
             "Messages and payment run through Showly, so these protections apply.",
           ],
         },
@@ -67,7 +67,7 @@ function copy(lang: Lang) {
           list: [
             "Register for free and verify your identity – then your profile goes live.",
             "Set prices, packages and free dates in your own calendar.",
-            `Receive ${keep} % of the fee, paid out ${PAYOUT_WORKDAYS} working days after the event.`,
+            `Receive ${keep} % of the fee, paid out ${PAYOUT_DAYS} days after the event.`,
           ],
         },
       ],
@@ -113,8 +113,8 @@ function copy(lang: Lang) {
         {
           h: "Cancelación y protección",
           list: [
-            `Cancelación gratuita hasta ${FREE_CANCEL_HOURS} horas antes del inicio.`,
-            `Si el artista cancela tarde sin emergencia o no aparece, recuperas tu dinero y recibes un vale de ${VOUCHER_EUR} €.`,
+            "Cada proveedor muestra su nivel de cancelación (flexible, moderado, estricto) en el perfil y al pagar; se guarda con tu reserva. Un cambio de fecha gratuito en 6 meses.",
+            "Si el artista cancela o no aparece, recuperas todo al instante, tres propuestas de sustitución y un vale del 15 %.",
             "Mensajes y pago van por Showly, por eso se aplican estas protecciones.",
           ],
         },
@@ -123,7 +123,7 @@ function copy(lang: Lang) {
           list: [
             "Regístrate gratis y verifica tu identidad: entonces se publica tu perfil.",
             "Fija precios, paquetes y fechas libres en tu propio calendario.",
-            `Recibe el ${keep} % del caché, pagado ${PAYOUT_WORKDAYS} días hábiles después del evento.`,
+            `Recibe el ${keep} % del caché, pagado ${PAYOUT_DAYS} días después del evento.`,
           ],
         },
       ],
@@ -168,8 +168,8 @@ function copy(lang: Lang) {
       {
         h: "Stornierung und Schutz",
         list: [
-          `Kostenlos stornieren bis ${FREE_CANCEL_HOURS} Stunden vor Beginn.`,
-          `Sagt der Künstler kurzfristig ohne Notfall ab oder erscheint nicht, bekommst du dein Geld zurück und zusätzlich einen Gutschein über ${VOUCHER_EUR} €.`,
+          "Jeder Anbieter zeigt seine Stornostufe (Flexibel, Moderat, Streng) im Profil und an der Kasse; sie wird mit deiner Buchung gespeichert. Einmal kostenlos umbuchen innerhalb von 6 Monaten.",
+          "Sagt der Künstler ab oder erscheint nicht, bekommst du sofort alles zurück, drei Ersatz-Vorschläge und einen Gutschein über 15 %.",
           "Nachrichten und Zahlung laufen über Showly, deshalb gilt dieser Schutz.",
         ],
       },
@@ -178,7 +178,7 @@ function copy(lang: Lang) {
         list: [
           "Kostenlos registrieren und Identität bestätigen – dann geht das Profil online.",
           "Preise, Pakete und freie Termine im eigenen Kalender festlegen.",
-          `${keep} % der Gage erhalten, ausgezahlt ${PAYOUT_WORKDAYS} Werktage nach dem Event.`,
+          `${keep} % der Gage erhalten, ausgezahlt ${PAYOUT_DAYS} Tage nach dem Event.`,
         ],
       },
     ],

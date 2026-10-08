@@ -2,12 +2,13 @@
  *
  * Oben das Auszahlungskonto: Ohne Kontodaten kann nichts ausgezahlt werden,
  * deshalb steht der Hinweis auffällig da, bis das Konto hinterlegt ist.
- * Darunter die Auszahlungen mit Datum (5 Werktage nach dem Termin) und dem
+ * Darunter die Auszahlungen mit Datum (7 Tage nach dem Termin, schneller gegen Gebühr) und dem
  * Sicherheitseinbehalt der ersten Buchungen (AGB § 21).
  *
  * Im Echtbetrieb erfasst Stripe Connect Konto und Identität im eigenen,
  * gesicherten Fenster; Showly speichert dann keine IBAN. Bis dahin liegen
  * die Angaben nur in diesem Browser. */
+import { PayoutSpeedPicker } from "./Fair";
 import { TaxNotice } from "@/components/showly/ProviderNotices";
 import { useEffect, useState } from "react";
 import { useShowly, type Payout } from "@/showly/store";
@@ -25,7 +26,7 @@ const COPY = {
   de: {
     bankH: "Auszahlungskonto",
     bankP:
-      "Deine Gage wird 5 Werktage nach dem Termin auf dieses Konto überwiesen.",
+      "Deine Gage wird immer 7 Tage nach dem Event auf dieses Konto überwiesen. Schneller geht gegen Gebühr: 3 Tage nach dem Event (10 %) oder innerhalb von 48 Stunden (20 %).",
     missing:
       "Hinterlege dein Konto, sonst können wir deine Gage nicht auszahlen.",
     holder: "Kontoinhaber",
@@ -58,7 +59,7 @@ const COPY = {
   en: {
     bankH: "Payout account",
     bankP:
-      "Your fee is transferred to this account 5 business days after the event.",
+      "Your fee is always transferred 7 days after the event. Faster for a fee: 3 days after the event (10%) or within 48 hours (20%).",
     missing: "Add your account, otherwise we can't pay out your fee.",
     holder: "Account holder",
     iban: "IBAN",
@@ -90,7 +91,7 @@ const COPY = {
   es: {
     bankH: "Cuenta de cobro",
     bankP:
-      "Tu caché se transfiere a esta cuenta 5 días hábiles después del evento.",
+      "Tu caché se transfiere siempre 7 días después del evento. Más rápido con comisión: 3 días después (10 %) o en 48 horas (20 %).",
     missing: "Añade tu cuenta; si no, no podemos pagarte el caché.",
     holder: "Titular",
     iban: "IBAN",
@@ -317,6 +318,11 @@ export function PayoutPanel({ artistId }: { artistId: number }) {
                       {C.reserve(fmt(p.reserve), fmtDate(p.reserveUntil))}
                     </small>
                   ) : null}
+                  {p.expressFee ? <small>Gebühr für schnellere Auszahlung: {fmt(p.expressFee)}</small> : null}
+                  {p.offset ? <small>Verrechnet mit Vertragsstrafe: {fmt(p.offset)}</small> : null}
+                  {p.status === "pending" && due(p) > today && (
+                    <PayoutSpeedPicker id={p.id} net={p.net} expressFee={p.expressFee} speed={p.speed} frozen={p.frozen} />
+                  )}
                 </div>
                 <div className="payout-side">
                   <b>{fmt(p.net)}</b>

@@ -3,11 +3,11 @@
  * Versprechen: Kommt dein Künstler nicht, besorgen wir Ersatz oder du
  * bekommst alles zurück (AGB § 9 Abs. 7).
  *  - Das Geld geht sofort und vollständig zurück.
- *  - Das Showly-Team schlägt passende Ersatz-Künstler für denselben Termin vor.
- *    Kostet der Ersatz mehr, übernimmt Showly den Aufpreis bis 20 % per
- *    Gutschein.
- *  - Bei später Absage ohne Notfall oder Nichterscheinen gibt es zusätzlich
- *    den Gutschein über 50 € (AGB § 9 Abs. 4).
+ *  - Das System schlägt sofort drei Ersatz-Künstler vor (gleicher Termin,
+ *    gleiche Kategorie, gleiche Gegend, Springer zuerst). Kostet der Ersatz
+ *    mehr, übernimmt Showly den Aufpreis bis 100 €.
+ *  - Als Entschuldigung ein Gutschein über 15 % (policies.ts).
+ *  - Unter 48 Stunden: persönlicher Anruf, Notfall-Hotline am Wochenende.
  *
  * Finanziert aus den Vertragsstrafen der Künstler (AGB § 9 Abs. 2) und einem
  * kleinen Teil der Provision (GUARANTEE_FEE_SHARE). Die Verwaltung sieht den
@@ -16,8 +16,7 @@
 
 /** Anteil der Provision, der in den Garantie-Topf fließt */
 export const GUARANTEE_FEE_SHARE = 0.05;
-/** Aufpreis für Ersatz, den Showly höchstens übernimmt */
-export const GUARANTEE_UPGRADE = 0.2;
+export { UPGRADE_CAP_EUR as GUARANTEE_UPGRADE_EUR } from "./policies";
 
 export function guaranteePool(p: { penaltiesCents: number; feeCents: number; usedCents?: number }): number {
   return Math.max(0, Math.round(p.penaltiesCents + p.feeCents * GUARANTEE_FEE_SHARE - (p.usedCents ?? 0)));
@@ -30,8 +29,9 @@ export const GUARANTEE = {
     claim: "Kommt dein Künstler nicht, besorgen wir Ersatz – oder du bekommst alles zurück.",
     points: [
       "Sagt der Künstler ab oder erscheint nicht, bekommst du sofort den vollen Betrag zurück.",
-      "Unser Team schlägt dir innerhalb von 24 Stunden passende Ersatz-Künstler für deinen Termin vor. Kostet der Ersatz mehr, übernehmen wir den Aufpreis bis 20 %.",
-      "Bei später Absage oder Nichterscheinen gibt es zusätzlich 50 € Gutschein.",
+      "Du bekommst sofort drei passende Ersatz-Künstler für denselben Termin vorgeschlagen. Kostet der Ersatz mehr, übernehmen wir den Aufpreis bis 100 €.",
+      "Als Entschuldigung bekommst du einen Gutschein über 15 % des Buchungsbetrags.",
+      "Unter 48 Stunden vor dem Event rufen wir dich persönlich an; am Wochenende gibt es eine Notfall-Hotline.",
     ],
     why: "Bei Kleinanzeigen stehst du allein da, wenn jemand nicht kommt. Bei Showly haften die Künstler mit Vertragsstrafen, und daraus zahlen wir deinen Ersatz.",
     more: "So funktioniert die Garantie",
@@ -42,8 +42,9 @@ export const GUARANTEE = {
     claim: "If your artist doesn't show up, we find a replacement – or you get everything back.",
     points: [
       "If the artist cancels or doesn't show, you get the full amount back immediately.",
-      "Our team suggests suitable replacement artists for your date within 24 hours. If the replacement costs more, we cover the difference up to 20%.",
-      "For late cancellations or no-shows you also get a €50 voucher.",
+      "You immediately get three suitable replacement artists for the same date. If the replacement costs more, we cover the difference up to €100.",
+      "As an apology you get a voucher worth 15% of the booking.",
+      "Less than 48 hours before the event we call you personally; there is an emergency hotline at weekends.",
     ],
     why: "On classified ad sites you're on your own if someone doesn't show. At Showly, artists are liable through contractual penalties – and that's what pays for your replacement.",
     more: "How the guarantee works",
@@ -54,8 +55,9 @@ export const GUARANTEE = {
     claim: "Si tu artista no viene, buscamos un sustituto – o te devolvemos todo.",
     points: [
       "Si el artista cancela o no aparece, recibes el importe completo de inmediato.",
-      "Nuestro equipo te propone artistas sustitutos para tu fecha en 24 horas. Si el sustituto cuesta más, cubrimos la diferencia hasta un 20 %.",
-      "En cancelaciones tardías o ausencias recibes además un vale de 50 €.",
+      "Recibes al instante tres artistas sustitutos para la misma fecha. Si el sustituto cuesta más, cubrimos la diferencia hasta 100 €.",
+      "Como disculpa recibes un vale del 15 % de la reserva.",
+      "A menos de 48 horas del evento te llamamos personalmente; los fines de semana hay una línea de emergencia.",
     ],
     why: "En los portales de anuncios estás solo si alguien no aparece. En Showly los artistas responden con penalizaciones, y con eso pagamos tu sustituto.",
     more: "Cómo funciona la garantía",

@@ -3,6 +3,7 @@
  * Torten-Anfragen: annehmen mit Endpreis oder ablehnen (AGB § 17 Abs. 2),
  * Direktbuchungen sind schon bezahlt. Zu jeder Anfrage gibt es den Chat mit
  * dem Kunden. Deko: eingegangene Bestellungen mit eigenen Artikeln. */
+import { ComplaintList, HandoverTools } from "./Fair";
 import { useCallback, useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
@@ -178,6 +179,7 @@ export function ProviderInbox() {
       </div>
       <p className="payout-info">{C.p}</p>
       {unpublished && <p className="prov-review">{C.pending}</p>}
+      <ComplaintList role="provider" />
       {!sweets.length && !orders.length && <p className="dash26-none">{C.none}</p>}
 
       {sweets.length > 0 && <h4 className="inb-h">{C.sweets}</h4>}
@@ -255,32 +257,9 @@ export function ProviderInbox() {
                   {K.shipped}
                 </button>
               )}
-              {(o.status === "paid" || o.status === "shipped") && o.items.some((i) => i.mode === "rent") && (
-                <button className="home-btn soft" onClick={() => setRet({ id: o.id, keep: "", note: "" })}>
-                  {K.returned}
-                </button>
-              )}
             </div>
-            {ret?.id === o.id && (
-              <div className="ret-box">
-                <p className="pe-hint">{K.retP(fmt((o.deposit_cents ?? 0) / 100))}</p>
-                <label className="pe-field">
-                  <span className="pe-label">{K.keep}</span>
-                  <input inputMode="decimal" value={ret.keep} placeholder="0" onChange={(e) => setRet({ ...ret, keep: e.target.value })} />
-                </label>
-                <label className="pe-field">
-                  <span className="pe-label">{K.note}</span>
-                  <textarea value={ret.note} maxLength={2000} placeholder={K.notePh} onChange={(e) => setRet({ ...ret, note: e.target.value })} />
-                </label>
-                <div className="acc-sec-actions">
-                  <button className="home-btn soft" onClick={() => setRet(null)}>
-                    {K.cancel}
-                  </button>
-                  <button className="home-btn primary" onClick={() => void orderAct(o, "returned")}>
-                    {K.confirm}
-                  </button>
-                </div>
-              </div>
+            {o.items.some((i) => i.mode === "rent") && o.status !== "cancelled" && (
+              <HandoverTools orderId={o.id} returned={!!o.returned_at} reported={!!o.damage_reported_at || !!o.deposit_released_at} />
             )}
           </li>
         ))}

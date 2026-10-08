@@ -3,8 +3,11 @@
  * Nur auf dem Server, nur mit dem Dienstschlüssel. Beides läuft über Stripe:
  *  - Erstattung: zurück auf das Zahlungsmittel der Buchung (AGB § 8 Abs. 3).
  *  - Auszahlung: Überweisung (Transfer) auf das Stripe-Connect-Konto der
- *    anbietenden Person, 5 Werktage nach dem Termin (AGB § 21). Der
- *    Sicherheitseinbehalt der ersten Buchungen folgt nach seiner Frist.
+ *    anbietenden Person, 7 Tage nach dem Termin, schneller gegen Gebühr
+ *    (AGB § 21). Der Sicherheitseinbehalt der ersten Buchungen folgt nach
+ *    seiner Frist. Fällige Vertragsstrafen werden mit der nächsten
+ *    Auszahlung verrechnet, bei einer offenen Reklamation ist sie
+ *    eingefroren.
  *
  * Jede Funktion ist so gebaut, dass ein zweiter Aufruf nichts doppelt
  * auszahlt oder erstattet: Stripe bekommt einen Idempotenz-Schlüssel, und
@@ -131,15 +134,27 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
       out.skipped++;
       continue;
     }
-    const cents = first ? p.net_cents - p.reserve_cents : p.reserve_cents;
+    if (p.frozen) {
+      await db.from("payouts").update({ last_error: "Eingefroren: offene Reklamation" }).eq("id", p.id);
+      out.skipped++;
+      continue;
+    }
+    let cents = first ? p.net_cents - p.reserve_cents : p.reserve_cents;
 
     const { data: b } = await db
       .from("bookings")
-      .select("id, status, paid, refunded_cents, stripe_session_id, artist_id")
+      .select("id, status, paid, amount_cents, refunded_cents, stripe_session_id, artist_id, cancelled_by")
       .eq("id", p.booking_id)
       .maybeSingle();
-    /* Keine Auszahlung bei Storno, Nichterscheinen oder Erstattung */
-    if (!b || !b.paid || b.refunded_cents > 0 || !["confirmed", "completed", "pending"].includes(b.status)) {
+    /* Keine Auszahlung bei Absage durch den Künstler, Nichterscheinen oder
+       voller Erstattung. Bei später Stornierung durch den Kunden wird der
+       einbehaltene Anteil ausgezahlt (net_cents ist dann schon gekürzt). */
+    const payable =
+      !!b &&
+      b.paid &&
+      b.refunded_cents < b.amount_cents &&
+      (["confirmed", "completed", "pending"].includes(b.status) || (b.status === "cancelled" && b.cancelled_by === "customer"));
+    if (!b || !payable) {
       await db.from("payouts").update({ status: "cancelled", last_error: "Buchung nicht (mehr) auszahlbar" }).eq("id", p.id);
       out.skipped++;
       continue;
@@ -160,6 +175,31 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
       await db.from("payouts").update({ last_error: "Kein freigeschaltetes Auszahlungskonto" }).eq("id", p.id);
       out.skipped++;
       continue;
+    }
+
+    /* Fällige Vertragsstrafen des Künstlers mit dieser Auszahlung verrechnen */
+    let offset = first ? (p.offset_cents ?? 0) : 0;
+    /* Schon verrechnet (Wiederholung nach Fehler): nicht noch einmal */
+    if (offset) cents -= offset;
+    else if (first && cents > 0 && p.artist_id) {
+      const { data: open } = await db
+        .from("penalties")
+        .select("id, amount_cents, offset_cents")
+        .eq("artist_id", p.artist_id)
+        .eq("status", "due")
+        .order("created_at")
+        .limit(20);
+      for (const q of open || []) {
+        const left = q.amount_cents - (q.offset_cents ?? 0);
+        const take = Math.min(left, cents - offset);
+        if (take <= 0) continue;
+        offset += take;
+        await db.from("penalties").update({ offset_cents: (q.offset_cents ?? 0) + take }).eq("id", q.id);
+      }
+      if (offset) {
+        cents -= offset;
+        await db.from("payouts").update({ offset_cents: offset }).eq("id", p.id);
+      }
     }
 
     try {
@@ -191,7 +231,7 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
         const to = await emailOf(artist.owner);
         if (to)
           await sendMail(to, "Showly hat deine Gage überwiesen", [
-            `Für deinen Auftritt haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.`,
+            `Für deinen Auftritt haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.${offset ? ` Verrechnet mit einer Vertragsstrafe: ${euro(offset)}.` : ""}${p.express_fee_cents ? ` Gebühr für schnellere Auszahlung: ${euro(p.express_fee_cents)}.` : ""}`,
             p.reserve_cents > 0
               ? `Der Sicherheitseinbehalt von ${euro(p.reserve_cents)} folgt am ${p.reserve_until?.split("-").reverse().join(".")}.`
               : "Je nach Bank ist das Geld in 1 bis 3 Werktagen auf deinem Konto.",

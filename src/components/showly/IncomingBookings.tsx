@@ -5,6 +5,9 @@
  * Künstler im Profil fest (siehe showly/booking.ts). Ablehnen fragt einmal
  * nach, direkt im Eintrag: Browser-Dialoge wie confirm() sind in der App-
  * Hülle und in Vorschauen oft gesperrt. */
+import { ComplaintList } from "./Fair";
+import { reviewWindow } from "@/showly/policies";
+import { dbIdOf } from "@/showly/cloudMap";
 import { isBusiness } from "@/showly/providerStatus";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
@@ -13,7 +16,8 @@ import { useShowly, type Booking } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { figName } from "@/showly/figures";
 import { bookingPrice, minHoursOf } from "@/showly/pricing";
-import { PENALTY_RATE, checkinOpen, isLateCancel, respondBy } from "@/showly/booking";
+import { checkinOpen, respondBy, startOf } from "@/showly/booking";
+import { ARTIST_PENALTY, artistCancelStage } from "@/showly/policies";
 import { Chat, unreadFor, useUnread } from "./Chat";
 
 const COPY = {
@@ -31,15 +35,15 @@ const COPY = {
     sureCancel: "Wirklich absagen? Der Kunde bekommt den vollen Betrag zurück.",
     yesCancel: "Ja, absagen",
     cancelled: "Buchung abgesagt. Der Kunde bekommt den vollen Betrag zurück.",
-    sureLate: (p: string) => `Weniger als 24 Stunden vor Beginn: Ohne Notfall fällt eine Vertragsstrafe von 50 % deiner Gage an (${p}), und der Kunde bekommt einen Gutschein. Bei einem Notfall (z. B. Unfall, akute Krankheit) schick uns den Nachweis, dann entfällt die Strafe.`,
+    sureLate: (p: string) => `Weniger als 14 Tage vor dem Event: Ohne Notfall fällt eine Vertragsstrafe an (${p}; unter 48 Stunden 25 % deiner Gage, sonst 15 %), sie wird mit deiner nächsten Auszahlung verrechnet. Das zählt als Verwarnung und erscheint in deiner Stornoquote; 3 Verwarnungen in 12 Monaten führen zur Sperre. Bei einem Notfall (z. B. Unfall, akute Krankheit) schick uns den Nachweis, dann entfällt die Strafe.`,
     yesEmergency: "Notfall, Nachweis folgt",
     yesNoEmergency: "Ohne Notfall absagen",
     doneProof: "Abgesagt. Schick den Nachweis innerhalb von 7 Tagen an support@showly.eu, wir prüfen ihn.",
-    donePenalty: (p: string) => `Abgesagt. Die Vertragsstrafe von ${p} wird dir in Rechnung gestellt.`,
+    donePenalty: (p: string) => `Abgesagt. Die Vertragsstrafe von ${p} wird mit deiner nächsten Auszahlung verrechnet.`,
     penDue: (p: string) => `Vertragsstrafe ${p}: wird in Rechnung gestellt`,
     penProof: "Deine Stellungnahme oder dein Nachweis wird geprüft (support@showly.eu)",
     penWaived: "Nachweis anerkannt, keine Vertragsstrafe",
-    sureLatePriv: "Weniger als 24 Stunden vor Beginn: Ohne Notfall bekommst du eine Verwarnung nach dem Stufenmodell (AGB § 23), und der Kunde bekommt einen Gutschein. Eine Geldstrafe gibt es bei Privatanbietern nicht. Bei einem Notfall schick uns den Nachweis.",
+    sureLatePriv: "Weniger als 14 Tage vor dem Event: Ohne Notfall bekommst du eine Verwarnung nach dem Stufenmodell (AGB § 23), und der Kunde bekommt einen Gutschein. Eine Geldstrafe gibt es bei Privatanbietern nicht. Bei einem Notfall schick uns den Nachweis.",
     donePenaltyPriv: "Abgesagt. Die späte Absage wird als Verwarnung vermerkt (AGB § 23).",
     penDuePriv: "Späte Absage oder Nichterscheinen: als Verwarnung vermerkt, keine Geldstrafe",
     penHearingPriv: (d: string) => `Der Kunde meldet: nicht erschienen. Du kannst dich bis ${d} äußern oder einen Notfall belegen, danach wird es als Verwarnung vermerkt.`,
@@ -94,15 +98,15 @@ const COPY = {
     sureCancel: "Really cancel? The customer gets a full refund.",
     yesCancel: "Yes, cancel",
     cancelled: "Booking cancelled. The customer gets a full refund.",
-    sureLate: (p: string) => `Less than 24 hours before the start: without an emergency, a contractual penalty of 50% of your fee applies (${p}) and the customer gets a voucher. In an emergency (e.g. accident, sudden illness), send us proof and the penalty is dropped.`,
+    sureLate: (p: string) => `Less than 14 days before the event: without an emergency a contractual penalty applies (${p}; 25% of your fee under 48 hours, otherwise 15%), offset against your next payout. It counts as a warning and shows in your cancellation rate; 3 warnings in 12 months lead to a ban. In an emergency, send us proof and the penalty is dropped.`,
     yesEmergency: "Emergency, proof to follow",
     yesNoEmergency: "Cancel without emergency",
     doneProof: "Cancelled. Send the proof to support@showly.eu within 7 days and we'll review it.",
-    donePenalty: (p: string) => `Cancelled. The contractual penalty of ${p} will be invoiced to you.`,
+    donePenalty: (p: string) => `Cancelled. The contractual penalty of ${p} is offset against your next payout.`,
     penDue: (p: string) => `Contractual penalty ${p}: will be invoiced`,
     penProof: "Your response or proof is under review (support@showly.eu)",
     penWaived: "Proof accepted, no penalty",
-    sureLatePriv: "Less than 24 hours before the start: without an emergency you get a warning under the strike model (T&C § 23), and the customer gets a voucher. Private providers pay no monetary penalty. In an emergency, send us proof.",
+    sureLatePriv: "Less than 14 days before the event: without an emergency you get a warning under the strike model (T&C § 23), and the customer gets a voucher. Private providers pay no monetary penalty. In an emergency, send us proof.",
     donePenaltyPriv: "Cancelled. The late cancellation is recorded as a warning (T&C § 23).",
     penDuePriv: "Late cancellation or no-show: recorded as a warning, no monetary penalty",
     penHearingPriv: (d: string) => `The customer reports: no-show. You can respond or prove an emergency until ${d}; after that, it is recorded as a warning.`,
@@ -157,15 +161,15 @@ const COPY = {
     sureCancel: "¿Seguro que quieres cancelar? El cliente recibe el reembolso completo.",
     yesCancel: "Sí, cancelar",
     cancelled: "Reserva cancelada. El cliente recibe el reembolso completo.",
-    sureLate: (p: string) => `Faltan menos de 24 horas: sin una emergencia se aplica una penalización del 50 % de tu caché (${p}) y el cliente recibe un vale. En caso de emergencia (p. ej. accidente, enfermedad repentina), envíanos el justificante y no habrá penalización.`,
+    sureLate: (p: string) => `Faltan menos de 14 días: sin una emergencia se aplica una penalización (${p}; 25 % de tu caché a menos de 48 horas, si no 15 %), que se descuenta de tu próximo pago. Cuenta como advertencia; 3 en 12 meses llevan al bloqueo. En caso de emergencia, envíanos el justificante y no habrá penalización.`,
     yesEmergency: "Emergencia, envío justificante",
     yesNoEmergency: "Cancelar sin emergencia",
     doneProof: "Cancelada. Envía el justificante a support@showly.eu en 7 días y lo revisaremos.",
-    donePenalty: (p: string) => `Cancelada. Se te facturará la penalización de ${p}.`,
+    donePenalty: (p: string) => `Cancelada. La penalización de ${p} se descuenta de tu próximo pago.`,
     penDue: (p: string) => `Penalización ${p}: se facturará`,
     penProof: "Tu respuesta o justificante está en revisión (support@showly.eu)",
     penWaived: "Justificante aceptado, sin penalización",
-    sureLatePriv: "Menos de 24 horas antes del inicio: sin emergencia recibes un aviso según el sistema por niveles (CG § 23) y el cliente recibe un vale. Los particulares no pagan penalización económica. En caso de emergencia, envíanos el justificante.",
+    sureLatePriv: "Menos de 14 días antes del evento: sin emergencia recibes un aviso según el sistema por niveles (CG § 23) y el cliente recibe un vale. Los particulares no pagan penalización económica. En caso de emergencia, envíanos el justificante.",
     donePenaltyPriv: "Cancelado. La cancelación tardía se registra como aviso (CG § 23).",
     penDuePriv: "Cancelación tardía o ausencia: registrada como aviso, sin penalización económica",
     penHearingPriv: (d: string) => `El cliente informa: no se presentó. Puedes responder o justificar una emergencia hasta el ${d}; después se registrará como aviso.`,
@@ -241,7 +245,9 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
     const net = bookingPrice(a!, b.hours || minHoursOf(a!), b.pkg).payout;
     const until = respondBy(b.requestedAt);
     const pen = penalties.find((p) => p.bookingId === b.id);
-    const late = isLateCancel(b);
+    const stage = artistCancelStage(startOf(b), Date.now());
+    const late = stage !== "free";
+    const rate = ARTIST_PENALTY[stage === "urgent" ? "urgent" : "late"];
     const priv = !isBusiness(a);
     return (
       <article className={"dash26-item inb-item s-" + b.status} key={b.id}>
@@ -366,7 +372,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
           <div className="inb-actions">
             {asking === b.id ? (
               <>
-                <span className="inb-sure">{late ? (priv ? C.sureLatePriv : C.sureLate(fmt(Math.round(net * PENALTY_RATE.late)))) : C.sureCancel}</span>
+                <span className="inb-sure">{late ? (priv ? C.sureLatePriv : C.sureLate(fmt(Math.round(net * rate)))) : C.sureCancel}</span>
                 <button className="dash26-mini outline" onClick={() => setAsking(null)}>
                   {C.no}
                 </button>
@@ -391,7 +397,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
                       r === "penalty"
                         ? priv
                           ? C.donePenaltyPriv
-                          : C.donePenalty(fmt(Math.round(net * PENALTY_RATE.late)))
+                          : C.donePenalty(fmt(Math.round(net * rate)))
                         : C.cancelled,
                     );
                   }}
@@ -443,6 +449,9 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
             )}
           </div>
         )}
+        {(b.status === "confirmed" || b.status === "completed") && dbIdOf(b.id) !== null && reviewWindow(b.dateISO, Date.now()) === "open" && (
+          <GuestReview bookingId={dbIdOf(b.id)!} />
+        )}
       </article>
     );
   }
@@ -451,6 +460,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
   const st = standing(a.id);
   return (
     <div className="inb">
+      <ComplaintList role="provider" />
       {(st.removed || !st.bookable || !st.instantAllowed) && (
         <div className="inb-standing" role="alert">
           <Icon name="shield" />
@@ -515,6 +525,48 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
             />
           );
         })()}
+    </div>
+  );
+}
+
+/** Künstler bewertet den Kunden; verdeckt, bis beide bewertet haben oder 14 Tage um sind */
+function GuestReview({ bookingId }: { bookingId: number }) {
+  const { toast } = useShowly();
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [text, setText] = useState("");
+  const [done, setDone] = useState(false);
+  if (done) return <p className="fair-muted">Danke! Deine Bewertung bleibt verdeckt, bis der Kunde auch bewertet hat oder 14 Tage um sind.</p>;
+  if (!open)
+    return (
+      <div className="inb-actions">
+        <button className="dash26-mini outline" onClick={() => setOpen(true)}>
+          <Icon name="star" /> Kunden bewerten
+        </button>
+      </div>
+    );
+  return (
+    <div className="fair-box">
+      <b>Wie war die Zusammenarbeit mit dem Kunden?</b>
+      <div className="fair-chips" role="radiogroup" aria-label="Sterne">
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button key={n} type="button" role="radio" aria-checked={rating === n} className={"fair-chip" + (rating === n ? " on" : "")} onClick={() => setRating(n)}>
+            {n} ★
+          </button>
+        ))}
+      </div>
+      <textarea rows={2} placeholder="Kurz (freiwillig)" value={text} onChange={(e) => setText(e.target.value)} aria-label="Text" />
+      <button
+        className="dash26-mini"
+        onClick={async () => {
+          const { reviewGuest } = await import("@/utils/fair.functions");
+          const r = await reviewGuest({ data: { bookingId, rating, text } }).catch(() => ({ error: "Hat nicht geklappt" }));
+          if ("error" in r) return toast(r.error);
+          setDone(true);
+        }}
+      >
+        Bewertung abgeben
+      </button>
     </div>
   );
 }

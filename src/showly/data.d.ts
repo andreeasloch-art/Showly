@@ -10,6 +10,8 @@ export interface Artist {
   verified?: boolean; superhost?: boolean; events?: number; responseTime?: LText; responseRate?: string;
   /** Arbeitszeiten je Wochentag (workHours.ts); fehlt = keine Einschränkung */
   workHours?: import("./workHours").WorkHours | null;
+  /** Stornostufe (policies.ts), Springer-Liste, Stornoquote 0..1 der letzten 12 Monate */
+  cancelTier?: import("./policies").CancelTier; standby?: boolean; cancelRate?: number;
   /** Einsatzradius in km ab dem eigenen Standort; 800 steht für deutschlandweit. */
   radiusKm?: number;
   shopIds?: number[]; name: LText; loc: LText; exp?: LText; desc: LText; tags?: LList; langs?: LList;

@@ -259,11 +259,11 @@ export const shopOrderAction = createServerFn({ method: "POST" })
     }
     if (o.status !== "paid" && o.status !== "shipped") return { error: "Bestellung ist nicht offen" };
     const dep = o.deposit_cents ?? 0;
-    if (data.keepCents > dep) return { error: "Einbehalt ist höher als die Kaution" };
-    if (data.keepCents > 0 && data.note.length < 10) return { error: "Bitte den Einbehalt kurz begründen (Zustand, Schaden, Verspätung)" };
+    /* Abzüge nur nach dem Schadenskatalog mit Übergabefotos (fair.functions.ts: reportDamage) */
+    if (data.keepCents > 0) return { error: "Schäden bitte über das Übergabeprotokoll und den Schadenskatalog melden." };
     await admin
       .from("shop_orders")
-      .update({ status: "returned", returned_at: new Date().toISOString(), condition_note: data.note || null })
+      .update({ status: "returned", returned_at: new Date().toISOString(), condition_note: data.note || null, deposit_released_at: new Date().toISOString() })
       .eq("id", o.id);
     const { refundDeposit } = await import("@/lib/money.server");
     const r = dep > 0 ? await refundDeposit(o.id, dep - data.keepCents) : { ok: true as const, cents: 0 };

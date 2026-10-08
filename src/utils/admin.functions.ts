@@ -334,14 +334,16 @@ export const adminAct = createServerFn({ method: "POST" })
               p as unknown as { bookings: { customer: string | null } | null }
             ).bookings?.customer;
             if (customer) {
-              const { VOUCHER_EUR, voucherCode, voucherValidUntil } =
+              const { voucherCode, voucherValidUntil } =
                 await import("@/showly/booking");
+              const { apologyVoucherCents } = await import("@/showly/policies");
+              const { data: bk } = await a.from("bookings").select("amount_cents").eq("id", p.booking_id).maybeSingle();
               for (let i = 0; i < 3; i++) {
                 const { error } = await a.from("vouchers").insert({
                   code: voucherCode(),
                   owner: customer,
                   booking_id: p.booking_id,
-                  amount_cents: VOUCHER_EUR * 100,
+                  amount_cents: apologyVoucherCents(bk?.amount_cents ?? 0),
                   valid_until: voucherValidUntil(),
                 });
                 if (!error || error.message.includes("booking_id")) break;

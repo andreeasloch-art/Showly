@@ -13,7 +13,7 @@ import { isBackendConfigured } from "@/lib/supabase";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { adminAct, adminExport, adminList, adminOverview, adminRunDaily, type AdminSection } from "@/utils/admin.functions";
 import { AdminMedia } from "@/components/showly/AdminMedia";
-import { AdminAuditView, AdminFees, AdminPromos, AdminReportView } from "@/components/showly/AdminExtras";
+import { AdminAuditView, AdminComplaints, AdminFees, AdminPromos, AdminReportView } from "@/components/showly/AdminExtras";
 
 export const Route = createFileRoute("/admin")({
   head: () => ({ meta: [{ title: "Verwaltung – Showly" }, { name: "robots", content: "noindex" }] }),
@@ -22,8 +22,8 @@ export const Route = createFileRoute("/admin")({
 
 type Row = Record<string, unknown> & { id: number };
 
-type Extra = "overview" | "export" | "media" | "report" | "fees" | "promos" | "audit";
-const EXTRA = new Set<string>(["overview", "export", "media", "report", "fees", "promos", "audit"]);
+type Extra = "overview" | "export" | "media" | "report" | "fees" | "promos" | "audit" | "complaints";
+const EXTRA = new Set<string>(["overview", "export", "media", "report", "fees", "promos", "audit", "complaints"]);
 const TABS: { id: AdminSection | Extra; label: string; icon: string }[] = [
   { id: "overview", label: "Übersicht", icon: "chart" },
   { id: "media", label: "Fotos & Videos", icon: "image" },
@@ -37,6 +37,7 @@ const TABS: { id: AdminSection | Extra; label: string; icon: string }[] = [
   { id: "report", label: "Berichte", icon: "chart" },
   { id: "fees", label: "Provision", icon: "money" },
   { id: "promos", label: "Rabattcodes", icon: "gift" },
+  { id: "complaints", label: "Reklamationen", icon: "scale" },
   { id: "audit", label: "Audit-Log", icon: "clipboard" },
   { id: "export", label: "Datensicherung", icon: "lock" },
 ];
@@ -191,6 +192,7 @@ function AdminPage() {
         {tab === "fees" && <AdminFees />}
         {tab === "promos" && <AdminPromos />}
         {tab === "audit" && <AdminAuditView />}
+        {tab === "complaints" && <AdminComplaints />}
 
         {tab === "reports" && (
           <ul className="admin26-list">

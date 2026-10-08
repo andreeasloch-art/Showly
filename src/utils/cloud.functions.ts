@@ -74,7 +74,7 @@ export const bookingAction = createServerFn({ method: "POST" })
     if (!(await allow("action", uid))) return { error: TOO_MANY };
     const admin = adminClient();
     const { decide, plannedPayout } = await import("@/showly/cloudRules");
-    const { VOUCHER_EUR, voucherCode, voucherValidUntil } = await import("@/showly/booking");
+    const { voucherCode, voucherValidUntil } = await import("@/showly/booking");
 
     const { data: b } = await admin.from("bookings").select("*").eq("id", data.bookingId).maybeSingle();
     if (!b) return { error: "Buchung nicht gefunden" };
@@ -149,28 +149,28 @@ export const bookingAction = createServerFn({ method: "POST" })
               : null;
       if (change) await notifyBookingChange(change, b).catch(() => false);
     }
-    /* Ersatzgarantie: Team sucht Ersatz für denselben Termin (showly/guarantee.ts) */
-    if (data.action.kind === "cancelArtist" || data.action.kind === "reportNoShow") {
-      const { data: art } = b.artist_id
-        ? await admin.from("artists").select("cat, name").eq("id", b.artist_id).maybeSingle()
-        : { data: null };
-      const when = `${String(b.day).split("-").reverse().join(".")}${b.slot ? `, ${b.slot} Uhr` : ""}`;
-      await admin.from("support_tickets").insert({
-        profile: b.customer,
-        email: "support@showly.eu",
-        name: "Ersatzgarantie",
-        topic: "booking",
-        body: `Ersatzgarantie: Bitte innerhalb von 24 Stunden Ersatz vorschlagen. Buchung ${b.id} (${data.action.kind === "cancelArtist" ? "Absage durch Künstler" : "Nichterscheinen gemeldet"}), Termin ${when}, Kategorie ${art?.cat ?? "?"}, Ort ${b.address ?? "–"}, Betrag ${(b.amount_cents / 100).toFixed(2)} €. Aufpreis bis 20 % per Gutschein übernehmen.`,
-      });
-      if (data.action.kind === "reportNoShow") {
-        const { notify } = await import("@/lib/notify.server");
-        await notify(b.customer, "Showly-Ersatzgarantie: wir kümmern uns", [
-          "Danke für deine Meldung. Wir prüfen sie und hören die anbietende Person an. Den Betrag bekommst du zurück.",
-          "Brauchst du noch Ersatz, antworte über Hilfe in der App, dann schlagen wir dir passende Künstler vor.",
-        ]).catch(() => false);
-      }
+    /* Teil-Erstattung nach Stornostufe; Auszahlung auf den Anteil kürzen */
+    if (d.refundCents) {
+      const { refundBooking } = await import("@/lib/money.server");
+      await refundBooking(b.id, { cents: d.refundCents, reason: "Stornierung nach Stornostufe" }).catch(() => null);
     }
-    if (d.voucher && b.customer) await issueVoucher(admin, b.id, b.customer, VOUCHER_EUR, voucherCode, voucherValidUntil);
+    if (d.payoutShare !== undefined && d.payoutShare < 1) {
+      const { data: po } = await admin.from("payouts").select("id, net_cents").eq("booking_id", b.id).neq("status", "paid").maybeSingle();
+      if (po)
+        await admin
+          .from("payouts")
+          .update({ net_cents: Math.round(b.payout_cents * d.payoutShare), reserve_cents: 0 })
+          .eq("id", po.id);
+    }
+    /* Ersatzgarantie: drei Ersatz-Vorschläge, Ticket, unter 48 h Anruf (lib/fair.server.ts) */
+    if (data.action.kind === "cancelArtist" || data.action.kind === "reportNoShow") {
+      const { guaranteeCase } = await import("@/lib/fair.server");
+      await guaranteeCase(admin, b, data.action.kind).catch(() => null);
+    }
+    if (d.voucher && b.customer) {
+      const { apologyVoucherCents } = await import("@/showly/policies");
+      await issueVoucher(admin, b.id, b.customer, apologyVoucherCents(b.amount_cents) / 100, voucherCode, voucherValidUntil);
+    }
     if (d.payout === "cancel") await admin.from("payouts").update({ status: "cancelled" }).eq("booking_id", b.id).neq("status", "paid");
     if (d.payout === "create" && b.artist_id) {
       const { count } = await admin.from("payouts").select("id", { count: "exact", head: true }).eq("artist_id", b.artist_id);
@@ -192,7 +192,7 @@ async function issueVoucher(
   for (let i = 0; i < 3; i++) {
     const { error } = await admin
       .from("vouchers")
-      .insert({ code: code(), owner, booking_id: bookingId, amount_cents: eur * 100, valid_until: validUntil() });
+      .insert({ code: code(), owner, booking_id: bookingId, amount_cents: Math.round(eur * 100), valid_until: validUntil() });
     /* Doppelter Code: neu würfeln. Schon ein Gutschein zur Buchung: fertig. */
     if (!error || error.message.includes("booking_id")) return;
   }
@@ -212,7 +212,7 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
   const admin = adminClient();
   const sb = ctx.sb;
   const { requestLapsed, hearingOver } = await import("@/showly/cloudRules");
-  const { VOUCHER_EUR, voucherCode, voucherValidUntil } = await import("@/showly/booking");
+  const { voucherCode, voucherValidUntil } = await import("@/showly/booking");
 
   const { data: own } = await admin.from("artists").select("id, name").eq("owner", uid);
   const artistIds = (own || []).map((a) => a.id);
@@ -243,8 +243,11 @@ export const loadMine = createServerFn({ method: "POST" }).handler(async () => {
     if (!involved || !hearingOver(p)) continue;
     const now = new Date().toISOString();
     await admin.from("penalties").update({ status: "due", due_at: now, updated_at: now }).eq("id", p.id).eq("status", "hearing");
-    if (p.bookings.customer)
-      await issueVoucher(admin, p.booking_id, p.bookings.customer, VOUCHER_EUR, voucherCode, voucherValidUntil);
+    if (p.bookings.customer) {
+      const { data: bk } = await admin.from("bookings").select("amount_cents").eq("id", p.booking_id).maybeSingle();
+      const { apologyVoucherCents } = await import("@/showly/policies");
+      await issueVoucher(admin, p.booking_id, p.bookings.customer, apologyVoucherCents(bk?.amount_cents ?? 0) / 100, voucherCode, voucherValidUntil);
+    }
   }
 
   /* Lesen mit den Rechten der Person: die Zugriffsregeln gelten */

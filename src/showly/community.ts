@@ -30,6 +30,14 @@ export interface UserReview {
   media: MediaRef[];
   /** Nur bei Einträgen aus der Datenbank: von der angemeldeten Person */
   mine?: boolean;
+  /** nach echter Buchung geschrieben ("Verifizierte Buchung") */
+  verified?: boolean;
+  /** Teilnoten: Pünktlichkeit, Qualität, Kinderfreundlichkeit, Preis-Leistung */
+  sub?: Record<string, number>;
+  /** öffentliche Antwort des Anbieters */
+  reply?: string;
+  /** noch verdeckt (doppelt verdeckt bis beide bewertet haben oder 14 Tage um) */
+  hidden?: boolean;
 }
 
 export interface PostComment {
@@ -186,13 +194,14 @@ export async function addReview(r: Omit<UserReview, "id" | "dateISO">): Promise<
         text: r.text,
         ...(r.eventDate ? { eventDate: r.eventDate } : {}),
         media: cloudMedia(r.media),
+        ...(r.sub ? { sub: r.sub } : {}),
       },
     }).catch(() => ({ error: "Keine Verbindung" }));
     if ("error" in res) return res;
     await syncCommunity();
     return { ok: true };
   }
-  reviews = [{ ...r, id: newId("r"), dateISO: new Date().toISOString() }, ...reviews];
+  reviews = [{ ...r, verified: true, id: newId("r"), dateISO: new Date().toISOString() }, ...reviews];
   publish();
   return { ok: true };
 }

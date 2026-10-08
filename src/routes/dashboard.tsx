@@ -14,7 +14,11 @@ import { MyRequests } from "@/components/showly/Sweets";
 import { listRequests } from "@/showly/sweets";
 import { ProfileEditor } from "@/components/showly/ProfileEditor";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
-import { checkinCodeOf, isLateCancel, presenceQuestion, startOf } from "@/showly/booking";
+import { checkinCodeOf, presenceQuestion, startOf } from "@/showly/booking";
+import { canRebook, complaintOpen, customerCancel, type PolicySnapshot } from "@/showly/policies";
+import { policyOf } from "@/showly/cloudRules";
+import { dbIdOf } from "@/showly/cloudMap";
+import { CancelPolicyNote, ComplaintForm, ComplaintList, RebookForm, Replacements, RentStatus } from "@/components/showly/Fair";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
 import { BlockedList } from "@/components/showly/BlockedList";
 import { PayoutPanel } from "@/components/showly/PayoutPanel";
@@ -56,11 +60,15 @@ const COPY = {
     withdraw: "Anfrage zurückziehen",
     cancelFree: "Kostenlos stornieren? Du bekommst den vollen Betrag zurück.",
     cancelLate: "Weniger als 24 Stunden vor Beginn: Die Gage bleibt fällig (AGB § 8). Trotzdem stornieren?",
+    cancelPart: (back: string, keep: string) =>
+      `Nach der Stornostufe dieser Buchung bekommst du ${back} zurück, ${keep} bleiben beim Künstler (AGB § 8). Du darfst einen geringeren Schaden nachweisen. Trotzdem stornieren?`,
+    rebook: "Umbuchen",
+    complain: "Reklamieren",
     cancelReq: "Anfrage zurückziehen? Es wird nichts abgebucht.",
     cancelYes: "Ja, stornieren",
     cancelNo: "Zurück",
     cancelDone: "Buchung storniert. Der Betrag wird erstattet.",
-    cancelDoneLate: "Buchung storniert. Die Gage bleibt nach AGB § 8 fällig.",
+    cancelDoneLate: "Buchung storniert. Erstattet wird nach der Stornostufe der Buchung (AGB § 8).",
     incomingSub: "Anfragen annehmen oder ablehnen und kommende Auftritte im Blick behalten.",
     stRequested: "Wartet auf Zusage",
     stDeclined: "Abgelehnt",
@@ -103,11 +111,15 @@ const COPY = {
     withdraw: "Withdraw request",
     cancelFree: "Cancel for free? You get a full refund.",
     cancelLate: "Less than 24 hours before the start: the fee remains due (T&C § 8). Cancel anyway?",
+    cancelPart: (back: string, keep: string) =>
+      `Under this booking's cancellation tier you get ${back} back, ${keep} stays with the artist (T&C § 8). You may prove a smaller loss. Cancel anyway?`,
+    rebook: "Rebook",
+    complain: "Complain",
     cancelReq: "Withdraw the request? Nothing will be charged.",
     cancelYes: "Yes, cancel",
     cancelNo: "Back",
     cancelDone: "Booking cancelled. The amount will be refunded.",
-    cancelDoneLate: "Booking cancelled. The fee remains due under T&C § 8.",
+    cancelDoneLate: "Booking cancelled. Refund according to the booking's cancellation tier (T&C § 8).",
     incomingSub: "Accept or decline requests and keep track of upcoming gigs.",
     stRequested: "Awaiting reply",
     stDeclined: "Declined",
@@ -150,11 +162,15 @@ const COPY = {
     withdraw: "Retirar solicitud",
     cancelFree: "¿Cancelar gratis? Recibes el importe completo.",
     cancelLate: "Faltan menos de 24 horas: el caché sigue siendo debido (CG § 8). ¿Cancelar igualmente?",
+    cancelPart: (back: string, keep: string) =>
+      `Según el nivel de cancelación recibes ${back}, ${keep} quedan para el artista (CG § 8). Puedes demostrar un daño menor. ¿Cancelar igualmente?`,
+    rebook: "Cambiar fecha",
+    complain: "Reclamar",
     cancelReq: "¿Retirar la solicitud? No se cobrará nada.",
     cancelYes: "Sí, cancelar",
     cancelNo: "Volver",
     cancelDone: "Reserva cancelada. Se te reembolsará el importe.",
-    cancelDoneLate: "Reserva cancelada. El caché sigue siendo debido según CG § 8.",
+    cancelDoneLate: "Reserva cancelada. Reembolso según el nivel de cancelación (CG § 8).",
     incomingSub: "Acepta o rechaza solicitudes y controla tus próximas actuaciones.",
     stRequested: "Esperando respuesta",
     stDeclined: "Rechazada",
@@ -250,13 +266,23 @@ function Dashboard() {
     confirmPresence,
   } = useShowly();
   const [cancelAsk, setCancelAsk] = useState<number | null>(null);
+  /* Umbuchen oder Reklamieren zu einer Buchung/Bestellung */
+  const [panel, setPanel] = useState<{ id: number; kind: "rebook" | "complaint" } | null>(null);
   /* Nachrichten zu einer Buchung */
   const [chatFor, setChatFor] = useState<number | null>(null);
   const unread = useUnread();
   const todayISO = new Date().toISOString().slice(0, 10);
   /* Nichterscheinen lässt sich bis 14 Tage nach dem Termin melden */
   const noShowFrom = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
-  const isLate = (b: { dateISO: string; slot?: string }) => isLateCancel(b);
+  /* Was bei Stornierung passiert, nach der mit der Buchung gespeicherten Stufe */
+  const cancelInfo = (b: { dateISO: string; slot?: string; amount: number; policy?: PolicySnapshot }) =>
+    customerCancel(policyOf(b), startOf(b), Date.now(), Math.round(b.amount * 100));
+  const cancelText = (b: { dateISO: string; slot?: string; amount: number; policy?: PolicySnapshot }) => {
+    const c = cancelInfo(b);
+    if (c.stage === "free") return C.cancelFree;
+    return C.cancelPart(fmt(c.refundCents / 100), fmt(c.keepCents / 100));
+  };
+  const endOf = (b: { dateISO: string; slot?: string; hours?: number }) => startOf(b) + (b.hours || 2) * 3600000;
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
   const navigate = useNavigate();
   const cal = useCalendar();
@@ -488,6 +514,7 @@ function Dashboard() {
               </div>
             </div>
 
+            <ComplaintList role="customer" />
             {bookings.length ? (
               <div className="dash26-list">
                 {bookings.map((b) => {
@@ -554,13 +581,7 @@ function Dashboard() {
                           <div className="inb-actions">
                             {cancelAsk === b.id ? (
                               <>
-                                <span className="inb-sure">
-                                  {b.status === "requested"
-                                    ? C.cancelReq
-                                    : isLate(b)
-                                      ? C.cancelLate
-                                      : C.cancelFree}
-                                </span>
+                                <span className="inb-sure">{b.status === "requested" ? C.cancelReq : cancelText(b)}</span>
                                 <button className="dash26-mini outline" onClick={() => setCancelAsk(null)}>
                                   {C.cancelNo}
                                 </button>
@@ -576,15 +597,43 @@ function Dashboard() {
                                 </button>
                               </>
                             ) : (
-                              <button
-                                className="dash26-mini outline inb-decline-ghost"
-                                onClick={() => setCancelAsk(b.id)}
-                              >
-                                <Icon name="close" /> {b.status === "requested" ? C.withdraw : C.cancel}
-                              </button>
+                              <>
+                                <button
+                                  className="dash26-mini outline inb-decline-ghost"
+                                  onClick={() => setCancelAsk(b.id)}
+                                >
+                                  <Icon name="close" /> {b.status === "requested" ? C.withdraw : C.cancel}
+                                </button>
+                                {canRebook(b.policy ?? null, { status: b.status, rebooked_at: b.rebookedAt ?? null }, startOf(b), Date.now()) && (
+                                  <button className="dash26-mini outline" onClick={() => setPanel({ id: b.id, kind: "rebook" })}>
+                                    <Icon name="calendar" /> {C.rebook}
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
+                      {b.policy && b.status !== "declined" && b.status !== "cancelled" && startOf(b) > Date.now() && (
+                        <CancelPolicyNote policy={b.policy} compact />
+                      )}
+                      {panel?.id === b.id && panel.kind === "rebook" && (
+                        <RebookForm id={b.id} dateISO={b.dateISO} slot={b.slot} onDone={() => setPanel(null)} />
+                      )}
+                      {((b.status === "declined" && b.cancelledBy === "artist") || b.status === "noshow") && b.replacements && (
+                        <Replacements list={b.replacements} />
+                      )}
+                      {(b.status === "confirmed" || b.status === "pending" || b.status === "completed") &&
+                        complaintOpen(endOf(b), Date.now()) &&
+                        Date.now() > startOf(b) &&
+                        (panel?.id === b.id && panel.kind === "complaint" ? (
+                          <ComplaintForm refTo={{ kind: "booking", id: dbIdOf(b.id) ?? b.id }} hours={b.hours} onDone={() => setPanel(null)} />
+                        ) : (
+                          <div className="inb-actions">
+                            <button className="dash26-mini outline" onClick={() => setPanel({ id: b.id, kind: "complaint" })}>
+                              <Icon name="clipboard" /> {C.complain}
+                            </button>
+                          </div>
+                        ))}
                       {presenceQuestion(b) && (
                         <div className="inb-actions dash26-presence">
                           <span className="inb-sure">
@@ -702,7 +751,16 @@ function Dashboard() {
                     </div>
                     <div className="dash26-item-side">
                       <b>{fmt(o.total)}</b>
+                      {dbIdOf(o.id) !== null && (
+                        <button className="dash26-mini outline" onClick={() => setPanel({ id: o.id, kind: "complaint" })}>
+                          {C.complain}
+                        </button>
+                      )}
                     </div>
+                    {o.rent && <RentStatus orderId={o.id} rent={o.rent} />}
+                    {panel?.id === o.id && panel.kind === "complaint" && (
+                      <ComplaintForm refTo={{ kind: "order", id: dbIdOf(o.id) ?? o.id }} onDone={() => setPanel(null)} />
+                    )}
                   </article>
                 );
               })}

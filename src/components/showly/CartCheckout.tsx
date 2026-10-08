@@ -22,6 +22,7 @@ import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
 import { GuaranteeBadge } from "@/components/showly/Guarantee";
+import { CancelPolicyNote } from "@/components/showly/Fair";
 
 const TEXT = {
   de: {
@@ -73,7 +74,7 @@ const TEXT = {
     splitOwn: "Showly-Shop",
     splitReq: "Anfrage",
     secure: "Sichere Zahlung über Stripe. Showly sieht keine Kartendaten.",
-    cancel: "Buchungen sind bis 24 Stunden vorher kostenlos stornierbar.",
+    cancel: "Storno nach der Stornostufe des Anbieters (steht bei jeder Buchung); einmal kostenlos umbuchen innerhalb von 6 Monaten.",
     reqNote: "Einige Künstler bestätigen erst innerhalb von 48 Stunden. Für diese Buchungen wird erst bei Zusage abgebucht.",
     offH: "Online-Zahlung noch nicht freigeschaltet",
     offP: "Du kannst trotzdem verbindlich reservieren. Künstler und Anbieter bestätigen, bezahlt wird danach. Jetzt wird nichts abgebucht.",
@@ -137,7 +138,7 @@ const TEXT = {
     splitOwn: "Showly shop",
     splitReq: "request",
     secure: "Secure payment via Stripe. Showly never sees card details.",
-    cancel: "Bookings can be cancelled free of charge up to 24 hours before.",
+    cancel: "Cancellation according to the provider's tier (shown with each booking); one free rebooking within 6 months.",
     reqNote: "Some artists confirm within 48 hours. For those bookings, payment is only taken once they accept.",
     offH: "Online payment is not switched on yet",
     offP: "You can still reserve. Artists and providers confirm, payment follows afterwards. Nothing is charged now.",
@@ -201,7 +202,7 @@ const TEXT = {
     splitOwn: "Tienda Showly",
     splitReq: "solicitud",
     secure: "Pago seguro con Stripe. Showly no ve los datos de la tarjeta.",
-    cancel: "Las reservas se pueden cancelar gratis hasta 24 horas antes.",
+    cancel: "Cancelación según el nivel del proveedor (indicado en cada reserva); un cambio de fecha gratuito en 6 meses.",
     reqNote: "Algunos artistas confirman en 48 horas. En esas reservas solo se cobra cuando aceptan.",
     offH: "El pago en línea todavía no está activado",
     offP: "Aun así puedes reservar. Artistas y proveedores confirman y el pago llega después. Ahora no se cobra nada.",
@@ -519,6 +520,7 @@ export function CartCheckout() {
                               {fmtDate(b.dateISO)} · {b.slot}
                               {b.figure ? ` · ${b.figure}` : ""}
                             </small>
+                            <CancelPolicyNote tier={a.cancelTier} compact />
                             {p.pkg ? (
                               <small>{String(L(p.pkg.name))}</small>
                             ) : (

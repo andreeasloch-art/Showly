@@ -6,6 +6,8 @@ import { useShowly } from "@/showly/store";
 import { CATS } from "@/showly/data";
 import { getStripeEnvironment } from "@/lib/stripe";
 import { adminAudit, adminFees, adminPromos, adminReport, type AdminReport, type PromoInfo } from "@/utils/admin.functions";
+import { adminComplaints, evidenceUrls } from "@/utils/fair.functions";
+import type { ComplaintRow } from "@/lib/database.types";
 
 const euro = (c: number) => (c / 100).toFixed(2).replace(".", ",") + " €";
 const pct = (r: number) => `${Math.round(r * 1000) / 10} %`;
@@ -266,6 +268,90 @@ export function AdminAuditView() {
         ))}
         {!rows.length && <li>Noch keine Einträge.</li>}
       </ul>
+    </section>
+  );
+}
+
+/** Reklamationen: Nachweise, Stellungnahme, Entscheidung innerhalb von 5 Tagen */
+export function AdminComplaints() {
+  const { toast } = useShowly();
+  const [list, setList] = useState<(ComplaintRow & { flagged: boolean; title: string })[]>([]);
+  const [form, setForm] = useState<Record<number, { cents: string; text: string }>>({});
+  async function run(data: Parameters<typeof adminComplaints>[0]["data"]) {
+    const r = await adminComplaints({ data }).catch(() => null);
+    if (!r) return;
+    if ("error" in r) return toast(r.error);
+    setList(r.list);
+  }
+  useEffect(() => {
+    void run({ op: "list" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  async function show(c: ComplaintRow) {
+    const ref = c.booking_id
+      ? { kind: "booking" as const, id: c.booking_id }
+      : c.shop_order_id
+        ? { kind: "order" as const, id: c.shop_order_id }
+        : { kind: "sweet" as const, id: c.sweet_request_id ?? 0 };
+    const urls = await evidenceUrls({ data: { ref, paths: c.evidence } }).catch(() => ({}));
+    Object.values(urls).forEach((u) => window.open(u, "_blank", "noopener"));
+  }
+  const open = list.filter((c) => ["open", "offer", "escalated"].includes(c.status));
+  const done = list.filter((c) => !["open", "offer", "escalated"].includes(c.status));
+  const row = (c: ComplaintRow & { flagged: boolean; title: string }) => {
+    const f = form[c.id] ?? { cents: "", text: "" };
+    return (
+      <li key={c.id} className={c.status === "escalated" ? "" : "st-closed"}>
+        <div>
+          <b>
+            #{c.id} · {c.title} · {euro(c.amount_cents)}
+            {c.flagged ? " · ⚠ viele Reklamationen" : ""}
+          </b>
+          <small>
+            {c.booking_id ? `Buchung ${c.booking_id}` : c.shop_order_id ? `Bestellung ${c.shop_order_id}` : `Torte ${c.sweet_request_id}`} · Status {c.status} ·
+            entscheiden bis {new Date(c.decide_by).toLocaleDateString("de-DE")}
+          </small>
+          <p>{c.body}</p>
+          {c.statement && <p>Stellungnahme: {c.statement}</p>}
+          {c.offer_cents ? <p>Angebot: {euro(c.offer_cents)} ({c.offer_by})</p> : null}
+          {c.decision && <p>Entscheidung: {c.decision} · {euro(c.refund_cents ?? 0)}</p>}
+        </div>
+        <div className="admin26-act">
+          {c.evidence.length > 0 && (
+            <button type="button" className="dash26-mini outline" onClick={() => void show(c)}>
+              {c.evidence.length} Nachweise
+            </button>
+          )}
+          {["open", "offer", "escalated"].includes(c.status) && (
+            <>
+              <input inputMode="decimal" placeholder="Erstattung €" value={f.cents} onChange={(e) => setForm({ ...form, [c.id]: { ...f, cents: e.target.value } })} aria-label="Erstattung" />
+              <input placeholder="Begründung" value={f.text} onChange={(e) => setForm({ ...form, [c.id]: { ...f, text: e.target.value } })} aria-label="Begründung" />
+              <button
+                type="button"
+                className="dash26-mini"
+                onClick={() =>
+                  void run({ op: "decide", id: c.id, cents: Math.round(Number(f.cents.replace(",", ".")) * 100) || 0, decision: f.text })
+                }
+              >
+                Entscheiden
+              </button>
+            </>
+          )}
+        </div>
+      </li>
+    );
+  };
+  return (
+    <section className="admin26-panel">
+      <h2>Reklamationen</h2>
+      <p className="admin26-hint">
+        Anbieter haben 48 Stunden für eine Stellungnahme, danach landet die Reklamation hier. Entscheidung spätestens 5 Tage nach Eingang. Richtwerte: 20 Minuten zu
+        spät = 20 %, kürzere Show anteilig, falsches Tortenmotiv 50–100 %. Der Chat zur Buchung zählt als Nachweis. Gesetzliche Gewährleistung bleibt unberührt.
+      </p>
+      <h3>Offen ({open.length})</h3>
+      <ul className="admin26-list">{open.length ? open.map(row) : <li>Keine offenen Reklamationen.</li>}</ul>
+      <h3>Erledigt</h3>
+      <ul className="admin26-list">{done.slice(0, 50).map(row)}</ul>
     </section>
   );
 }

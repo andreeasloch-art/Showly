@@ -41,6 +41,7 @@ const COPY = {
     bufferL: (n: number) => `danach ${n} ${n === 1 ? "Tag" : "Tage"} Reinigung`,
     busy: "In diesem Zeitraum ist der Artikel schon vergeben. Bitte einen anderen Zeitraum wählen.",
     perDay: "pro Tag",
+    needDetails: "Bitte bei allen Artikeln Größe bzw. Mietzeitraum wählen.",
   },
   en: {
     h: "Rental",
@@ -71,6 +72,7 @@ const COPY = {
     bufferL: (n: number) => `then ${n} ${n === 1 ? "day" : "days"} cleaning`,
     busy: "This item is already taken for that period. Please choose another period.",
     perDay: "per day",
+    needDetails: "Please choose size or rental period for all items.",
   },
   es: {
     h: "Alquiler",
@@ -101,6 +103,7 @@ const COPY = {
     bufferL: (n: number) => `después ${n} ${n === 1 ? "día" : "días"} de limpieza`,
     busy: "Este artículo ya está reservado en ese periodo. Elige otro.",
     perDay: "por día",
+    needDetails: "Elige talla o periodo de alquiler en todos los artículos.",
   },
 } as const;
 
@@ -174,10 +177,6 @@ export function RentTermsFields({ d, onChange }: { d: RentDraft; onChange: (d: R
           <span>€</span>
         </span>
         <span className="pe-hint">{C.depositHint}</span>
-      </label>
-      <label className="pe-field">
-        <span className="pe-label">{C.sizes}</span>
-        <input value={d.sizes} maxLength={120} placeholder={C.sizesPh} onChange={(e) => up("sizes", e.target.value)} />
       </label>
       <label className="pe-field">
         <span className="pe-label">{C.hygiene}</span>
@@ -300,7 +299,28 @@ export function RentFacts({ i }: { i: ShopItem }) {
 export function rentLinesReady(lines: CartShopLine[], find: (id: number) => ShopItem | undefined): boolean {
   return lines.every((l) => {
     const i = find(l.shopId);
-    if (!i || l.mode !== "rent" || !(i.rent > 0)) return true;
+    if (!i) return true;
+    if (l.mode !== "rent" || !(i.rent > 0)) return !i.sizes?.length || (!!l.size && i.sizes.includes(l.size));
     return rentDays(l.from, l.to) > 0 && (l.from ?? "") >= todayISO() && (!i.sizes?.length || !!l.size) && shipFee(i, l.ship) !== null;
   });
+}
+
+/** Größe einer Kauf-Zeile (Kostüme) im Warenkorb */
+export function SizeSelect({ i, l, idx }: { i: ShopItem; l: CartShopLine; idx: number }) {
+  const C = useRentCopy();
+  const { updateCartLine } = useShowly();
+  if (!i.sizes?.length) return null;
+  return (
+    <label className={"prod-size" + (!l.size ? " err" : "")}>
+      <span>{C.size}</span>
+      <select value={l.size ?? ""} onChange={(e) => updateCartLine(idx, { size: e.target.value || undefined })}>
+        <option value="">{C.pick}</option>
+        {i.sizes.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }

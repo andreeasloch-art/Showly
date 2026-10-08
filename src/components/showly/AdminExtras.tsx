@@ -209,6 +209,8 @@ export function AdminReportView() {
               ["Buchungen", String(r.bookings.total)],
               ["Stornoquote", `${Math.round(r.cancelRate * 1000) / 10} %`],
               ["Rückbuchungen", String(r.disputes)],
+              ["Vertragsstrafen", euro(r.penaltiesCents)],
+              ["Garantie-Topf (Strafen + 5 % Provision)", euro(r.guaranteeCents)],
             ].map(([k, v]) => (
               <div key={k} className="admin26-card">
                 <b>{v}</b>

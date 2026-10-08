@@ -69,8 +69,9 @@ export async function notifyBookingChange(
         "Schau gern nach einem anderen Act für deinen Termin.",
       ]);
     case "cancelledByArtist":
-      return notify(b.customer, "Absage für deinen Termin", [
+      return notify(b.customer, "Absage für deinen Termin – deine Ersatzgarantie greift", [
         `Der Termin am ${when} wurde von der anbietenden Person abgesagt. Du bekommst den gezahlten Betrag vollständig zurück.`,
+        "Showly-Ersatzgarantie: Unser Team schlägt dir innerhalb von 24 Stunden passende Ersatz-Künstler für deinen Termin vor. Kostet der Ersatz mehr, übernehmen wir den Aufpreis bis 20 % per Gutschein. Möchtest du keinen Ersatz, musst du nichts tun.",
       ]);
     case "cancelledByCustomer":
       return notify(await ownerOfArtist(b.artist_id), "Eine Buchung wurde storniert", [

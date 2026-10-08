@@ -64,7 +64,11 @@ import { isBot, localeFor, pickLang, serverCountry } from "./geoLang";
 
 /* Beispielartikel zeigen, wie Größe, Hygiene, Kaution und Übergabe beim
    Mieten aussehen; echte Anbieter tragen ihre eigenen Angaben ein. */
-for (const i of SHOP_ITEMS) if (i.demo && i.rent > 0) Object.assign(i, demoRentTerms(i));
+for (const i of SHOP_ITEMS) {
+  if (i.demo && i.rent > 0) Object.assign(i, demoRentTerms(i));
+  /* Kostüme gibt es in Größen, auch nur zum Kaufen */
+  else if (i.demo && i.section !== "deko" && !i.sizes) i.sizes = ["S", "M", "L", "XL"];
+}
 
 
 const DICT: Record<string, Record<string, string>> = {

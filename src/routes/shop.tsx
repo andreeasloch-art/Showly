@@ -65,6 +65,9 @@ const TAB_ICON: Record<string, string> = {
 const COPY = {
   de: {
     fromRent: (p: string) => `Mieten ab ${p} am Tag`,
+    size: "Größe",
+    sizePick: "bitte wählen",
+    sizeNeed: "Bitte zuerst deine Größe wählen.",
     deposit: "Kaution",
     buyToo: "Auch zum Kaufen",
     perk: "15 % Rabatt für Künstler",
@@ -100,6 +103,15 @@ const COPY = {
     newTag: "Neu",
     form: {
       h: "Deko anbieten",
+      hCostume: "Kostüm anbieten",
+      area: "Was bietest du an?",
+      areaDeco: "Deko",
+      areaCostume: "Kostüm",
+      sizes: "Größen (mit Komma getrennt)",
+      sizesPh: "z. B. S, M, L, XL oder 116, 128, 140",
+      sizesHint: "Kunden wählen ihre Größe beim Kaufen und Mieten.",
+      namePhCostume: "z. B. Eiskönigin-Kleid mit Umhang",
+      doneCostume: "Dein Kostüm steht jetzt im Kostüm-Shop.",
       save: "Einstellen",
       vendor: "Dein Name oder Firmenname",
       name: "Was bietest du an?",
@@ -120,6 +132,9 @@ const COPY = {
   },
   en: {
     fromRent: (p: string) => `Rent from ${p} a day`,
+    size: "Size",
+    sizePick: "please choose",
+    sizeNeed: "Please choose your size first.",
     deposit: "Deposit",
     buyToo: "Also for sale",
     perk: "15% off for artists",
@@ -155,6 +170,15 @@ const COPY = {
     newTag: "New",
     form: {
       h: "Offer decor",
+      hCostume: "Offer a costume",
+      area: "What are you offering?",
+      areaDeco: "Decor",
+      areaCostume: "Costume",
+      sizes: "Sizes (comma separated)",
+      sizesPh: "e.g. S, M, L, XL or 116, 128, 140",
+      sizesHint: "Customers pick their size when buying or renting.",
+      namePhCostume: "e.g. Ice queen dress with cape",
+      doneCostume: "Your costume is now in the costume shop.",
       save: "Publish",
       vendor: "Your name or company",
       name: "What do you offer?",
@@ -175,6 +199,9 @@ const COPY = {
   },
   es: {
     fromRent: (p: string) => `Alquiler desde ${p} al día`,
+    size: "Talla",
+    sizePick: "elige",
+    sizeNeed: "Elige primero tu talla.",
     deposit: "Fianza",
     buyToo: "También a la venta",
     perk: "15 % de descuento para artistas",
@@ -210,6 +237,15 @@ const COPY = {
     newTag: "Nuevo",
     form: {
       h: "Ofrecer decoración",
+      hCostume: "Ofrecer disfraz",
+      area: "¿Qué ofreces?",
+      areaDeco: "Decoración",
+      areaCostume: "Disfraz",
+      sizes: "Tallas (separadas por comas)",
+      sizesPh: "p. ej. S, M, L, XL o 116, 128, 140",
+      sizesHint: "Los clientes eligen su talla al comprar o alquilar.",
+      namePhCostume: "p. ej. Vestido de reina de hielo con capa",
+      doneCostume: "Tu disfraz ya está en la tienda de disfraces.",
       save: "Publicar",
       vendor: "Tu nombre o empresa",
       name: "¿Qué ofreces?",
@@ -469,8 +505,8 @@ function Shop() {
                   {t("shop.discountBtn")}
                   <Icon name="arrow" />
                 </button>
-                <button className="home-btn ghost" onClick={() => go("deko")}>
-                  {C.areaDeco}
+                <button className="home-btn ghost" onClick={() => setOffering(true)}>
+                  {C.form.hCostume}
                 </button>
               </div>
             </div>
@@ -486,6 +522,7 @@ function Shop() {
       {offering && (
         <DecoOffer
           C={C}
+          initialArea={deko ? "deko" : "kostuem"}
           onClose={() => setOffering(false)}
           onDone={(id) => {
             setOffering(false);
@@ -502,17 +539,24 @@ function DecoOffer({
   C,
   onClose,
   onDone,
+  initialArea = "deko",
 }: {
   C: Copy;
   onClose: () => void;
   onDone: (id: number) => void;
+  initialArea?: "deko" | "kostuem";
 }) {
   const okText = useContactCheck();
   const { t, toast, session, refreshCloud } = useShowly();
   const F = C.form;
   const [vendor, setVendor] = useState("");
   const [name, setName] = useState("");
-  const [cat, setCat] = useState("balloons");
+  const [offerArea, setOfferArea] = useState<"deko" | "kostuem">(initialArea);
+  const [cat, setCat] = useState(initialArea === "kostuem" ? "fairy" : "balloons");
+  const [sizes, setSizes] = useState("");
+  const costume = offerArea === "kostuem";
+  const sizeList = () =>
+    [...new Set(sizes.split(",").map((x) => x.trim().slice(0, 20)).filter(Boolean))].slice(0, 12);
   const [occ, setOcc] = useState<string[]>(["birthday"]);
   const [desc, setDesc] = useState("");
   const [buy, setBuy] = useState("");
@@ -558,9 +602,11 @@ function DecoOffer({
       buy: b || r * 5,
       rent: r,
       photo,
+      area: offerArea,
+      ...(sizeList().length ? { sizes: sizeList() } : {}),
       ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
     });
-    toast(F.done);
+    toast(costume ? F.doneCostume : F.done);
     onDone(item.id);
   }
 
@@ -577,6 +623,8 @@ function DecoOffer({
         occ,
         buy: b || r * 5,
         rent: r,
+        area: offerArea,
+        sizes: sizeList(),
         ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
       }).then(async (res) => {
         if ("error" in res) return toast(res.error);
@@ -594,7 +642,7 @@ function DecoOffer({
           <button className="feed26-x" onClick={onClose} aria-label="✕">
             <Icon name="close" />
           </button>
-          <h2 id="deco-h">{F.h}</h2>
+          <h2 id="deco-h">{costume ? F.hCostume : F.h}</h2>
           <button className="feed26-share-btn" onClick={publish}>
             {F.save}
           </button>
@@ -608,14 +656,34 @@ function DecoOffer({
             <span className="pe-label">{F.vendor}</span>
             <input value={vendor} maxLength={80} onChange={(e) => setVendor(e.target.value)} />
           </label>
+          <div className="pe-field">
+            <span className="pe-label">{F.area}</span>
+            <div className="prod-mode" role="radiogroup" aria-label={F.area}>
+              {(["deko", "kostuem"] as const).map((a) => (
+                <button
+                  key={a}
+                  type="button"
+                  role="radio"
+                  aria-checked={offerArea === a}
+                  className={"prod-mode-opt" + (offerArea === a ? " on" : "")}
+                  onClick={() => {
+                    setOfferArea(a);
+                    setCat(a === "kostuem" ? "fairy" : "balloons");
+                  }}
+                >
+                  {a === "kostuem" ? F.areaCostume : F.areaDeco}
+                </button>
+              ))}
+            </div>
+          </div>
           <label className="pe-field">
             <span className="pe-label">{F.name}</span>
-            <input value={name} maxLength={100} placeholder={F.namePh} onChange={(e) => setName(e.target.value)} />
+            <input value={name} maxLength={100} placeholder={costume ? F.namePhCostume : F.namePh} onChange={(e) => setName(e.target.value)} />
           </label>
           <label className="pe-field">
             <span className="pe-label">{F.cat}</span>
             <select value={cat} onChange={(e) => setCat(e.target.value)}>
-              {DECO_TABS.filter((d) => d.id !== "all").map((d) => (
+              {(costume ? SHOP_TABS : DECO_TABS).filter((d) => d.id !== "all").map((d) => (
                 <option key={d.id} value={d.id}>
                   {t(d.k)}
                 </option>
@@ -658,6 +726,11 @@ function DecoOffer({
               <span className="pe-hint">{F.rentHint}</span>
             </label>
           </div>
+          <label className="pe-field">
+            <span className="pe-label">{F.sizes}</span>
+            <input value={sizes} maxLength={120} placeholder={F.sizesPh} onChange={(e) => setSizes(e.target.value)} />
+            <span className="pe-hint">{F.sizesHint}</span>
+          </label>
           {price(rent) > 0 && <RentTermsFields d={terms} onChange={setTerms} />}
           <label className="pe-field">
             <span className="pe-label">{F.desc}</span>
@@ -705,11 +778,19 @@ function ProductCard({
   const both = i.rent > 0;
   const [done, setDone] = useState<"" | "rent" | "buy">("");
   const [mode, setMode] = useState<"rent" | "buy">("rent");
+  const [size, setSize] = useState("");
+  const [sizeErr, setSizeErr] = useState(false);
+  const sizes = i.sizes ?? [];
   const timer = useRef(0);
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   function add(mode: "rent" | "buy") {
-    addToCart(i.id, mode);
+    /* Kostüme mit Größen: erst Größe wählen, beim Kaufen wie beim Mieten */
+    if (sizes.length && !size) {
+      setSizeErr(true);
+      return;
+    }
+    addToCart(i.id, mode, size ? { size } : undefined);
     setDone(mode);
     window.clearTimeout(timer.current);
     timer.current = window.setTimeout(() => setDone(""), 1600);
@@ -792,6 +873,31 @@ function ProductCard({
               </button>
             ))}
           </div>
+        )}
+        {sizes.length > 0 && (
+          <label className={"prod-size" + (sizeErr ? " err" : "")}>
+            <span>{C.size}</span>
+            <select
+              value={size}
+              aria-invalid={sizeErr}
+              onChange={(e) => {
+                setSize(e.target.value);
+                setSizeErr(false);
+              }}
+            >
+              <option value="">{C.sizePick}</option>
+              {sizes.map((x) => (
+                <option key={x} value={x}>
+                  {x}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {sizeErr && (
+          <p className="prod-size-msg" role="alert">
+            {C.sizeNeed}
+          </p>
         )}
         <button className={"prod-btn solid" + (done ? " done" : "")} onClick={() => add(both ? mode : "buy")}>
           {done ? <Icon name="check" /> : <Icon name="cart" />}

@@ -94,3 +94,20 @@ describe("Mietpreis an der Kasse (Server rechnet genauso)", () => {
     expect(L({ from: "2026-10-30", to: "2026-10-31", size: "M" })).toEqual([]);
   });
 });
+
+describe("Kostüm kaufen mit Größe", () => {
+  const costume = { id: 100002, cat: "fairy", rent: 0, buy: 120, rating: 0, reviews: 0, name: "Fee", desc: "", sizes: ["116", "128"] } as ShopItem;
+  const extra = { item: (id: number) => (id === costume.id ? costume : undefined) };
+  const L = (x: object) =>
+    priceLines([{ shopId: costume.id, mode: "buy" as const, qty: 1, ...x }], [], String, { rent: "", buy: "Kauf" }, [], extra, { allowDemo: false });
+  it("ohne oder mit falscher Größe nicht bezahlbar", () => {
+    expect(L({}).unknown).toEqual(["size:100002"]);
+    expect(L({ size: "XXL" }).unknown).toEqual(["size:100002"]);
+  });
+  it("mit Größe: Kaufpreis, Größe im Posten", () => {
+    const r = L({ size: "128" });
+    expect(r.unknown).toEqual([]);
+    expect(r.lines[0]!.name).toContain("128");
+    expect(r.lines[0]!.amountInCents).toBe(12000);
+  });
+});

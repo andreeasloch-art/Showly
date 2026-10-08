@@ -149,6 +149,27 @@ export const bookingAction = createServerFn({ method: "POST" })
               : null;
       if (change) await notifyBookingChange(change, b).catch(() => false);
     }
+    /* Ersatzgarantie: Team sucht Ersatz für denselben Termin (showly/guarantee.ts) */
+    if (data.action.kind === "cancelArtist" || data.action.kind === "reportNoShow") {
+      const { data: art } = b.artist_id
+        ? await admin.from("artists").select("cat, name").eq("id", b.artist_id).maybeSingle()
+        : { data: null };
+      const when = `${String(b.day).split("-").reverse().join(".")}${b.slot ? `, ${b.slot} Uhr` : ""}`;
+      await admin.from("support_tickets").insert({
+        profile: b.customer,
+        email: "support@showly.eu",
+        name: "Ersatzgarantie",
+        topic: "booking",
+        body: `Ersatzgarantie: Bitte innerhalb von 24 Stunden Ersatz vorschlagen. Buchung ${b.id} (${data.action.kind === "cancelArtist" ? "Absage durch Künstler" : "Nichterscheinen gemeldet"}), Termin ${when}, Kategorie ${art?.cat ?? "?"}, Ort ${b.address ?? "–"}, Betrag ${(b.amount_cents / 100).toFixed(2)} €. Aufpreis bis 20 % per Gutschein übernehmen.`,
+      });
+      if (data.action.kind === "reportNoShow") {
+        const { notify } = await import("@/lib/notify.server");
+        await notify(b.customer, "Showly-Ersatzgarantie: wir kümmern uns", [
+          "Danke für deine Meldung. Wir prüfen sie und hören die anbietende Person an. Den Betrag bekommst du zurück.",
+          "Brauchst du noch Ersatz, antworte über Hilfe in der App, dann schlagen wir dir passende Künstler vor.",
+        ]).catch(() => false);
+      }
+    }
     if (d.voucher && b.customer) await issueVoucher(admin, b.id, b.customer, VOUCHER_EUR, voucherCode, voucherValidUntil);
     if (d.payout === "cancel") await admin.from("payouts").update({ status: "cancelled" }).eq("booking_id", b.id).neq("status", "paid");
     if (d.payout === "create" && b.artist_id) {

@@ -165,6 +165,7 @@ export function CartDrawer() {
                       <div className="cart-name">{L(item.name)}</div>
                       <div className="cart-mode">
                         {c.mode === "rent" ? t("shop.addRent") : t("shop.addBuy")}
+                        {c.size ? ` · ${R.size} ${c.size}` : ""}
                         {c.mode === "rent" && c.from && c.to ? ` · ${fmtDate(c.from)} – ${fmtDate(c.to)}` : ""}
                       </div>
                       {c.mode === "rent" && item.rent > 0 && (

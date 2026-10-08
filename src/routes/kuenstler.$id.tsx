@@ -24,6 +24,7 @@ import { ReviewComposer, UserReviewList } from "@/components/showly/Reviews";
 import { ProfileVideos } from "@/components/showly/MediaView";
 import type { MediaRef } from "@/showly/media";
 import { TIERS, TIER_ICON, TIER_LABEL, isPlannerCat, type Tier } from "@/showly/plannerPackages";
+import { GuaranteeBadge } from "@/components/showly/Guarantee";
 
 export const Route = createFileRoute("/kuenstler/$id")({
   /* Echte Profile schon beim Rendern auf dem Server laden, damit
@@ -700,6 +701,7 @@ function Detail() {
             </div>
           </div>
           )}
+          <GuaranteeBadge className="in-side" />
         </aside>
       </div>
 

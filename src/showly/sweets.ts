@@ -577,12 +577,15 @@ export interface DecoInput {
   photo?: MediaRef | undefined;
   /** Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
   terms?: RentTerms | undefined;
+  /** Bereich im Shop (Standard Deko) und Größen, auch beim Kauf */
+  area?: "deko" | "kostuem" | undefined;
+  sizes?: string[] | undefined;
 }
 
 function decoToItem(d: DecoInput & { id: number }): ShopItem {
   return {
     id: d.id,
-    section: "deko",
+    ...(d.area === "kostuem" ? {} : { section: "deko" as const }),
     cat: d.cat,
     occ: d.occ,
     vendor: d.vendor,
@@ -594,6 +597,7 @@ function decoToItem(d: DecoInput & { id: number }): ShopItem {
     desc: d.desc,
     photo: d.photo,
     ...(d.terms ?? {}),
+    ...(d.sizes?.length ? { sizes: d.sizes } : {}),
     own: true,
   };
 }

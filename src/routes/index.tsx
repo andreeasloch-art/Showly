@@ -15,6 +15,8 @@ import { CountUp } from "@/components/showly/ImageWall";
 import { ActOfWeek } from "@/components/showly/ActOfWeek";
 import { HeroReel } from "@/components/showly/HeroReel";
 import { StageLight } from "@/components/showly/Motion";
+import { GuaranteeSection } from "@/components/showly/Guarantee";
+import { guaranteeCopy } from "@/showly/guarantee";
 
 export const Route = createFileRoute("/")({
   head: (ctx) => seoHead("/", "/", headLang(ctx)),
@@ -265,7 +267,7 @@ function Home() {
               </li>
               <li>
                 <Icon name="shield" />
-                <span>{t("hero.usp3")}</span>
+                <span>{guaranteeCopy(lang).short}</span>
               </li>
             </ul>
           </div>
@@ -357,6 +359,9 @@ function Home() {
           </div>
         )}
       </div>
+
+      {/* Werbeversprechen: Ersatz oder Geld zurück (showly/guarantee.ts) */}
+      <GuaranteeSection />
 
       {/* Nur echte Profile; solange es keine gibt, keine Zahlen */}
       {facts.acts > 0 && (

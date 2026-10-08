@@ -16,11 +16,12 @@ import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
 import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice } from "@/showly/pricing";
-import { RentLineEditor, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
+import { RentLineEditor, SizeSelect, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
 import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
+import { GuaranteeBadge } from "@/components/showly/Guarantee";
 
 const TEXT = {
   de: {
@@ -397,7 +398,7 @@ export function CartCheckout() {
   }
 
   function finishWithoutPayment() {
-    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDates);
+    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDetails);
     const snap = snapshot();
     const req = snap.requests.some((r) => !r.direct);
     const reserved =
@@ -410,7 +411,7 @@ export function CartCheckout() {
   }
 
   function startPayment() {
-    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDates);
+    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDetails);
     const snap = snapshot();
     setPending({
       kind: "cart",
@@ -569,7 +570,7 @@ export function CartCheckout() {
                               </button>
                             </div>
                           </div>
-                          {c.mode === "rent" && i.rent > 0 && <RentLineEditor i={i} l={c} idx={idx} />}
+                          {c.mode === "rent" && i.rent > 0 ? <RentLineEditor i={i} l={c} idx={idx} /> : <SizeSelect i={i} l={c} idx={idx} />}
                         </div>
                       );
                     })}
@@ -661,6 +662,7 @@ export function CartCheckout() {
                     </div>
                   </section>
                 )}
+                {cartBookings.length > 0 && <GuaranteeBadge />}
                 <WithdrawalNotes
                   artists={cartBookings.length > 0}
                   cakes={cartRequests.length > 0}

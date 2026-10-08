@@ -210,7 +210,12 @@ export function priceLines(
       continue;
     }
     if (!isRent(i, l)) {
-      lines.push({ name: `${name(i.name)} (${labels.buy})`, amountInCents: Math.round(i.buy * 100), quantity: qty });
+      /* Kostüme mit Größen nur mit gewählter Größe */
+      if (i.sizes?.length && !(l.size && i.sizes.includes(l.size))) {
+        unknown.push(`size:${l.shopId}`);
+        continue;
+      }
+      lines.push({ name: `${name(i.name)} (${labels.buy}${l.size ? `, ${l.size}` : ""})`, amountInCents: Math.round(i.buy * 100), quantity: qty });
       continue;
     }
     /* Miete nur mit gültigem Zeitraum und angebotener Übergabeart */

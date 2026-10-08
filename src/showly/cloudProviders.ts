@@ -88,7 +88,7 @@ function itemFromOffer(o: OfferRow, vendor: string): ShopItem {
   const d = o.data;
   return {
     id: o.id,
-    section: "deko",
+    ...(d["area"] === "kostuem" ? {} : { section: "deko" as const }),
     cat: String(d["cat"] || "deco"),
     occ: (Array.isArray(d["occ"]) ? d["occ"] : []) as string[],
     vendor,
@@ -232,6 +232,9 @@ export async function saveDecoCloud(d: {
   buy: number;
   rent: number;
   terms?: import("./rental").RentTerms | undefined;
+  /** Bereich im Shop; Kostüme mit Größen */
+  area?: "deko" | "kostuem" | undefined;
+  sizes?: string[] | undefined;
 }): Promise<Result<{ id: number }>> {
   const p = await saveProvider({
     data: { kind: "deco", data: { vendor: d.vendor, business: d.business, taxAckAt: new Date().toISOString() } },
@@ -240,7 +243,15 @@ export async function saveDecoCloud(d: {
   return saveOffer({
     data: {
       kind: "deco",
-      data: { name: d.name, desc: d.desc, cat: d.cat, occ: d.occ, ...(d.rent > 0 && d.terms ? d.terms : {}) },
+      data: {
+        name: d.name,
+        desc: d.desc,
+        cat: d.cat,
+        occ: d.occ,
+        area: d.area ?? "deko",
+        ...(d.rent > 0 && d.terms ? d.terms : {}),
+        ...(d.sizes?.length ? { sizes: d.sizes } : {}),
+      },
       priceCents: Math.round(d.buy * 100),
       rentCents: Math.round(d.rent * 100),
     },

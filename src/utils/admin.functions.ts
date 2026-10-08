@@ -643,6 +643,9 @@ export interface AdminReport {
   bookings: { total: number; confirmed: number; cancelled: number; declined: number; requested: number };
   cancelRate: number;
   disputes: number;
+  /** Ersatzgarantie: Vertragsstrafen + Anteil der Provision (showly/guarantee.ts) */
+  penaltiesCents: number;
+  guaranteeCents: number;
   top: { kind: string; providerId: number | null; name: string; cents: number; count: number }[];
 }
 
@@ -666,6 +669,14 @@ export const adminReport = createServerFn({ method: "POST" })
         .limit(20000),
       a.from("bookings").select("status").gte("created_at", data.from).lte("created_at", end).limit(20000),
     ]);
+    const { data: pens } = await a
+      .from("penalties")
+      .select("amount_cents, status")
+      .eq("status", "due")
+      .gte("created_at", data.from)
+      .lte("created_at", end)
+      .limit(10000);
+    const penaltiesCents = (pens || []).reduce((n, p) => n + p.amount_cents, 0);
     const paid = (orders || []).filter((o) => o.status === "paid");
     const b = { total: 0, confirmed: 0, cancelled: 0, declined: 0, requested: 0 };
     for (const x of bks || []) {
@@ -710,6 +721,11 @@ export const adminReport = createServerFn({ method: "POST" })
       bookings: b,
       cancelRate: b.total ? (b.cancelled + b.declined) / b.total : 0,
       disputes: (orders || []).filter((o) => o.dispute_status).length,
+      penaltiesCents,
+      guaranteeCents: (await import("@/showly/guarantee")).guaranteePool({
+        penaltiesCents,
+        feeCents: live.reduce((n, s) => n + s.fee_cents, 0),
+      }),
       top: top.map((t) => ({
         ...t,
         name:

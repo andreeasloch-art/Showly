@@ -147,6 +147,8 @@ export const saveOffer = createServerFn({ method: "POST" })
             desc: s(x["desc"], 600),
             cat: s(x["cat"], 30) || "deco",
             occ: Array.isArray(x["occ"]) ? (x["occ"] as unknown[]).map((o) => s(o, 20)).filter(Boolean).slice(0, 6) : [],
+            /* Bereich im Shop: Deko oder Kostüm (Kauf und/oder Miete) */
+            area: x["area"] === "kostuem" ? "kostuem" : "deko",
             /* Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
             ...cleanRentTerms(x),
           };

@@ -1,5 +1,7 @@
 /* Bausteine für Torten & Süßes: Texte, Anbieterkarte, Angebotskarte,
    Anfrage-Fenster und die Liste eigener Anfragen. */
+import { ComplaintForm } from "./Fair";
+import { complaintOpen } from "@/showly/policies";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -704,6 +706,8 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
   const [list, setList] = useState<SweetRequest[]>([]);
   /* Nachrichten an den Anbieter */
   const [chatFor, setChatFor] = useState<SweetRequest | null>(null);
+  /* Reklamation bis 48 Stunden nach dem Liefertag (Foto Pflicht) */
+  const [complain, setComplain] = useState<string | null>(null);
   useEffect(() => {
     const load = () => setList(listRequests().filter((r) => bakerId === undefined || r.bakerId === bakerId));
     load();
@@ -738,6 +742,16 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
                   <Icon name="comment" /> {C.msgs}
                 </button>
               )}
+              {r.id.startsWith("db-") &&
+                (r.status === "confirmed" || r.status === "booked") &&
+                complaintOpen(new Date(r.dateISO + "T23:59:00").getTime(), Date.now()) &&
+                (complain === r.id ? (
+                  <ComplaintForm refTo={{ kind: "sweet", id: Number(r.id.slice(3)) }} onDone={() => setComplain(null)} />
+                ) : (
+                  <button type="button" className="dash26-mini outline" onClick={() => setComplain(r.id)}>
+                    Reklamieren
+                  </button>
+                ))}
             </li>
           );
         })}

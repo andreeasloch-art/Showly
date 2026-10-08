@@ -90,6 +90,8 @@ export type MediaRow = {
 
 export type ArtistRow = {
   id: number;
+  /** Pakete Basic/Premium/Luxus der Planer (0015), showly/plannerPackages.ts */
+  packages?: { id: string; name: string; price: number; dur: string; inc: string[]; text: string; popular?: boolean }[] | null;
   /** Arbeitszeiten je Wochentag (0013), showly/workHours.ts */
   work_hours?: Record<string, [number, number]> | null;
   owner: string;

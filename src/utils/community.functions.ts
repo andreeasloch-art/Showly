@@ -13,6 +13,7 @@ import { TOO_MANY, allow } from "@/lib/guard.server";
 import { ownsAll } from "@/lib/media.server";
 import type { MediaRefRow } from "@/lib/database.types";
 import { cleanWorkHours } from "@/showly/workHours";
+import { cleanPackages, fromPrice } from "@/showly/plannerPackages";
 
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -384,6 +385,30 @@ export const setWorkHoursCloud = createServerFn({ method: "POST" })
     if (!a || a.owner !== ctx.user.id) return { error: "Keine Berechtigung" };
     if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
     const { error } = await db.from("artists").update({ work_hours: data.workHours }).eq("id", data.artistId);
+    return error ? { error: "Speichern hat nicht geklappt" } : { ok: true };
+  });
+
+/** Pakete der Planer (Basic/Premium/Luxus) speichern; Einstiegspreis = günstigstes Paket */
+export const setPackagesCloud = createServerFn({ method: "POST" })
+  .inputValidator((d: { artistId: number; packages: unknown }) => ({
+    artistId: Number(d.artistId) | 0,
+    packages: cleanPackages(d.packages),
+  }))
+  .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
+    const ctx = await me();
+    if (!ctx) return { error: "Bitte melde dich an" };
+    const db = adminClient();
+    const { data: a } = await db.from("artists").select("owner").eq("id", data.artistId).maybeSingle();
+    if (!a || a.owner !== ctx.user.id) return { error: "Keine Berechtigung" };
+    if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
+    const { findContact } = await import("@/showly/contactGuard");
+    const texts = data.packages.flatMap((p) => [p.name, p.dur, p.text, ...p.inc]).join("\n");
+    if (findContact(texts).length) return { error: "Bitte keine Kontaktdaten in den Paketen" };
+    const min = fromPrice(data.packages);
+    const { error } = await db
+      .from("artists")
+      .update({ packages: data.packages, ...(min ? { price_cents: Math.round(min * 100) } : {}) })
+      .eq("id", data.artistId);
     return error ? { error: "Speichern hat nicht geklappt" } : { ok: true };
   });
 

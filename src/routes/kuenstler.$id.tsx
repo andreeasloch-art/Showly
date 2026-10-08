@@ -23,6 +23,7 @@ import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ReviewComposer, UserReviewList } from "@/components/showly/Reviews";
 import { ProfileVideos } from "@/components/showly/MediaView";
 import type { MediaRef } from "@/showly/media";
+import { TIERS, TIER_ICON, TIER_LABEL, isPlannerCat, type Tier } from "@/showly/plannerPackages";
 
 export const Route = createFileRoute("/kuenstler/$id")({
   /* Echte Profile schon beim Rendern auf dem Server laden, damit
@@ -120,7 +121,9 @@ function Detail() {
   }
 
   const pkgs = (a as { packages?: any[] }).packages || [];
-  const curPkg = pkgs.find((p) => p.id === pkgId) || null;
+  /* Planer rechnen nur pro Paket ab: ohne Auswahl gilt das beliebte bzw. erste */
+  const plannerOnly = isPlannerCat(a.cat) && pkgs.length > 0;
+  const curPkg = pkgs.find((p) => p.id === pkgId) || (plannerOnly ? pkgs.find((p) => p.popular) || pkgs[0] : null) || null;
   /* Die Gage gilt immer pro Stunde. Der Kunde wählt die Dauer, mindestens
      so viele Stunden, wie der Künstler im Profil festgelegt hat. Nur Planer
      mit festen Paketen rechnen pro Paket ab; dann entfällt die Stundenwahl. */
@@ -383,18 +386,21 @@ function Detail() {
               <p className="detail-lead">{t("pkg.p")}</p>
               <div className="pkg-grid">
                 {pkgs.map((p) => {
-                  const on = pkgId === p.id;
+                  const on = curPkg?.id === p.id;
                   return (
                     <button
                       className={"pkg-card" + (on ? " on" : "")}
                       key={p.id}
-                      onClick={() => setPkgId(on ? null : p.id)}
+                      onClick={() => setPkgId(on && !plannerOnly ? null : p.id)}
                       aria-pressed={on}
                     >
                       {p.popular && <span className="pkg-tag">★ {t("pkg.popular")}</span>}
                       <span className="pkg-emoji">
-                        <Icon name={p.icon || "gift"} />
+                        <Icon name={p.icon || TIER_ICON[p.id as Tier] || "gift"} />
                       </span>
+                      {(TIERS as readonly string[]).includes(p.id) && (
+                        <span className={"pkg-tier tier-" + p.id}>{TIER_LABEL[p.id as Tier][(lang as "de" | "en" | "es") ?? "de"]}</span>
+                      )}
                       <div className="pkg-name">{L(p.name)}</div>
                       <div className="pkg-dur">{L(p.dur || "")}</div>
                       <div className="pkg-price">
@@ -405,6 +411,7 @@ function Detail() {
                           <li key={x}>{x}</li>
                         ))}
                       </ul>
+                      {p.text && <p className="pkg-text">{L(p.text)}</p>}
                       <span className="pkg-pick">{on ? t("pkg.chosen") : t("pkg.choose") + " →"}</span>
                     </button>
                   );

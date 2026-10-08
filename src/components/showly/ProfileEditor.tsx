@@ -10,6 +10,8 @@ import { saveArtistMedia } from "@/utils/media.functions";
 import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
 import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { updateArtistProfile } from "@/showly/persist";
+import { PackagesEditor, draftsFrom, draftsToRaw, usePkgCopy, type PkgDrafts } from "@/components/showly/PackagesEditor";
+import { TIERS, cleanPackages, fromPrice, isPlannerCat, packagesProblem, type PlannerPackage } from "@/showly/plannerPackages";
 import { isInstant } from "@/showly/booking";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 import { RADIUS_OPTIONS, radiusOf, travelOption } from "@/showly/travel";
@@ -278,7 +280,27 @@ type Draft = {
   figures: string[];
   figureImages: Record<string, MediaRef>;
   contact: Contact;
+  /** Pakete Basic/Premium/Luxus (nur Planer) */
+  pkgs: PkgDrafts;
 };
+
+/* Pakete aus dem Profil (auch Beispielprofile mit mehrsprachigen Texten),
+   nach Preis auf Basic → Premium → Luxus verteilt */
+function packagesOf(a: Artist, lang: string): PlannerPackage[] {
+  const raw = ((a as { packages?: Record<string, unknown>[] }).packages || []).slice();
+  const known = raw.every((p) => (TIERS as readonly string[]).includes(String(p["id"])));
+  const sorted = known ? raw : raw.sort((x, y) => Number(x["price"]) - Number(y["price"])).slice(0, 3);
+  return cleanPackages(
+    sorted.map((p, i) => ({
+      ...p,
+      id: known ? p["id"] : TIERS[i],
+      name: textOf(p["name"], lang),
+      dur: textOf(p["dur"], lang),
+      inc: listOf(p["inc"], lang),
+      text: textOf(p["text"], lang),
+    })),
+  );
+}
 
 /* Mehrsprachige Werte ({ de, en, es }) als Text in der eingestellten Sprache */
 function textOf(v: unknown, lang: string): string {
@@ -326,6 +348,7 @@ function initialDraft(a: Artist, lang: string): Draft {
     photos: ((a["photos"] as MediaRef[] | undefined) || []).slice(),
     figures: figuresOf(a).slice(),
     figureImages: { ...((a["figureImages"] as Record<string, MediaRef> | undefined) || {}) },
+    pkgs: draftsFrom(packagesOf(a, lang), (lang as "de" | "en" | "es") ?? "de"),
     contact: {
       email: c.email || "",
       phone: c.phone || "",
@@ -354,7 +377,8 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
   const photoInput = useRef<HTMLInputElement>(null);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
-  const isPlanner = ((a as { packages?: unknown[] }).packages || []).length > 0;
+  const isPlanner = isPlannerCat(a.cat) || ((a as { packages?: unknown[] }).packages || []).length > 0;
+  const P = usePkgCopy();
   const real = realName(a);
   const presets = figureList(a.cat).filter((f) => !draft.figures.includes(f.id));
 
@@ -437,6 +461,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       includes: splitLines(draft.includes),
       specs: splitComma(draft.specs),
       price: Math.round(Number(draft.price) || 0),
+      packages: cleanPackages(draftsToRaw(draft.pkgs)),
       minHours: draft.minHours,
       instantBook: draft.instantBook,
       loc: draft.loc.trim(),
@@ -461,7 +486,15 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
     /* Kontaktdaten gehören in den Bereich "Kontakt", nicht in öffentliche Texte */
     if (!okText(patch.name, patch.desc, patch.exp, ...patch.tags, ...patch.includes, ...patch.specs, ...patch.figures))
       return;
-    if (patch.price < 10 || patch.price > 2000) return toast(C.errPrice);
+    if (isPlanner) {
+      /* Planer: Pakete statt Stundensatz; Einstiegspreis = günstigstes Paket */
+      const on = TIERS.filter((t) => draft.pkgs[t].on);
+      if (on.some((t) => !patch.packages.some((p) => p.id === t))) return toast(P.errPrice);
+      const prob = packagesProblem(patch.packages);
+      if (prob) return toast(prob === "none" ? P.errNone : prob === "items" ? P.errItems : P.errOrder);
+      if (!okText(...patch.packages.flatMap((p) => [p.name, p.dur, p.text, ...p.inc]))) return;
+      patch.price = fromPrice(patch.packages) ?? patch.price;
+    } else if (patch.price < 10 || patch.price > 2000) return toast(C.errPrice);
     if (patch.contact.website && !/^https:\/\/[^\s]+\.[^\s]+$/.test(patch.contact.website))
       return toast(C.errUrl);
     if (patch.contact.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patch.contact.email))
@@ -489,6 +522,13 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       void saveArtistMedia({ data: { items } }).then((r) => {
         if ("error" in r) toast(r.error);
       });
+      if (isPlanner)
+        void import("@/utils/community.functions")
+          .then(({ setPackagesCloud }) => setPackagesCloud({ data: { artistId: a.id, packages: patch.packages } }))
+          .then((r) => {
+            if ("error" in r) toast(r.error);
+          })
+          .catch(() => undefined);
     }
     setSaved(draft);
     toast(C.saved);
@@ -772,7 +812,10 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
           </div>
         </section>
 
-        {/* Gage */}
+        {/* Gage bzw. Pakete (Planer) */}
+        {isPlanner ? (
+          <PackagesEditor value={draft.pkgs} onChange={(v) => set("pkgs", v)} />
+        ) : (
         <section className="pe-card">
           <div className="pe-card-head">
             <span className="pe-ic">
@@ -852,6 +895,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
             ))}
           </fieldset>
         </section>
+        )}
 
         {/* Kontakt */}
         <section className="pe-card">

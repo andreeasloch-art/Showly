@@ -38,7 +38,7 @@ async function artistTerms(
   }
   const { data: a } = await admin
     .from("artists")
-    .select("id, cat, price_cents, instant_book, published")
+    .select("id, cat, price_cents, instant_book, published, packages")
     .eq("id", artistId)
     .maybeSingle();
   if (!a || !a.published) return null;
@@ -58,7 +58,11 @@ async function artistTerms(
   );
   if (!standing.bookable) return null;
   const h = Math.min(MAX_HOURS, Math.max(1, Math.round(hours) || 1));
-  const base = a.price_cents * h;
+  /* Planer-Paket (Basic/Premium/Luxus): Festpreis aus der Datenbank */
+  const { cleanPackages } = await import("@/showly/plannerPackages");
+  const pk = pkg ? cleanPackages(a.packages).find((p) => p.id === pkg) : undefined;
+  if (pkg && !pk) return null;
+  const base = pk ? Math.round(pk.price * 100) : a.price_cents * h;
   const { pickRate } = await import("@/showly/feeRules");
   const fee = Math.round(base * pickRate(rules, { kind: "artist", providerId: a.id, category: a.cat }, FEE_RATE));
   return {

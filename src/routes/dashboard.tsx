@@ -876,8 +876,12 @@ function Dashboard() {
                     </li>
                   ))}
                 </ul>
+                {p.text && <p className="pkg-text">{L(p.text)}</p>}
               </div>
             ))}
+            <button className="home-btn soft" onClick={() => setSection("edit")}>
+              <Icon name="gift" /> {lang === "en" ? "Edit packages" : lang === "es" ? "Editar paquetes" : "Pakete bearbeiten"}
+            </button>
           </div>
         )}
 

@@ -10,6 +10,7 @@ import type { Database } from "./database.types";
 import type { Artist, ShopItem } from "@/showly/data";
 import type { Sweet } from "@/showly/sweets";
 import type { Extra } from "@/showly/pricing";
+import { cleanPackages } from "@/showly/plannerPackages";
 
 export const DB_FROM = 100000;
 
@@ -35,7 +36,7 @@ export async function loadCatalog(
   if (aIds.length) {
     const { data } = await admin
       .from("artists")
-      .select("id, name, price_cents, published, blocked, cat")
+      .select("id, name, price_cents, published, blocked, cat, packages")
       .in("id", aIds);
     for (const r of data || []) {
       if (!r.published || r.blocked) continue;
@@ -46,6 +47,7 @@ export async function loadCatalog(
         color: "#F1EAFF",
         price: r.price_cents / 100,
         minHours: 1,
+        packages: cleanPackages(r.packages),
         rating: 0,
         reviews: 0,
         name: { de: name.de || "", en: name.en || name.de || "" },

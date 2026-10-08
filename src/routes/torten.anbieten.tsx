@@ -24,6 +24,8 @@ import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 import { isBackendConfigured } from "@/lib/supabase";
 import { AccountStep } from "@/components/showly/AccountStep";
+import { useFoodCopy } from "@/components/showly/FoodInfo";
+import { cleanFoodInfo, foodInfoComplete } from "@/showly/cakeRules";
 
 export const Route = createFileRoute("/torten/anbieten")({
   head: (ctx) => seoHead("/torten/anbieten", "/torten/anbieten", headLang(ctx)),
@@ -175,6 +177,7 @@ function Onboard() {
   const [photos, setPhotos] = useState<MediaRef[]>([]);
   const [busy, setBusy] = useState(false);
   const [offer, setOffer] = useState<OfferDraft>(emptyOffer("birthday"));
+  const foodNeed = useFoodCopy().need;
   const [legal, setLegal] = useState(false);
   const [terms, setTerms] = useState(false);
   const [taxOk, setTaxOk] = useState(false);
@@ -198,6 +201,8 @@ function Onboard() {
     if (!name.trim() || !city.trim() || !specs.length) return toast(C.need);
     const price = parsePrice(offer.price);
     if (!offer.name.trim() || !price) return toast(C.needOffer);
+    const food = cleanFoodInfo(offer.food);
+    if (!foodInfoComplete(food)) return toast(foodNeed);
     if (!legal || !terms || !taxOk) return toast(C.needLegal);
     if (!privOk) return toast(P.need);
     if (!okText(tagline, about, offer.name, offer.desc)) return;
@@ -227,6 +232,8 @@ function Onboard() {
           unit: offer.unit,
           minQty: offer.unit === "set" ? 1 : offer.minQty,
           direct: offer.direct ?? isDirectSweet({ cat: offer.cat }),
+          food,
+          ...(offer.leadDays !== undefined ? { leadDays: offer.leadDays } : {}),
         },
       };
       void queueBakerSignup(signup).then((id) => {
@@ -265,6 +272,8 @@ function Onboard() {
       unit: offer.unit,
       minQty: offer.unit === "set" ? 1 : offer.minQty,
       direct: offer.direct ?? isDirectSweet({ cat: offer.cat }),
+      food,
+      leadDays: offer.leadDays,
       photo: offer.photo,
     });
     toast(C.done);

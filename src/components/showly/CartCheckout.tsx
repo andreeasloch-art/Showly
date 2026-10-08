@@ -15,7 +15,8 @@ import { SHOP_ITEMS } from "@/showly/data";
 import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
-import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopUnit, sweetPrice } from "@/showly/pricing";
+import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice } from "@/showly/pricing";
+import { RentLineEditor, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
 import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
@@ -227,6 +228,55 @@ interface Contact {
 }
 const CONTACT_KEY = "showly.contact";
 
+/* Widerrufsrecht je Produktart, vor der Bestellung (§ 312d BGB, Art. 246a
+   EGBGB). Einzelheiten in AGB §§ 11, 16, 17 und der Widerrufsbelehrung. */
+const WR = {
+  de: {
+    h: "Widerrufsrecht",
+    artists: "Showacts und Künstler zu einem festen Termin: kein Widerrufsrecht (§ 312g Abs. 2 Nr. 9 BGB). Es gelten die Stornoregeln (AGB § 8).",
+    cakes: "Torten und Süßes: kein Widerrufsrecht, weil sie schnell verderben bzw. nach deinen Wünschen angefertigt werden (§ 312g Abs. 2 Nr. 1 und 2 BGB).",
+    buy: "Kauf von Kostümen und Deko: 14 Tage Widerrufsrecht bei gewerblichen Anbietern. Ausnahmen: Personalisiertes und geöffnete Hygieneartikel. Bei privaten Anbietern besteht kein gesetzliches Widerrufsrecht.",
+    rent: "Miete: 14 Tage Widerrufsrecht bei gewerblichen Anbietern; nutzt du den Artikel vorher, ist die Nutzung zu ersetzen (AGB § 16 Abs. 3).",
+    link: "Widerrufsbelehrung und Formular",
+  },
+  en: {
+    h: "Right of withdrawal",
+    artists: "Shows and artists for a fixed date: no right of withdrawal (Sec. 312g (2) no. 9 BGB). Cancellation rules apply (terms § 8).",
+    cakes: "Cakes and sweets: no right of withdrawal, as they perish quickly or are made to your wishes (Sec. 312g (2) nos. 1 and 2 BGB).",
+    buy: "Buying costumes and decor: 14-day right of withdrawal with business sellers. Exceptions: personalised items and opened hygiene items. Private sellers: no statutory right of withdrawal.",
+    rent: "Rental: 14-day right of withdrawal with business providers; if you use the item before withdrawing, you pay for the use (terms § 16 (3)).",
+    link: "Withdrawal information and form",
+  },
+  es: {
+    h: "Derecho de desistimiento",
+    artists: "Shows y artistas en una fecha fija: sin derecho de desistimiento (§ 312g ap. 2 n.º 9 BGB). Se aplican las reglas de cancelación (condiciones § 8).",
+    cakes: "Tartas y dulces: sin derecho de desistimiento, porque son perecederos o se hacen a medida (§ 312g ap. 2 n.º 1 y 2 BGB).",
+    buy: "Compra de disfraces y decoración: 14 días de desistimiento con vendedores profesionales. Excepciones: artículos personalizados y de higiene abiertos. Con particulares no hay derecho legal de desistimiento.",
+    rent: "Alquiler: 14 días de desistimiento con proveedores profesionales; si usas el artículo antes, debes pagar el uso (condiciones § 16 ap. 3).",
+    link: "Información y formulario de desistimiento",
+  },
+} as const;
+
+function WithdrawalNotes({ artists, cakes, buy, rent }: { artists: boolean; cakes: boolean; buy: boolean; rent: boolean }) {
+  const { lang } = useShowly();
+  const W = WR[(lang as "de" | "en" | "es") ?? "de"] ?? WR.de;
+  if (!artists && !cakes && !buy && !rent) return null;
+  return (
+    <section className="co-withdraw" aria-label={W.h}>
+      <b>{W.h}</b>
+      <ul>
+        {artists && <li>{W.artists}</li>}
+        {cakes && <li>{W.cakes}</li>}
+        {buy && <li>{W.buy}</li>}
+        {rent && <li>{W.rent}</li>}
+      </ul>
+      <Link to="/widerruf" target="_blank">
+        {W.link}
+      </Link>
+    </section>
+  );
+}
+
 export function CartCheckout() {
   const {
     lang,
@@ -247,6 +297,7 @@ export function CartCheckout() {
     instantFor,
   } = useShowly();
   const X = (TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de) as T;
+  const R = useRentCopy();
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [done, setDone] = useState<null | { paid: boolean; req: boolean; reserved: boolean }>(null);
@@ -299,7 +350,7 @@ export function CartCheckout() {
       const it = findItem(l.shopId);
       if (!it) continue;
       const vendor = it.vendor && it.section === "deko" ? it.vendor : null;
-      add(vendor ? `deco:${vendor}` : "showly", vendor ?? X.splitOwn, shopUnit(it, l.mode) * l.qty);
+      add(vendor ? `deco:${vendor}` : "showly", vendor ?? X.splitOwn, shopLineTotal(it, l));
     }
     return [...m.values()];
   })();
@@ -346,6 +397,7 @@ export function CartCheckout() {
   }
 
   function finishWithoutPayment() {
+    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDates);
     const snap = snapshot();
     const req = snap.requests.some((r) => !r.direct);
     const reserved =
@@ -358,6 +410,7 @@ export function CartCheckout() {
   }
 
   function startPayment() {
+    if (!rentLinesReady(cart, (id) => findItem(id))) return toast(R.needDates);
     const snap = snapshot();
     setPending({
       kind: "cart",
@@ -499,20 +552,24 @@ export function CartCheckout() {
                       const i = SHOP_ITEMS.find((x) => x.id === c.shopId);
                       if (!i) return null;
                       return (
-                        <div className="co-line" key={c.shopId + c.mode}>
-                          <span className="co-img" style={shopBg(i)} />
-                          <div className="co-line-text">
-                            <b>{L(i.name)}</b>
-                            <small>
-                              {c.mode === "rent" ? X.rent : X.buy} · {c.qty} × {fmt(shopUnit(i, c.mode))}
-                            </small>
+                        <div className="co-line-wrap" key={`${c.shopId}-${c.mode}-${idx}`}>
+                          <div className="co-line">
+                            <span className="co-img" style={shopBg(i)} />
+                            <div className="co-line-text">
+                              <b>{L(i.name)}</b>
+                              <small>
+                                {c.mode === "rent" ? X.rent : X.buy} · {c.qty} × {fmt(shopUnit(i, c.mode))}
+                                {c.mode === "rent" ? ` ${R.perDay}` : ""}
+                              </small>
+                            </div>
+                            <div className="co-line-end">
+                              <b>{fmt(shopLineTotal(i, c))}</b>
+                              <button className="co-rm" onClick={() => removeFromCart(idx)}>
+                                {X.remove}
+                              </button>
+                            </div>
                           </div>
-                          <div className="co-line-end">
-                            <b>{fmt(shopUnit(i, c.mode) * c.qty)}</b>
-                            <button className="co-rm" onClick={() => removeFromCart(idx)}>
-                              {X.remove}
-                            </button>
-                          </div>
+                          {c.mode === "rent" && i.rent > 0 && <RentLineEditor i={i} l={c} idx={idx} />}
                         </div>
                       );
                     })}
@@ -604,6 +661,12 @@ export function CartCheckout() {
                     </div>
                   </section>
                 )}
+                <WithdrawalNotes
+                  artists={cartBookings.length > 0}
+                  cakes={cartRequests.length > 0}
+                  buy={cart.some((c) => c.mode === "buy" || !(findItem(c.shopId)?.rent ?? 0))}
+                  rent={cart.some((c) => c.mode === "rent" && (findItem(c.shopId)?.rent ?? 0) > 0)}
+                />
                 <label className="ob-check co-terms">
                   <input type="checkbox" checked={terms} onChange={(e) => setTerms(e.target.checked)} />
                   <span>
@@ -660,6 +723,15 @@ export function CartCheckout() {
                       }))}
                       customerEmail={contact.email.trim()}
                       locale={(lang as "de" | "en" | "es") ?? "de"}
+                      snapshot={(() => {
+                        const snap = snapshot();
+                        return {
+                          bookings: snap.bookings,
+                          requests: snap.requests,
+                          shop: snap.shop,
+                          contact: { name: snap.contact.name, address: snap.contact.address },
+                        };
+                      })()}
                     />
                   ) : (
                     <>

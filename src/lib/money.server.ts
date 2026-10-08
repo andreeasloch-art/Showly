@@ -74,6 +74,40 @@ export async function refundBooking(
   return { ok: true, cents };
 }
 
+/** Kaution einer Shop-Bestellung erstatten (ganz oder abzüglich Schäden,
+ *  Reinigung oder Verspätung). Gleicher Stand, gleicher Schlüssel: Stripe
+ *  erstattet nie doppelt. */
+export async function refundDeposit(
+  orderId: number,
+  cents: number,
+): Promise<{ ok: true; cents: number } | { error: string }> {
+  const db = adminClient();
+  const { data: o } = await db.from("shop_orders").select("*").eq("id", orderId).maybeSingle();
+  if (!o) return { error: "Bestellung nicht gefunden" };
+  const left = (o.deposit_cents ?? 0) - (o.deposit_refunded_cents ?? 0);
+  const amount = Math.min(left, Math.max(0, Math.round(cents)));
+  if (amount <= 0) return { ok: true, cents: 0 };
+  const env = stripeEnv();
+  try {
+    const pay = await paymentOf(o.stripe_session_id, env);
+    if (!pay) return { error: "Keine Stripe-Zahlung zu dieser Bestellung" };
+    await createStripeClient(env).refunds.create(
+      { payment_intent: pay.pi, amount, metadata: { shop_order_id: String(o.id), kind: "deposit" } },
+      { idempotencyKey: `deposit-${o.id}-${o.deposit_refunded_cents ?? 0}-${amount}` },
+    );
+  } catch (e) {
+    return { error: getStripeErrorMessage(e) };
+  }
+  await db.from("shop_orders").update({ deposit_refunded_cents: (o.deposit_refunded_cents ?? 0) + amount }).eq("id", o.id);
+  const to = await emailOf(o.customer);
+  if (to)
+    await sendMail(to, "Deine Kaution wurde erstattet", [
+      `Wir haben ${euro(amount)} Kaution erstattet.`,
+      "Das Geld geht auf das Zahlungsmittel zurück, mit dem du bezahlt hast. Je nach Bank dauert die Gutschrift einige Tage.",
+    ]);
+  return { ok: true, cents: amount };
+}
+
 const today = () => new Date().toISOString().slice(0, 10);
 
 /** Fällige Auszahlungen überweisen. Gibt zurück, was passiert ist. */

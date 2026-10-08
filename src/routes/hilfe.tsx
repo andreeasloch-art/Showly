@@ -168,7 +168,11 @@ function HelpPage() {
     }
     setBusy(true);
     try {
-      const r = await createTicket({ data: { email: email.trim(), name: name.trim(), topic, body: body.trim(), hp } });
+      const { captchaToken } = await import("@/showly/captcha");
+      const captcha = await captchaToken(lang).catch(() => undefined);
+      const r = await createTicket({
+        data: { email: email.trim(), name: name.trim(), topic, body: body.trim(), hp, ...(captcha ? { captcha } : {}) },
+      });
       if ("error" in r) return toast(r.error);
       setSent(true);
       setBody("");

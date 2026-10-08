@@ -14,6 +14,8 @@ import { BAKERS, SWEETS, setCloudOwnBakers, type Baker, type Sweet } from "./swe
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { preloadMedia } from "./media";
 import { removeOffer, saveOffer, saveProvider } from "@/utils/provider.functions";
+import { cleanFoodInfo } from "./cakeRules";
+import { cleanRentTerms } from "./rental";
 
 export const DB_FROM = 100000;
 export const isCloudId = (id: number) => id >= DB_FROM;
@@ -49,6 +51,7 @@ function bakerFromRow(r: Row, own: boolean, published: boolean): Baker {
     specialties: (Array.isArray(d["specialties"]) ? d["specialties"] : []) as Baker["specialties"],
     leadDays: Number(d["leadDays"]) || 7,
     radiusKm: Number(d["radiusKm"]) || 0,
+    maxPerDay: Number(d["maxPerDay"]) || 0,
     verified: published,
     coverImg: Number(d["coverImg"]) || 1,
     diets: (Array.isArray(d["diets"]) ? d["diets"] : []) as string[],
@@ -76,6 +79,8 @@ function sweetFromOffer(o: OfferRow): Sweet {
     minQty: Number(d["minQty"]) || 1,
     img: Number(d["img"]) || 1,
     direct: o.direct,
+    food: cleanFoodInfo(d["food"]) ?? undefined,
+    ...(Number.isFinite(Number(d["leadDays"])) && d["leadDays"] != null ? { leadDays: Number(d["leadDays"]) } : {}),
   };
 }
 
@@ -93,6 +98,7 @@ function itemFromOffer(o: OfferRow, vendor: string): ShopItem {
     reviews: 0,
     name: L(d["name"]),
     desc: L(d["desc"]),
+    ...cleanRentTerms(d),
   };
 }
 
@@ -169,6 +175,7 @@ export async function saveBakerCloud(b: Partial<Baker>): Promise<Result<{ id: nu
         specialties: b.specialties,
         leadDays: b.leadDays,
         radiusKm: b.radiusKm,
+        maxPerDay: b.maxPerDay ?? 0,
         diets: b.diets,
         coverImg: b.coverImg,
         /* Nur Dateien auf dem Server ("c:"); örtliche bleiben im Browser */
@@ -190,7 +197,16 @@ export async function saveSweetCloud(s: Omit<Sweet, "id" | "own" | "bakerId"> & 
     data: {
       ...(s.id && isCloudId(s.id) ? { offerId: s.id } : {}),
       kind: "sweet",
-      data: { name: txt(s.name), desc: txt(s.desc), cat: s.cat, unit: s.unit, minQty: s.minQty, img: s.img ?? 1 },
+      data: {
+        name: txt(s.name),
+        desc: txt(s.desc),
+        cat: s.cat,
+        unit: s.unit,
+        minQty: s.minQty,
+        img: s.img ?? 1,
+        food: s.food,
+        ...(s.leadDays !== undefined ? { leadDays: s.leadDays } : {}),
+      },
       priceCents: Math.round(s.price * 100),
       direct: !!s.direct,
     },
@@ -215,6 +231,7 @@ export async function saveDecoCloud(d: {
   desc: string;
   buy: number;
   rent: number;
+  terms?: import("./rental").RentTerms | undefined;
 }): Promise<Result<{ id: number }>> {
   const p = await saveProvider({
     data: { kind: "deco", data: { vendor: d.vendor, business: d.business, taxAckAt: new Date().toISOString() } },
@@ -223,7 +240,7 @@ export async function saveDecoCloud(d: {
   return saveOffer({
     data: {
       kind: "deco",
-      data: { name: d.name, desc: d.desc, cat: d.cat, occ: d.occ },
+      data: { name: d.name, desc: d.desc, cat: d.cat, occ: d.occ, ...(d.rent > 0 && d.terms ? d.terms : {}) },
       priceCents: Math.round(d.buy * 100),
       rentCents: Math.round(d.rent * 100),
     },

@@ -16,6 +16,7 @@ import { Footer } from "@/components/showly/Footer";
 import { authRedirectTo, isBackendConfigured, supabase } from "@/lib/supabase";
 import { normalizePhone } from "@/showly/phone";
 import { confirmSmsCode, requestSmsCode, smsMessage, type SmsVia } from "@/showly/smsLogin";
+import { captchaOptions } from "@/showly/captcha";
 
 export const Route = createFileRoute("/anmelden")({
   head: (ctx) => seoHead("/anmelden", "/anmelden", headLang(ctx)),
@@ -196,7 +197,7 @@ function SignInPage() {
     }
     const { error } = await supabase().auth.signInWithOtp({
       email: value,
-      options: { emailRedirectTo: authRedirectTo("/dashboard") },
+      options: { emailRedirectTo: authRedirectTo("/dashboard"), ...(await captchaOptions()) },
     });
 
     setBusy(false);
@@ -210,7 +211,11 @@ function SignInPage() {
     if (!MAIL.test(value)) return setErr(T.errMail);
     if (!pw) return setErr(T.errPw);
     setBusy(true);
-    const { error } = await supabase().auth.signInWithPassword({ email: value, password: pw });
+    const { error } = await supabase().auth.signInWithPassword({
+      email: value,
+      password: pw,
+      options: await captchaOptions(),
+    });
     setBusy(false);
     if (error) return setErr(T.errPw);
     toast(T.ok);

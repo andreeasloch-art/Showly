@@ -1,3 +1,4 @@
+import type { RentTerms } from "./rental";
 export type Lang = "de" | "en" | "es";
 export type LText = string | { de: string; en: string; es?: string };
 export type LList = string[] | { de: string[]; en: string[]; es?: string[] };
@@ -7,6 +8,8 @@ export interface Review { n: string; d: LText; r: number; t: LText }
 export interface Artist {
   id: number; cat: string; color: string; price: number; rating: number; reviews: number;
   verified?: boolean; superhost?: boolean; events?: number; responseTime?: LText; responseRate?: string;
+  /** Arbeitszeiten je Wochentag (workHours.ts); fehlt = keine Einschränkung */
+  workHours?: import("./workHours").WorkHours | null;
   /** Einsatzradius in km ab dem eigenen Standort; 800 steht für deutschlandweit. */
   radiusKm?: number;
   shopIds?: number[]; name: LText; loc: LText; exp?: LText; desc: LText; tags?: LList; langs?: LList;
@@ -14,7 +17,7 @@ export interface Artist {
   /** Beispielprofil aus dem Katalog: nicht echt, nicht buchbar */
   demo?: boolean; [k: string]: any;
 }
-export interface ShopItem {
+export interface ShopItem extends RentTerms {
   id: number; cat: string; artistCat?: string; rent: number; buy: number; rating: number; reviews: number;
   name: LText; desc: LText;
   /** "deko" für Dekoration, fehlt bei Kostümen */

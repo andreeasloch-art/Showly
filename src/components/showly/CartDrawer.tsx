@@ -156,11 +156,14 @@ export function CartDrawer() {
                 const item = SHOP_ITEMS.find((s) => s.id === c.shopId);
                 if (!item) return null;
                 return (
-                  <div className="cart-item" key={`${c.shopId}-${c.mode}`}>
+                  <div className="cart-item" key={`${c.shopId}-${c.mode}-${idx}`}>
                     <div className="cart-img" style={shopBg(item)} />
                     <div className="cart-info">
                       <div className="cart-name">{L(item.name)}</div>
-                      <div className="cart-mode">{c.mode === "rent" ? t("shop.addRent") : t("shop.addBuy")}</div>
+                      <div className="cart-mode">
+                        {c.mode === "rent" ? t("shop.addRent") : t("shop.addBuy")}
+                        {c.mode === "rent" && c.from && c.to ? ` · ${fmtDate(c.from)} – ${fmtDate(c.to)}` : ""}
+                      </div>
                       <div className="cart-price">{fmt(cartPrice(c))}</div>
                       <div className="qty-row">
                         <button className="qty-btn" onClick={() => changeQty(idx, -1)} aria-label="−">

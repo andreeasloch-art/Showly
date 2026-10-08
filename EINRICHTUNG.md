@@ -327,6 +327,26 @@ Migration `0012_buchungssicherheit.sql` (in Lovable eingespielt).
 - **Kalender verbinden:** Künstler tragen im Portal unter „Verfügbarkeit“ (bzw. Dashboard → Kalender) den iCal-Link aus Google, Apple oder Outlook ein. Abgleich sofort, vor jeder Reservierung (wenn älter als 15 Minuten) und im täglichen Lauf. Gespeichert werden nur Beginn und Ende. Dazu gibt es einen geheimen Abo-Link mit allen Showly-Auftritten (`/api/kalender/<schlüssel>.ics`).
 - Nichts einzustellen; der tägliche Lauf (Abschnitt 13) erledigt Aufräumen und Abgleich mit.
 
+## 16. Zahlungen absichern, Bots, Zwei-Faktor, Überwachung
+
+**Stripe-Webhook** (verbucht Zahlungen auch, wenn der Browser nach dem Bezahlen zugeht, und meldet Rückbuchungen):
+1. Stripe-Dashboard → Entwickler → Webhooks → Endpunkt hinzufügen: `https://<deine-domain>/api/stripe/webhook`
+2. Ereignisse: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `charge.dispute.created`, `charge.dispute.closed`
+3. Signatur-Geheimnis als `STRIPE_LIVE_WEBHOOK_SECRET` (bzw. `STRIPE_SANDBOX_WEBHOOK_SECRET` im Testmodus) in Lovable hinterlegen.
+Rückbuchungen halten die Auszahlungen an und erscheinen als Fall unter Verwaltung → Hilfe.
+
+**Zahlungsarten:** Karte, Apple Pay, Google Pay, PayPal, Klarna, SEPA-Lastschrift im Stripe-Dashboard unter Einstellungen → Zahlungsmethoden einschalten; die Kasse zeigt automatisch alles Eingeschaltete. 3-D Secure macht Stripe selbst. Kartendaten kommen nie auf unseren Server.
+
+**Schutz vor Bots (Cloudflare Turnstile, optional):** Kostenloses Widget bei Cloudflare anlegen, `VITE_TURNSTILE_SITE_KEY` und `TURNSTILE_SECRET_KEY` setzen und in Supabase → Authentication → Attack Protection „Captcha“ mit Turnstile und demselben Geheimnis einschalten. Erst beides zusammen einschalten, sonst klappt die Anmeldung nicht.
+
+**Zwei-Faktor:** Im Konto unter „Zwei-Faktor-Anmeldung“ einrichten. Für die Verwaltung Pflicht, sobald `ADMIN_REQUIRE_2FA=1` gesetzt ist (erst setzen, wenn alle Admins 2FA eingerichtet haben). In Supabase → Authentication → MFA muss TOTP eingeschaltet sein.
+
+**Überwachung:** Bei UptimeRobot oder Better Stack einen Monitor auf `https://<deine-domain>/api/status` anlegen (200 = alles gut, 503 = Datenbank weg). Fehler aus der App landen unter Verwaltung → Fehler.
+
+**Automatische Prüfung (CI):** `.github/workflows/ci.yml` prüft bei jedem Push Typen, Tests und Build; Dependabot schlägt wöchentlich Updates vor.
+
+Datenschutz-Unterlagen: `docs/datenschutz/` (Verarbeitungsverzeichnis, Löschkonzept, Dienstleister/AVV). Umgebungen: `docs/umgebungen.md`.
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:

@@ -45,9 +45,19 @@ function isH3SwallowedErrorBody(body: string): boolean {
 }
 
 /* Sicherheits-Header, die nichts kaputt machen können: kein MIME-Raten,
-   sparsame Referrer, nur HTTPS, kein Mikrofon. (Eine strenge Content-Security-
-   Policy fehlt noch; sie muss auf Supabase, Stripe und Komoot abgestimmt und
-   im Live-Betrieb getestet werden.) */
+   sparsame Referrer, nur HTTPS, kein Mikrofon, kein fremdes Einbetten der
+   Seite (Clickjacking), keine Plugins, kein Umbiegen von <base> und
+   Formularen. Eine Skript-Whitelist (script-src) fehlt bewusst noch: Sie muss
+   auf Supabase, Stripe, Turnstile und Komoot abgestimmt und im Live-Betrieb
+   getestet werden; XSS verhindert bis dahin React (kein ungeprüftes HTML aus
+   Nutzereingaben). */
+const CSP = [
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self' https://checkout.stripe.com",
+  "frame-ancestors 'self' https://lovable.dev https://*.lovable.dev https://*.lovable.app https://*.lovableproject.com",
+  "upgrade-insecure-requests",
+].join("; ");
 function withSecurityHeaders(res: Response): Response {
   try {
     const h = new Headers(res.headers);
@@ -55,6 +65,8 @@ function withSecurityHeaders(res: Response): Response {
     h.set("Referrer-Policy", "strict-origin-when-cross-origin");
     h.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
     h.set("Permissions-Policy", "microphone=(), interest-cohort=()");
+    if (!h.has("Content-Security-Policy")) h.set("Content-Security-Policy", CSP);
+    h.set("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
     return new Response(res.body, { status: res.status, statusText: res.statusText, headers: h });
   } catch {
     return res;

@@ -14,6 +14,7 @@ import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { DeleteAccount } from "@/components/showly/DeleteAccount";
+import { DataExport, TwoFactorSettings } from "@/components/showly/AccountSecurity";
 import { accountExists, findAccount, saveAccount } from "@/showly/persist";
 import { loginId } from "@/showly/phone";
 import { pwScore } from "@/showly/figures";
@@ -195,6 +196,8 @@ function AccountPage() {
                 {T.out}
               </button>
             </div>
+            <TwoFactorSettings />
+            <DataExport />
             <DeleteAccount />
           </div>
         </div>

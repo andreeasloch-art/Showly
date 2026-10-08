@@ -18,6 +18,8 @@ import { saveDecoItem } from "@/showly/sweets";
 import { saveDecoCloud } from "@/showly/cloudProviders";
 import type { MediaRef } from "@/showly/media";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { RentTermsFields, emptyRentDraft, rentTermsFromDraft, type RentDraft } from "@/components/showly/Rental";
+import { cleanRentTerms, depositOf } from "@/showly/rental";
 
 type Area = "kostueme" | "deko";
 
@@ -63,6 +65,7 @@ const TAB_ICON: Record<string, string> = {
 const COPY = {
   de: {
     fromRent: (p: string) => `Mieten ab ${p} am Tag`,
+    deposit: "Kaution",
     buyToo: "Auch zum Kaufen",
     perk: "15 % Rabatt für Künstler",
     count: (n: number) => (n === 1 ? "1 Kostüm" : `${n} Kostüme`),
@@ -117,6 +120,7 @@ const COPY = {
   },
   en: {
     fromRent: (p: string) => `Rent from ${p} a day`,
+    deposit: "Deposit",
     buyToo: "Also for sale",
     perk: "15% off for artists",
     count: (n: number) => (n === 1 ? "1 costume" : `${n} costumes`),
@@ -171,6 +175,7 @@ const COPY = {
   },
   es: {
     fromRent: (p: string) => `Alquiler desde ${p} al día`,
+    deposit: "Fianza",
     buyToo: "También a la venta",
     perk: "15 % de descuento para artistas",
     count: (n: number) => (n === 1 ? "1 disfraz" : `${n} disfraces`),
@@ -512,6 +517,7 @@ function DecoOffer({
   const [desc, setDesc] = useState("");
   const [buy, setBuy] = useState("");
   const [rent, setRent] = useState("");
+  const [terms, setTerms] = useState<RentDraft>(emptyRentDraft());
   const [photo, setPhoto] = useState<MediaRef | undefined>();
   const [business, setBusiness] = useState<boolean | null>(null);
   const [taxOk, setTaxOk] = useState(false);
@@ -552,6 +558,7 @@ function DecoOffer({
       buy: b || r * 5,
       rent: r,
       photo,
+      ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
     });
     toast(F.done);
     onDone(item.id);
@@ -570,6 +577,7 @@ function DecoOffer({
         occ,
         buy: b || r * 5,
         rent: r,
+        ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
       }).then(async (res) => {
         if ("error" in res) return toast(res.error);
         await refreshCloud();
@@ -650,6 +658,7 @@ function DecoOffer({
               <span className="pe-hint">{F.rentHint}</span>
             </label>
           </div>
+          {price(rent) > 0 && <RentTermsFields d={terms} onChange={setTerms} />}
           <label className="pe-field">
             <span className="pe-label">{F.desc}</span>
             <textarea value={desc} maxLength={600} placeholder={F.descPh} onChange={(e) => setDesc(e.target.value)} />
@@ -758,6 +767,13 @@ function ProductCard({
           </span>
         </div>
 
+        {both && (i.sizes?.length || depositOf(i) > 0) ? (
+          <p className="sweet-allergens">
+            {[i.sizes?.length ? i.sizes.join(" · ") : "", depositOf(i) > 0 ? `${C.deposit} ${fmt(depositOf(i))}` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        ) : null}
         {/* Ein Knopf statt zwei: Bei Kostümen, die man mieten und kaufen
             kann, wählt man vorher die Art. Vorher standen auf jeder Karte
             zwei gleich laute Knöpfe, bei 15 Karten also 30. */}

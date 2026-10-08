@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, SLOTS, isoOf, todayISO } from "@/showly/ui";
 import { DEFAULT_SHOW_H, parseBusy, unavailable } from "@/showly/schedule";
+import { outsideWork } from "@/showly/workHours";
+import { ARTISTS } from "@/showly/data";
 
 export interface CalSel {
   date: string | null;
@@ -56,8 +58,11 @@ export function Calendar({
   /* Besucher: was für eine Show dieser Länge samt einer Stunde Fahrtzeit
      vor und nach anderen Buchungen nicht mehr geht (schedule.ts).
      Anbieter: was er selbst gesperrt hat bzw. was gebucht ist. */
+  const work = ARTISTS.find((x) => x.id === providerId)?.workHours ?? null;
   const blockedOn = (iso: string) =>
-    owner ? explicitOn(iso) : unavailable(SLOTS, hours, bookedSlots(providerId, iso));
+    owner
+      ? explicitOn(iso)
+      : [...new Set([...unavailable(SLOTS, hours, bookedSlots(providerId, iso)), ...outsideWork(work, iso, SLOTS, hours)])];
   /* Nur durch die Fahrtzeit nach bzw. vor einer Buchung belegt */
   const travelOn = (iso: string) => {
     const mine = explicitOn(iso);

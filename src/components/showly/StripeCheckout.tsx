@@ -1,5 +1,6 @@
 import { EmbeddedCheckoutProvider, EmbeddedCheckout } from "@stripe/react-stripe-js";
 import { getStripe, getStripeEnvironment } from "@/lib/stripe";
+import type { Snapshot } from "@/showly/cartSnapshot";
 import { createCartCheckout, createShowlyCheckout, releaseCartHold, type CheckoutLineInput } from "@/utils/payments.functions";
 import { useEffect, useRef, useState } from "react";
 
@@ -50,7 +51,10 @@ export function StripeCartCheckout({
   sweets = [],
   customerEmail,
   locale,
+  snapshot,
 }: {
+  /** ganzer Warenkorb samt Eventangaben (für den Stripe-Webhook) */
+  snapshot?: Snapshot | undefined;
   shop: { shopId: number; mode: "rent" | "buy"; qty: number }[];
   bookings: {
     artistId: number;
@@ -86,6 +90,7 @@ export function StripeCartCheckout({
         returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),
         ...(locale ? { locale } : {}),
+        ...(snapshot ? { snapshot } : {}),
       },
     });
     if ("error" in result) {
@@ -107,6 +112,13 @@ export function StripeCartCheckout({
           {err}
         </p>
       )}
+      <p className="checkout-pay-note">
+        {locale === "en"
+          ? "Clicking “Pay” places a binding order with obligation to pay."
+          : locale === "es"
+            ? "Al pulsar «Pagar» realizas un pedido vinculante con obligación de pago."
+            : "Mit Klick auf „Bezahlen“ gibst du eine zahlungspflichtige Bestellung ab."}
+      </p>
       {hold && (
         <p className="checkout-hold" role="status">
           {locale === "en"

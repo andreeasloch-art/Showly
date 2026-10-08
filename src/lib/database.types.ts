@@ -90,6 +90,8 @@ export type MediaRow = {
 
 export type ArtistRow = {
   id: number;
+  /** Arbeitszeiten je Wochentag (0013), showly/workHours.ts */
+  work_hours?: Record<string, [number, number]> | null;
   owner: string;
   cat: string;
   name: LText;
@@ -231,12 +233,27 @@ export type ShopOrderRow = {
   sub_order_id?: number | null;
   id: number;
   customer: string | null;
-  items: { shopId: number; mode: "rent" | "buy"; qty: number; price_cents: number }[];
+  items: {
+    shopId: number;
+    mode: "rent" | "buy";
+    qty: number;
+    price_cents: number;
+    from?: string;
+    to?: string;
+    size?: string;
+    ship?: "pickup" | "delivery" | "shipping";
+    deposit_cents?: number;
+  }[];
   total_cents: number;
   status: "pending" | "paid" | "shipped" | "returned" | "cancelled";
   ship_to: string | null;
   stripe_session_id: string | null;
   provider_owners: string[];
+  /** Kaution und Rückgabe (0013) */
+  deposit_cents?: number;
+  deposit_refunded_cents?: number;
+  returned_at?: string | null;
+  condition_note?: string | null;
   created_at: string;
 }
 
@@ -417,8 +434,34 @@ export type Database = {
         event_day: string | null;
         total_cents: number;
         status: "pending" | "paid" | "cancelled";
+        /** Rückbuchung bei der Bank des Kunden (0013) */
+        dispute_status?: "open" | "won" | "lost" | null;
         created_at: string;
       }>;
+      /** Warenkorb zu einer offenen Zahlung, für den Stripe-Webhook (0013) */
+      checkout_drafts: Table<{
+        session_id: string;
+        customer: string;
+        environment: "sandbox" | "live";
+        snapshot: unknown;
+        hold_key: string | null;
+        created_at: string;
+      }>;
+      /** Belegte Mietartikel je Zeitraum (0013) */
+      rental_claims: Table<{
+        id: number;
+        item_ref: number;
+        from_day: string;
+        until_day: string;
+        qty: number;
+        kind: "hold" | "booking";
+        hold_key: string | null;
+        expires_at: string | null;
+        shop_order_id: number | null;
+        created_at: string;
+      }>;
+      /** Bereits verarbeitete Stripe-Ereignisse (0013) */
+      stripe_events: Table<{ id: string; type: string; received_at: string }>;
       sub_orders: Table<{
         id: number;
         order_id: number;
@@ -484,7 +527,11 @@ export type Database = {
       };
       claim_slots: {
         Args: { p_items: unknown; p_kind: "hold" | "booking"; p_hold_key?: string | null; p_minutes?: number };
-        Returns: { ok: boolean; index?: number; reason?: "busy" | "blocked" | "external" | "unknown" };
+        Returns: { ok: boolean; index?: number; reason?: "busy" | "blocked" | "external" | "hours" | "unknown" };
+      };
+      claim_rentals: {
+        Args: { p_items: unknown; p_kind: "hold" | "booking"; p_hold_key?: string | null; p_minutes?: number; p_order?: number | null };
+        Returns: { ok: boolean; index?: number; reason?: "busy" };
       };
       release_hold: {
         Args: { p_hold_key: string };

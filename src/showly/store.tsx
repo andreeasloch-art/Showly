@@ -39,7 +39,8 @@ import { bookingEntry, clashes, parseBusy, withoutBooking } from "./schedule";
 import { hydrateDbProviders, saveBakerCloud, saveSweetCloud } from "./cloudProviders";
 import type { Baker, Sweet } from "./sweets";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopUnit, findItem, type CartBookingLine, type CartRequestLine } from "./pricing";
+import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopLineTotal, findItem, type CartBookingLine, type CartRequestLine, type CartShopLine } from "./pricing";
+import { demoRentTerms, type Ship } from "./rental";
 import {
   HEARING_DAYS,
   PENALTY_RATE,
@@ -60,6 +61,10 @@ import {
 } from "./booking";
 import { mediaVersion, preloadMedia, subscribeMedia } from "./media";
 import { isBot, localeFor, pickLang, serverCountry } from "./geoLang";
+
+/* Beispielartikel zeigen, wie Größe, Hygiene, Kaution und Übergabe beim
+   Mieten aussehen; echte Anbieter tragen ihre eigenen Angaben ein. */
+for (const i of SHOP_ITEMS) if (i.demo && i.rent > 0) Object.assign(i, demoRentTerms(i));
 
 
 const DICT: Record<string, Record<string, string>> = {
@@ -110,11 +115,7 @@ export interface CartSnapshot {
   requests: CartRequestLine[];
   contact: { name: string; email: string; phone?: string; address?: string };
 }
-export interface CartLine {
-  shopId: number;
-  mode: Mode;
-  qty: number;
-}
+export type CartLine = CartShopLine;
 export interface Booking {
   id: number;
   artistId: number;
@@ -230,7 +231,9 @@ interface Ctx {
   cart: CartLine[];
   cartOpen: boolean;
   setCartOpen: (v: boolean) => void;
-  addToCart: (shopId: number, mode: Mode, opts?: { quiet?: boolean }) => void;
+  addToCart: (shopId: number, mode: Mode, opts?: { quiet?: boolean; from?: string; to?: string; size?: string; ship?: Ship }) => void;
+  /** Mietzeitraum, Größe oder Übergabe einer Warenkorb-Zeile ändern */
+  updateCartLine: (idx: number, patch: Partial<Omit<CartLine, "shopId" | "mode">>) => void;
   changeQty: (idx: number, d: number) => void;
   removeFromCart: (idx: number) => void;
   cartPrice: (c: CartLine) => number;
@@ -292,6 +295,8 @@ interface Ctx {
   avail: Avail;
   bookedSlots: (providerId: number, iso: string) => string[];
   toggleBlock: (providerId: number, iso: string, slot: string) => void;
+  /** ganze Tage sperren oder freigeben (Urlaub); Ergebnis "ok" oder Fehlertext */
+  setDaysBlocked: (providerId: number, days: string[], blocked: boolean) => Promise<string>;
 
   toast: (msg: string) => void;
   toastMsg: string | null;
@@ -600,16 +605,24 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   const cartPrice = useCallback((c: CartLine) => {
     const i = SHOP_ITEMS.find((s) => s.id === c.shopId);
     if (!i) return 0;
-    return shopUnit(i, c.mode) * c.qty;
+    return shopLineTotal(i, c);
   }, []);
 
   const addToCart = useCallback(
-    (shopId: number, mode: Mode, opts?: { quiet?: boolean }) => {
+    (shopId: number, mode: Mode, opts?: { quiet?: boolean; from?: string; to?: string; size?: string; ship?: Ship }) => {
+      const extra = {
+        ...(opts?.from ? { from: opts.from } : {}),
+        ...(opts?.to ? { to: opts.to } : {}),
+        ...(opts?.size ? { size: opts.size } : {}),
+        ...(opts?.ship ? { ship: opts.ship } : {}),
+      };
       setCart((c) => {
-        const idx = c.findIndex((x) => x.shopId === shopId && x.mode === mode);
+        const idx = c.findIndex(
+          (x) => x.shopId === shopId && x.mode === mode && x.from === extra.from && x.to === extra.to && x.size === extra.size,
+        );
         if (idx >= 0)
           return c.map((x, k) => (k === idx ? { ...x, qty: x.qty + 1 } : x));
-        return [...c, { shopId, mode, qty: 1 }];
+        return [...c, { shopId, mode, qty: 1, ...extra }];
       });
       if (opts?.quiet) return;
       const item = SHOP_ITEMS.find((s) => s.id === shopId);
@@ -618,6 +631,10 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     },
     [L, t, toast],
   );
+
+  const updateCartLine = useCallback((idx: number, patch: Partial<Omit<CartLine, "shopId" | "mode">>) => {
+    setCart((c) => c.map((x, k) => (k === idx ? { ...x, ...patch } : x)));
+  }, []);
 
   const changeQty = useCallback((idx: number, d: number) => {
     setCart((c) =>
@@ -866,7 +883,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       if (snap.shop.length) {
         const items = snap.shop.map((c) => {
           const i = findItem(c.shopId);
-          return { ...c, price: i ? shopUnit(i, c.mode) * c.qty : 0 };
+          return { ...c, price: i ? shopLineTotal(i, c) : 0 };
         });
         const orderId = counters.current.order++;
         madeOrders.add(orderId);
@@ -1424,6 +1441,27 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [avail, session, toast],
   );
 
+  const setDaysBlocked = useCallback(
+    async (providerId: number, days: string[], blocked: boolean) => {
+      const db = ARTISTS.find((x) => x.id === providerId) as { fromDb?: boolean } | undefined;
+      if (db?.fromDb && session?.backend) {
+        const { setDaysBlockedCloud } = await import("@/utils/community.functions");
+        const r = await setDaysBlockedCloud({ data: { artistId: providerId, days, blocked } }).catch(() => ({ error: "Netzwerkfehler" }));
+        if ("error" in r) return r.error;
+      }
+      setAvail((a) => {
+        const forP = { ...(a[providerId] || {}) };
+        for (const iso of days) {
+          const cur = (forP[iso] || []).filter((x) => x !== "all");
+          forP[iso] = blocked ? [...cur, "all"] : cur;
+        }
+        return { ...a, [providerId]: forP };
+      });
+      return "ok";
+    },
+    [session],
+  );
+
   const mediaV = useSyncExternalStore(subscribeMedia, mediaVersion, () => 0);
 
   const value: Ctx = {
@@ -1484,6 +1522,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     avail,
     bookedSlots,
     toggleBlock,
+    setDaysBlocked,
+    updateCartLine,
     toast,
     toastMsg,
     refreshCloud,

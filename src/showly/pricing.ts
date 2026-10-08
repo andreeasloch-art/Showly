@@ -6,6 +6,7 @@
  * So kann niemand im Browser einen Preis auf 1 Euro ändern. */
 import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
 import { BAKERS, SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
+import { depositOf, rentDays, shipFee, type Ship } from "./rental";
 
 const bakerIsDemo = (id: number) => !!BAKERS.find((b) => b.id === id)?.demo;
 
@@ -29,6 +30,13 @@ export interface CartShopLine {
   shopId: number;
   mode: Mode;
   qty: number;
+  /** Miete: erster und letzter Tag */
+  from?: string | undefined;
+  to?: string | undefined;
+  /** gewählte Größe (Kostüme) */
+  size?: string | undefined;
+  /** Übergabe: Abholung, Lieferung oder Versand inkl. Rückversand */
+  ship?: Ship | undefined;
 }
 
 export interface CartBookingLine {
@@ -83,6 +91,30 @@ export function shopUnit(i: ShopItem, mode: Mode) {
   return mode === "rent" && i.rent > 0 ? i.rent : i.buy;
 }
 
+const isRent = (i: ShopItem, l: { mode: Mode }) => l.mode === "rent" && i.rent > 0;
+
+/** Bestandteile einer Shop-Zeile in Euro: Ware bzw. Miete, Kaution, Übergabe.
+ *  Miete ohne gültigen Zeitraum zählt als 1 Tag (Anzeige); bezahlt werden
+ *  kann sie erst mit Zeitraum (priceLines meldet sie sonst als unbekannt). */
+export function shopLineParts(i: ShopItem, l: CartShopLine) {
+  const qty = Math.min(99, Math.max(1, Math.round(l.qty) || 1));
+  if (!isRent(i, l)) return { goods: i.buy * qty, deposit: 0, ship: 0, days: 0, qty };
+  const days = rentDays(l.from, l.to);
+  return {
+    goods: i.rent * Math.max(1, days) * qty,
+    deposit: depositOf(i) * qty,
+    ship: shipFee(i, l.ship) ?? 0,
+    days,
+    qty,
+  };
+}
+
+/** Summe einer Shop-Zeile (inkl. Kaution und Übergabe) */
+export function shopLineTotal(i: ShopItem, l: CartShopLine) {
+  const p = shopLineParts(i, l);
+  return p.goods + p.deposit + p.ship;
+}
+
 export function findArtist(id: number, extra?: Extra) {
   return extra?.artist?.(id) ?? ARTISTS.find((a) => a.id === id);
 }
@@ -114,7 +146,7 @@ export function cartTotals(
   let items = 0;
   for (const l of shop) {
     const i = findItem(l.shopId);
-    if (i) items += shopUnit(i, l.mode) * l.qty;
+    if (i) items += shopLineTotal(i, l);
   }
   let artists = 0;
   for (const b of bookings) {
@@ -144,7 +176,7 @@ export interface PriceLine {
 /** Zahlungsposten, wie sie beim Zahlungsanbieter erscheinen.
  *  Unbekannte Kennungen werden gemeldet statt still übergangen. */
 export function priceLines(
-  shop: { shopId: number; mode: Mode; qty: number }[],
+  shop: CartShopLine[],
   bookings: { artistId: number; hours: number; pkg?: string | undefined; dateISO: string; slot: string }[],
   name: (v: unknown) => string,
   labels: { rent: string; buy: string },
@@ -177,11 +209,31 @@ export function priceLines(
       unknown.push(`item:${l.shopId}`);
       continue;
     }
+    if (!isRent(i, l)) {
+      lines.push({ name: `${name(i.name)} (${labels.buy})`, amountInCents: Math.round(i.buy * 100), quantity: qty });
+      continue;
+    }
+    /* Miete nur mit gültigem Zeitraum und angebotener Übergabeart */
+    const days = rentDays(l.from, l.to);
+    const fee = shipFee(i, l.ship);
+    if (!days || fee === null || (i.sizes?.length && !(l.size && i.sizes.includes(l.size)))) {
+      unknown.push(`rent:${l.shopId}`);
+      continue;
+    }
+    const span = `${l.from!.slice(8)}.${l.from!.slice(5, 7)}.–${l.to!.slice(8)}.${l.to!.slice(5, 7)}.`;
     lines.push({
-      name: `${name(i.name)} (${l.mode === "rent" && i.rent > 0 ? labels.rent : labels.buy})`,
-      amountInCents: Math.round(shopUnit(i, l.mode) * 100),
+      name: `${name(i.name)} (${labels.rent}, ${span}, ${days} ${days === 1 ? "Tag" : "Tage"}${l.size ? `, ${l.size}` : ""})`,
+      amountInCents: Math.round(i.rent * days * 100),
       quantity: qty,
     });
+    const dep = depositOf(i);
+    if (dep > 0) lines.push({ name: `Kaution ${name(i.name)} (wird nach Rückgabe erstattet)`, amountInCents: Math.round(dep * 100), quantity: qty });
+    if (fee > 0)
+      lines.push({
+        name: `${l.ship === "shipping" ? "Versand inkl. Rückversand" : "Lieferung und Abholung"} · ${name(i.name)}`,
+        amountInCents: Math.round(fee * 100),
+        quantity: 1,
+      });
   }
   for (const x of sweets) {
     const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);

@@ -9,6 +9,7 @@ import type { ArtistRow } from "@/lib/database.types";
 import { ARTISTS, CATS, type Artist } from "./data";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { preloadMedia } from "./media";
+import { cleanWorkHours } from "./workHours";
 
 /* Titelbilder werden synchron als Hintergrund gesetzt; deshalb ihre Adressen
    gleich nach dem Laden der Profile holen (nur freigegebene kommen zurück). */
@@ -66,6 +67,7 @@ export function artistFromRow(r: PublicRow): Artist {
       kind: m.kind === "video" ? ("video" as const) : ("image" as const),
       ratio: Number(m.ratio) || 1,
     })),
+    workHours: cleanWorkHours(r.work_hours),
     fromDb: true,
   };
 }

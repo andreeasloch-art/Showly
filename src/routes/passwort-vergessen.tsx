@@ -15,6 +15,7 @@ import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { authRedirectTo, isBackendConfigured, supabase } from "@/lib/supabase";
 import { createLocalReset, type LocalReset } from "@/showly/persist";
+import { captchaOptions } from "@/showly/captcha";
 
 export const Route = createFileRoute("/passwort-vergessen")({
   head: () => ({
@@ -131,6 +132,7 @@ function ForgotPage() {
     if (cloud) {
       const { error } = await supabase().auth.resetPasswordForEmail(value, {
         redirectTo: authRedirectTo("/passwort-neu"),
+        ...(await captchaOptions()),
       });
       /* Fehler wie "Konto unbekannt" verraten nichts nach außen. Nur wenn der
          Server gar nicht antwortet oder bremst, sagen wir es. */

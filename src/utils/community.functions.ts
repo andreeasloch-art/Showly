@@ -12,6 +12,7 @@ import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import { ownsAll } from "@/lib/media.server";
 import type { MediaRefRow } from "@/lib/database.types";
+import { cleanWorkHours } from "@/showly/workHours";
 
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -344,6 +345,46 @@ export const setBlockCloud = createServerFn({ method: "POST" })
       await db.from("availability").upsert({ artist_id: data.artistId, day: data.day, slot: data.slot, blocked: true });
     }
     return { ok: true };
+  });
+
+/** Mehrere ganze Tage sperren oder freigeben (Urlaub, Abwesenheit) */
+export const setDaysBlockedCloud = createServerFn({ method: "POST" })
+  .inputValidator((d: { artistId: number; days: string[]; blocked: boolean }) => {
+    const days = Array.isArray(d.days) ? d.days.map(String).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)) : [];
+    if (!days.length || days.length > 120) throw new Error("Ungültiger Zeitraum");
+    return { artistId: Number(d.artistId) | 0, days: [...new Set(days)], blocked: d.blocked === true };
+  })
+  .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
+    const ctx = await me();
+    if (!ctx) return { error: "Bitte melde dich an" };
+    const db = adminClient();
+    const { data: a } = await db.from("artists").select("owner").eq("id", data.artistId).maybeSingle();
+    if (!a || a.owner !== ctx.user.id) return { error: "Keine Berechtigung" };
+    if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
+    if (data.blocked) {
+      /* Bestehende Buchungen bleiben bestehen; neue sind an diesen Tagen nicht möglich */
+      await db.from("availability").upsert(data.days.map((day) => ({ artist_id: data.artistId, day, slot: "all", blocked: true })));
+    } else {
+      await db.from("availability").delete().eq("artist_id", data.artistId).eq("slot", "all").in("day", data.days);
+    }
+    return { ok: true };
+  });
+
+/** Arbeitszeiten je Wochentag speichern (null = keine Einschränkung) */
+export const setWorkHoursCloud = createServerFn({ method: "POST" })
+  .inputValidator((d: { artistId: number; workHours: unknown }) => ({
+    artistId: Number(d.artistId) | 0,
+    workHours: d.workHours === null ? null : cleanWorkHours(d.workHours),
+  }))
+  .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
+    const ctx = await me();
+    if (!ctx) return { error: "Bitte melde dich an" };
+    const db = adminClient();
+    const { data: a } = await db.from("artists").select("owner").eq("id", data.artistId).maybeSingle();
+    if (!a || a.owner !== ctx.user.id) return { error: "Keine Berechtigung" };
+    if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
+    const { error } = await db.from("artists").update({ work_hours: data.workHours }).eq("id", data.artistId);
+    return error ? { error: "Speichern hat nicht geklappt" } : { ok: true };
   });
 
 /** Gesperrte und gebuchte Zeitfenster der Datenbank-Profile, ab heute */

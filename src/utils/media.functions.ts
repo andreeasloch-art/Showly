@@ -80,6 +80,34 @@ export const registerMedia = createServerFn({ method: "POST" })
     const { data: listed } = await a.storage.from(BUCKET).list(folder, { search: file, limit: 1 });
     if (!listed?.some((o) => o.name === file)) return { error: "Datei nicht gefunden" };
 
+    /* Echte Dateiart aus den ersten Bytes prüfen und aus Fotos Standort und
+       andere Metadaten entfernen (Sicherheitsnetz; der Browser macht das
+       normalerweise schon beim Verkleinern). Passt die Datei nicht, wird sie
+       wieder gelöscht. */
+    const { isImageKind, isVideoKind, sniffType, stripImageMetadata } = await import("@/showly/imageSafety");
+    const reject = async (msg: string) => {
+      await a.storage.from(BUCKET).remove([data.path]);
+      return { error: msg };
+    };
+    if (data.kind === "image") {
+      const { data: blob } = await a.storage.from(BUCKET).download(data.path);
+      if (!blob) return { error: "Datei nicht gefunden" };
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (!isImageKind(sniffType(bytes))) return reject("Das ist kein Foto. Erlaubt sind JPEG, PNG, WebP, GIF und HEIC.");
+      const clean = stripImageMetadata(bytes);
+      if (clean.changed)
+        await a.storage.from(BUCKET).upload(data.path, clean.bytes, { upsert: true, contentType: blob.type || data.mime });
+    } else {
+      const { data: signed } = await a.storage.from(BUCKET).createSignedUrl(data.path, 60);
+      const head = signed?.signedUrl
+        ? await fetch(signed.signedUrl, { headers: { Range: "bytes=0-63" }, signal: AbortSignal.timeout(10_000) })
+            .then((r) => r.arrayBuffer())
+            .catch(() => null)
+        : null;
+      if (!head || !isVideoKind(sniffType(new Uint8Array(head))))
+        return reject("Das ist kein Video. Erlaubt sind MP4, MOV und WebM.");
+    }
+
     const { data: row, error } = await a
       .from("media")
       .insert({

@@ -29,6 +29,7 @@ import { ARTISTS } from "@/showly/data";
 import { Icon, SLOTS, todayISO } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { CalendarSync } from "@/components/showly/CalendarSync";
+import { WorkTimes } from "@/components/showly/WorkTimes";
 import { IncomingBookings } from "@/components/showly/IncomingBookings";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { IdentityCheck } from "@/components/showly/IdentityCheck";
@@ -938,6 +939,7 @@ function Portal() {
               );
             })}
           </div>
+          <WorkTimes artistId={pid} />
           <CalendarSync />
         </div>
       )}

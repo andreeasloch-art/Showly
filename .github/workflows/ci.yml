@@ -1,0 +1,38 @@
+# Automatische Prüfung bei jedem Push und Pull Request:
+# Typen, Tests (Buchungslogik, Preise, Zahlung, Kalender) und Build.
+# Ausgerollt wird über Lovable (Publish); dieser Lauf verhindert, dass
+# kaputter Code dort ankommt.
+name: CI
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Typen prüfen
+        run: npx tsc --noEmit -p .
+      - name: Tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Bekannte Sicherheitslücken in Abhängigkeiten (nur hohe und kritische)
+        run: npm audit --omit=dev --audit-level=high
+        continue-on-error: true

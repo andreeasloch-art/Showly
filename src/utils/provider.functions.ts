@@ -7,6 +7,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
+import { cleanFoodInfo, foodInfoComplete, type FoodInfo } from "@/showly/cakeRules";
+import { cleanRentTerms } from "@/showly/rental";
 
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const n = (v: unknown, min: number, max: number, dflt: number) => {
@@ -49,6 +51,8 @@ function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
       : [],
     leadDays: n(d["leadDays"], 1, 120, 7),
     radiusKm: n(d["radiusKm"], 0, 800, 20),
+    /* Tageskapazität der Backstube, 0 = ohne Grenze */
+    maxPerDay: n(d["maxPerDay"], 0, 500, 0),
     diets: Array.isArray(d["diets"]) ? (d["diets"] as unknown[]).map((x) => s(x, 30)).filter(Boolean).slice(0, 8) : [],
     coverImg: n(d["coverImg"], 1, 14, 1),
     /* Galerie: nur Kennungen aus public.media; Adressen gibt der Server nur
@@ -134,14 +138,21 @@ export const saveOffer = createServerFn({ method: "POST" })
             unit: ["person", "piece", "set"].includes(String(x["unit"])) ? String(x["unit"]) : "piece",
             minQty: n(x["minQty"], 1, 5000, 1),
             img: n(x["img"], 1, 14, 1),
+            /* Pflichtangaben nach Lebensmittelrecht (LMIV) */
+            food: cleanFoodInfo(x["food"]),
+            ...(x["leadDays"] != null && x["leadDays"] !== "" ? { leadDays: n(x["leadDays"], 0, 120, 0) } : {}),
           }
         : {
             name: s(x["name"], 100),
             desc: s(x["desc"], 600),
             cat: s(x["cat"], 30) || "deco",
             occ: Array.isArray(x["occ"]) ? (x["occ"] as unknown[]).map((o) => s(o, 20)).filter(Boolean).slice(0, 6) : [],
+            /* Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
+            ...cleanRentTerms(x),
           };
     if (!data.name) throw new Error("Name fehlt");
+    if (d.kind === "sweet" && !foodInfoComplete((data as { food?: FoodInfo | null }).food))
+      throw new Error("Bitte Allergene (oder „keines“), Zutaten und Haltbarkeit angeben.");
     return {
       offerId: Number.isInteger(d.offerId) ? d.offerId : undefined,
       kind: d.kind,
@@ -218,6 +229,52 @@ export const providerInbox = createServerFn({ method: "POST" }).handler(async ()
   ]);
   return { sweets: sw.data || [], orders: or.data || [] };
 });
+
+/** Anbieter: Bestellung versendet bzw. Mietartikel zurück. Bei der Rückgabe
+ *  wird der Zustand festgehalten und die Kaution erstattet, abzüglich eines
+ *  begründeten Betrags für Schäden, Reinigung oder Verspätung (AGB § 14). */
+export const shopOrderAction = createServerFn({ method: "POST" })
+  .inputValidator((d: { orderId: number; action: "shipped" | "returned"; keepCents?: number; note?: string }) => {
+    if (!Number.isInteger(d.orderId) || (d.action !== "shipped" && d.action !== "returned")) throw new Error("Ungültig");
+    return {
+      orderId: d.orderId,
+      action: d.action,
+      keepCents: n(d.keepCents ?? 0, 0, 10_000_000, 0),
+      note: s(d.note ?? "", 2000),
+    };
+  })
+  .handler(async ({ data }): Promise<{ ok: true; refunded: number } | { error: string }> => {
+    const ctx = await ctxOrError();
+    if (!ctx) return { error: "Bitte melde dich an" };
+    if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
+    const admin = adminClient();
+    const { data: o } = await admin.from("shop_orders").select("*").eq("id", data.orderId).maybeSingle();
+    if (!o || !(o.provider_owners || []).includes(ctx.user.id)) return { error: "Keine Berechtigung" };
+    if (data.action === "shipped") {
+      if (o.status !== "paid") return { error: "Nur bezahlte Bestellungen können versendet werden" };
+      await admin.from("shop_orders").update({ status: "shipped" }).eq("id", o.id);
+      return { ok: true, refunded: 0 };
+    }
+    if (o.status !== "paid" && o.status !== "shipped") return { error: "Bestellung ist nicht offen" };
+    const dep = o.deposit_cents ?? 0;
+    if (data.keepCents > dep) return { error: "Einbehalt ist höher als die Kaution" };
+    if (data.keepCents > 0 && data.note.length < 10) return { error: "Bitte den Einbehalt kurz begründen (Zustand, Schaden, Verspätung)" };
+    await admin
+      .from("shop_orders")
+      .update({ status: "returned", returned_at: new Date().toISOString(), condition_note: data.note || null })
+      .eq("id", o.id);
+    const { refundDeposit } = await import("@/lib/money.server");
+    const r = dep > 0 ? await refundDeposit(o.id, dep - data.keepCents) : { ok: true as const, cents: 0 };
+    if ("error" in r) return { error: `Rückgabe gespeichert, Erstattung fehlgeschlagen: ${r.error}` };
+    if (data.keepCents > 0) {
+      const { notify } = await import("@/lib/notify.server");
+      await notify(o.customer, "Rückgabe deiner Miete", [
+        `Von der Kaution wurden ${(data.keepCents / 100).toFixed(2).replace(".", ",")} € einbehalten. Begründung des Anbieters: ${data.note}`,
+        "Bist du nicht einverstanden, antworte über Hilfe in der App. Wir prüfen den Fall.",
+      ]).catch(() => false);
+    }
+    return { ok: true, refunded: r.cents };
+  });
 
 /** Anbieter beantwortet eine Torten-Anfrage: annehmen (mit Endpreis) oder ablehnen */
 export const respondSweet = createServerFn({ method: "POST" })

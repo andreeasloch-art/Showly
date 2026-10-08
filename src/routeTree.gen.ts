@@ -30,6 +30,7 @@ import { Route as TopActRouteImport } from './routes/top-act'
 import { Route as UeberShowlyRouteImport } from './routes/ueber-showly'
 import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as WieFunktioniertShowlyRouteImport } from './routes/wie-funktioniert-showly'
+import { Route as ApiStatusRouteImport } from './routes/api.status'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
@@ -39,6 +40,7 @@ import { Route as TortenIndexRouteImport } from './routes/torten.index'
 import { Route as TortenIdRouteImport } from './routes/torten.$id'
 import { Route as TortenAnbietenRouteImport } from './routes/torten.anbieten'
 import { Route as ApiKalenderTokenRouteImport } from './routes/api.kalender.$token'
+import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe.webhook'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -145,6 +147,11 @@ const WieFunktioniertShowlyRoute = WieFunktioniertShowlyRouteImport.update({
   path: '/wie-funktioniert-showly',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStatusRoute = ApiStatusRouteImport.update({
+  id: '/api/status',
+  path: '/api/status',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiTaeglichRoute = ApiTaeglichRouteImport.update({
   id: '/api/taeglich',
   path: '/api/taeglich',
@@ -190,6 +197,11 @@ const ApiKalenderTokenRoute = ApiKalenderTokenRouteImport.update({
   path: '/api/kalender/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
+  id: '/api/stripe/webhook',
+  path: '/api/stripe/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -213,6 +225,7 @@ export interface FileRoutesByFullPath {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -222,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -245,6 +259,7 @@ export interface FileRoutesByTo {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
@@ -254,6 +269,7 @@ export interface FileRoutesByTo {
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -278,6 +294,7 @@ export interface FileRoutesById {
   '/ueber-showly': typeof UeberShowlyRoute
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
+  '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
@@ -287,6 +304,7 @@ export interface FileRoutesById {
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
+  '/api/stripe/webhook': typeof ApiStripeWebhookRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -312,6 +330,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout/return'
@@ -321,6 +340,7 @@ export interface FileRouteTypes {
     | '/torten/anbieten'
     | '/torten/'
     | '/api/kalender/$token'
+    | '/api/stripe/webhook'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -344,6 +364,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout/return'
@@ -353,6 +374,7 @@ export interface FileRouteTypes {
     | '/torten/anbieten'
     | '/torten'
     | '/api/kalender/$token'
+    | '/api/stripe/webhook'
   id:
     | '__root__'
     | '/'
@@ -376,6 +398,7 @@ export interface FileRouteTypes {
     | '/ueber-showly'
     | '/widerruf'
     | '/wie-funktioniert-showly'
+    | '/api/status'
     | '/api/taeglich'
     | '/auth/rueckkehr'
     | '/checkout_/return'
@@ -385,6 +408,7 @@ export interface FileRouteTypes {
     | '/torten/anbieten'
     | '/torten/'
     | '/api/kalender/$token'
+    | '/api/stripe/webhook'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -409,6 +433,7 @@ export interface RootRouteChildren {
   UeberShowlyRoute: typeof UeberShowlyRoute
   WiderrufRoute: typeof WiderrufRoute
   WieFunktioniertShowlyRoute: typeof WieFunktioniertShowlyRoute
+  ApiStatusRoute: typeof ApiStatusRoute
   ApiTaeglichRoute: typeof ApiTaeglichRoute
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
@@ -418,6 +443,7 @@ export interface RootRouteChildren {
   TortenAnbietenRoute: typeof TortenAnbietenRoute
   TortenIndexRoute: typeof TortenIndexRoute
   ApiKalenderTokenRoute: typeof ApiKalenderTokenRoute
+  ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -569,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WieFunktioniertShowlyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/status': {
+      id: '/api/status'
+      path: '/api/status'
+      fullPath: '/api/status'
+      preLoaderRoute: typeof ApiStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/taeglich': {
       id: '/api/taeglich'
       path: '/api/taeglich'
@@ -632,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiKalenderTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/stripe/webhook': {
+      id: '/api/stripe/webhook'
+      path: '/api/stripe/webhook'
+      fullPath: '/api/stripe/webhook'
+      preLoaderRoute: typeof ApiStripeWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -657,6 +697,7 @@ const rootRouteChildren: RootRouteChildren = {
   UeberShowlyRoute: UeberShowlyRoute,
   WiderrufRoute: WiderrufRoute,
   WieFunktioniertShowlyRoute: WieFunktioniertShowlyRoute,
+  ApiStatusRoute: ApiStatusRoute,
   ApiTaeglichRoute: ApiTaeglichRoute,
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
@@ -666,6 +707,7 @@ const rootRouteChildren: RootRouteChildren = {
   TortenAnbietenRoute: TortenAnbietenRoute,
   TortenIndexRoute: TortenIndexRoute,
   ApiKalenderTokenRoute: ApiKalenderTokenRoute,
+  ApiStripeWebhookRoute: ApiStripeWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

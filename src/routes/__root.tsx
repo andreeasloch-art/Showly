@@ -24,6 +24,7 @@ import { Header } from "@/components/showly/Header";
 import { CartDrawer } from "@/components/showly/CartDrawer";
 import { Splash } from "@/components/showly/Splash";
 import { ErrorReporter } from "@/components/showly/ErrorReporter";
+import { MfaGate } from "@/components/showly/AccountSecurity";
 import { ConsentBanner } from "@/components/showly/ConsentBanner";
 import { CardLights } from "@/components/showly/Motion";
 
@@ -208,6 +209,7 @@ function RootComponent() {
         <Toast />
         <Splash />
         <ErrorReporter />
+        <MfaGate />
         <ConsentBanner />
         <CardLights />
       </ShowlyProvider>

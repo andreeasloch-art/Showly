@@ -642,3 +642,68 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .co-split li{display:flex;justify-content:space-between;gap:10px}
 .co-split li span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .co-split p{margin:4px 0 0;font-size:12.5px;color:var(--h-muted,#6B6480);line-height:1.4}
+
+/* Konto: Zwei-Faktor-Anmeldung und Datenauskunft (AccountSecurity.tsx) */
+.acc-sec{margin-top:20px;padding:18px;border:1px solid var(--h-line,#E8E3F3);border-radius:20px;background:#fff;display:flex;flex-direction:column;gap:12px;text-align:left}
+.acc-sec-head{display:flex;gap:12px;align-items:flex-start}
+.acc-sec-head h3{margin:0 0 4px;font:600 16px/1.2 'Outfit',system-ui,sans-serif;color:var(--h-ink,#15102A);display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.acc-sec-head p{margin:0;font-size:14px;line-height:1.45;color:var(--h-muted,#6B6480)}
+.acc-sec-ic{flex:none;width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:#EFE9FF;color:#5B3FD6}
+.acc-sec-ic svg{width:17px;height:17px}
+.acc-sec-on,.acc-sec-off{font-style:normal;font:600 12px/1 'Outfit',system-ui,sans-serif;padding:4px 8px;border-radius:999px}
+.acc-sec-on{background:#E3F7EC;color:#1E7A46}
+.acc-sec-off{background:#F2F0F7;color:#6B6480}
+.acc-sec-btn{align-self:flex-start;min-height:44px;padding:0 18px;border-radius:999px;border:1px solid #CFC3F5;background:#fff;color:#5B3FD6;font:600 14px/1 'Outfit',system-ui,sans-serif;cursor:pointer}
+.acc-sec-btn:hover{background:#F5F1FF}
+.acc-sec-btn:disabled{opacity:.6;cursor:default}
+.acc-sec-box{display:flex;flex-direction:column;gap:10px;font-size:14px;color:var(--h-ink2,#3A3350)}
+.acc-sec-box p{margin:0}
+.acc-sec-box label{display:flex;flex-direction:column;gap:6px}
+.acc-sec-qr{width:180px;height:180px;background:#fff;border-radius:12px;border:1px solid var(--h-line,#E8E3F3)}
+.acc-sec-secret{font:500 13px/1.4 ui-monospace,monospace;word-break:break-all;background:#F7F5FC;padding:8px 10px;border-radius:10px}
+.acc-sec-code{height:48px;max-width:220px;padding:0 14px;border-radius:12px;border:1px solid #CFC3F5;font:600 22px/1 ui-monospace,monospace;letter-spacing:.3em}
+.acc-sec-actions{display:flex;gap:10px;flex-wrap:wrap}
+.acc-sec-msg{margin:0;color:#C2334A;font-size:14px}
+.acc-sec-note{margin:0;font-size:13px;color:var(--h-muted,#6B6480)}
+.mfa-gate{z-index:2000;display:grid;place-items:center;padding:16px}
+.acc-sec-modal{max-width:420px;width:100%;margin:0;box-shadow:0 20px 60px rgba(21,16,42,.25)}
+.captcha-box{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:3000}
+
+/* Torten: Allergene, Zutaten, Konfigurator (FoodInfo.tsx, Sweets.tsx) */
+.food-fields,.cake-cfg{border:1px solid var(--h-line,#E8E3F3);border-radius:16px;padding:14px;margin:4px 0;display:flex;flex-direction:column;gap:10px;min-width:0}
+.food-fields legend,.cake-cfg legend{padding:0 6px}
+.food-grid{display:flex;flex-wrap:wrap;gap:8px}
+.food-chip{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:6px 12px;border-radius:999px;border:1px solid #DCD3F2;background:#fff;font-size:13px;cursor:pointer}
+.food-chip input{width:16px;height:16px;accent-color:#5B3FD6}
+.food-chip.on{background:#F1ECFF;border-color:#5B3FD6;color:#3C2A99}
+.food-none{display:flex;align-items:center;gap:8px;font-size:14px}
+.food-traces summary{cursor:pointer;font-size:14px;color:var(--h-ink2,#3A3350);padding:4px 0}
+.food-facts{border:1px solid var(--h-line,#E8E3F3);border-radius:14px;padding:12px 14px;background:#FBFAFE;font-size:14px}
+.food-facts summary{cursor:pointer;font-weight:600;display:flex;gap:8px;align-items:center}
+.food-facts summary svg{width:16px;height:16px}
+.food-facts dl{margin:10px 0 0;display:grid;grid-template-columns:1fr;gap:4px}
+.food-facts dt{font-size:12px;color:var(--h-muted,#6B6480);margin-top:6px}
+.food-facts dd{margin:0;color:var(--h-ink,#15102A);overflow-wrap:anywhere}
+.food-missing{margin:0;background:#FFF6E5;border-color:#F2D9A6;color:#7A5300}
+.sweet-allergens{margin:4px 0 0;font-size:12px;color:var(--h-muted,#6B6480)}
+
+/* Künstler: Arbeitszeiten und Urlaub (WorkTimes.tsx) */
+.worktimes{display:flex;flex-direction:column}
+.wt-days{display:flex;flex-direction:column;gap:6px}
+.wt-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:44px;border-bottom:1px solid var(--h-line,#F0ECF8)}
+.wt-day{display:flex;align-items:center;gap:8px;font-size:14px;min-width:130px}
+.wt-time{display:flex;align-items:center;gap:6px}
+.wt-time select{height:38px;border-radius:10px;border:1px solid #DCD3F2;padding:0 8px;background:#fff}
+.ret-box{flex-basis:100%;display:flex;flex-direction:column;gap:8px;margin-top:8px;padding:12px;border-radius:14px;background:#FBFAFE;border:1px solid var(--h-line,#E8E3F3)}
+
+/* Verleih im Warenkorb (Rental.tsx) */
+.co-line-wrap{display:flex;flex-direction:column;gap:6px;padding-bottom:10px;border-bottom:1px solid var(--h-line,#F0ECF8)}
+.co-line-wrap:last-child{border-bottom:0}
+.rent-line{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:#FBFAFE;border:1px solid var(--h-line,#E8E3F3)}
+.rent-sum{margin:0;font-size:13px;color:var(--h-ink2,#3A3350)}
+.rent-sum.warn{color:#9A4B00;font-weight:600}
+.rent-facts{margin:0;padding-left:18px;font-size:13px;color:var(--h-muted,#6B6480);display:flex;flex-direction:column;gap:2px}
+.co-withdraw{margin:8px 0;padding:12px 14px;border-radius:14px;background:#F7F5FC;border:1px solid var(--h-line,#E8E3F3);font-size:13px;color:var(--h-ink2,#3A3350);display:flex;flex-direction:column;gap:6px}
+.co-withdraw ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.co-withdraw a{color:#5B3FD6;font-weight:600}
+.checkout-pay-note{margin:0 0 8px;font-size:13px;color:var(--h-muted,#6B6480)}

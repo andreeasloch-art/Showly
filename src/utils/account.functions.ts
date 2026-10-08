@@ -123,3 +123,60 @@ export const reportContent = createServerFn({ method: "POST" })
       return { error: e instanceof Error ? e.message : String(e) };
     }
   });
+
+/* ---------------------------------------------------------------------------
+ * Datenauskunft und Datenübertragbarkeit (Art. 15 und 20 DSGVO): alle Daten
+ * zum eigenen Konto als JSON-Datei. Nur die eigene Person, geprüft auf dem
+ * Server; interne Sicherheitswerte (gehashte Ausweis- und SMS-Prüfwerte,
+ * Zähler gegen Missbrauch) sind keine Angaben über die Person und fehlen.
+ * ------------------------------------------------------------------------ */
+export const exportMyData = createServerFn({ method: "POST" }).handler(
+  async (): Promise<{ ok: true; json: string } | { error: string } | { skipped: true }> => {
+    let uid: string;
+    try {
+      uid = (await requireUser()).user.id;
+    } catch {
+      return { skipped: true };
+    }
+    if (!(await allow("action", uid))) return { error: TOO_MANY };
+    const db = adminClient();
+    const by = async (table: string, col: string, id: string | number[]) => {
+      const q = (db.from as unknown as (t: string) => any)(table).select("*");
+      const { data } = await (Array.isArray(id) ? q.in(col, id) : q.eq(col, id)).limit(5000);
+      return (data as unknown[]) || [];
+    };
+    const artists = (await by("artists", "owner", uid)) as { id: number }[];
+    const providers = (await by("providers", "owner", uid)) as { id: number }[];
+    const aIds = artists.map((a) => a.id);
+    const pIds = providers.map((p) => p.id);
+    const out = {
+      exported_at: new Date().toISOString(),
+      note: "Datenauskunft nach Art. 15 und Art. 20 DSGVO. Fragen: support@showly.eu",
+      profile: await by("profiles", "id", uid),
+      bookings_as_customer: await by("bookings", "customer", uid),
+      orders: await by("orders", "customer", uid),
+      cake_requests: await by("sweet_requests", "customer", uid),
+      shop_orders: await by("shop_orders", "customer", uid),
+      vouchers: await by("vouchers", "owner", uid),
+      reviews: await by("reviews", "author", uid),
+      posts: await by("posts", "author", uid),
+      post_comments: await by("post_comments", "author", uid),
+      post_likes: await by("post_likes", "profile_id", uid),
+      messages_sent: await by("messages", "sender", uid),
+      support_tickets: await by("support_tickets", "profile", uid),
+      reports_made: await by("reports", "reporter", uid),
+      blocked_people: await by("blocks", "blocker", uid),
+      media: await by("media", "owner", uid),
+      payout_account: await by("payout_accounts", "profile_id", uid),
+      artist_profiles: artists,
+      artist_bookings: aIds.length ? await by("bookings", "artist_id", aIds) : [],
+      artist_availability: aIds.length ? await by("availability", "artist_id", aIds) : [],
+      artist_payouts: aIds.length ? await by("payouts", "artist_id", aIds) : [],
+      artist_penalties: aIds.length ? await by("penalties", "artist_id", aIds) : [],
+      artist_calendars: aIds.length ? await by("calendar_feeds", "artist_id", aIds) : [],
+      provider_profiles: providers,
+      provider_offers: pIds.length ? await by("provider_offers", "provider_id", pIds) : [],
+    };
+    return { ok: true, json: JSON.stringify(out, null, 2) };
+  },
+);

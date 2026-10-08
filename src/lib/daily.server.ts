@@ -48,6 +48,12 @@ export async function runDaily(): Promise<DailyResult> {
   await db.rpc("purge_old_data").then(undefined, () => null);
   await db.rpc("purge_sms_log").then(undefined, () => null);
   await db.rpc("purge_slot_holds").then(undefined, () => null);
+  /* Warenkorb-Entwürfe nicht bezahlter Kassen (Stripe-Webhook) nach 2 Tagen */
+  await db
+    .from("checkout_drafts")
+    .delete()
+    .lt("created_at", new Date(Date.now() - 2 * 86_400_000).toISOString())
+    .then(undefined, () => null);
   const { syncAllFeeds } = await import("./calsync.server");
   const calendars = await syncAllFeeds().catch(() => ({ ok: 0, failed: 0 }));
   /* Merker für verschickte Mails nach 30 Tagen löschen */

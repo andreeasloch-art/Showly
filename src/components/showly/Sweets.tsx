@@ -20,9 +20,13 @@ import {
   type SweetCat,
   type SweetRequest,
   type Unit,
+  foodOf,
   isDirectSweet,
+  leadOf,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { FoodFacts, useFoodCopy } from "@/components/showly/FoodInfo";
+import { ALLERGEN_LABEL, foodInfoComplete } from "@/showly/cakeRules";
 import { Chat } from "@/components/showly/Chat";
 
 export const SWEETS_COPY = {
@@ -390,6 +394,7 @@ export function SweetCard({
           </Link>
         )}
         <p className="sweet-desc">{L(s.desc)}</p>
+        <AllergenLine s={s} />
         <div className="prod-price">
           <span>
             <b>{fmt(s.price)}</b> {C.unit[s.unit]}
@@ -415,9 +420,62 @@ function addDays(n: number) {
   return d.toISOString().slice(0, 10);
 }
 
+/* Torten nach Wunsch: Größe (Personen), Etagen, Geschmack, Füllung, Aufschrift */
+const CUSTOM_CATS: SweetCat[] = ["wedding", "birthday", "motif"];
+const CFG = {
+  de: {
+    h: "Deine Torte",
+    tiers: "Etagen",
+    flavor: "Geschmack",
+    flavorPh: "z. B. Schokolade, Vanille",
+    filling: "Füllung",
+    fillingPh: "z. B. Himbeer-Sahne",
+    text: "Aufschrift",
+    textPh: "z. B. Alles Gute, Mia!",
+    photo: "Eine Bildvorlage für das Motiv kannst du nach der Zusage mit dem Anbieter im Chat abstimmen.",
+  },
+  en: {
+    h: "Your cake",
+    tiers: "Tiers",
+    flavor: "Flavour",
+    flavorPh: "e.g. chocolate, vanilla",
+    filling: "Filling",
+    fillingPh: "e.g. raspberry cream",
+    text: "Inscription",
+    textPh: "e.g. Happy birthday, Mia!",
+    photo: "You can agree on a picture template for the design with the baker in the chat after confirmation.",
+  },
+  es: {
+    h: "Tu tarta",
+    tiers: "Pisos",
+    flavor: "Sabor",
+    flavorPh: "p. ej. chocolate, vainilla",
+    filling: "Relleno",
+    fillingPh: "p. ej. nata con frambuesa",
+    text: "Texto",
+    textPh: "p. ej. ¡Feliz cumple, Mia!",
+    photo: "La plantilla de imagen para el motivo la acuerdas con el proveedor en el chat después de la confirmación.",
+  },
+} as const;
+
+/** Kurzzeile auf der Karte: enthaltene Hauptallergene */
+function AllergenLine({ s }: { s: Sweet }) {
+  const { lang } = useShowly();
+  const f = foodOf(s);
+  if (!foodInfoComplete(f)) return null;
+  const l = (lang as "de" | "en" | "es") ?? "de";
+  const label = l === "en" ? "Allergens" : l === "es" ? "Alérgenos" : "Allergene";
+  return (
+    <p className="sweet-allergens">
+      {label}: {f.noAllergens ? "–" : f.allergens.map((a) => ALLERGEN_LABEL[a][l].split(" (")[0]).join(", ")}
+    </p>
+  );
+}
+
 export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) {
   const okText = useContactCheck();
-  const { L, fmt, toast, session, addCartRequest, setCartOpen } = useShowly();
+  const F = useFoodCopy();
+  const { L, fmt, toast, session, addCartRequest, setCartOpen, lang } = useShowly();
   const C = useSweetsCopy();
   const R = C.req;
   const b = bakerOf(s.bakerId);
@@ -428,8 +486,27 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   const [name, setName] = useState(session?.name ?? "");
   const [email, setEmail] = useState(session?.email ?? "");
   const [direct, setDirect] = useState(false);
+  /* Torten-Konfigurator (nur Torten nach Wunsch) */
+  const custom = CUSTOM_CATS.includes(s.cat);
+  const [cfg, setCfg] = useState({ tiers: "1", flavor: "", filling: "", text: "" });
+  const K = CFG[(lang as "de" | "en" | "es") ?? "de"] ?? CFG.de;
+  const food = foodOf(s);
+  /* Lebensmittelrecht: ohne Allergen- und Zutatenangaben kein Verkauf */
+  const foodOk = foodInfoComplete(food);
+  const lead = leadOf(s);
   /* Festpreis-Paket: kommt als Buchung in den Warenkorb und wird bezahlt */
   const fixed = isDirectSweet(s);
+  const allWishes = () =>
+    (custom
+      ? [
+          `${K.tiers}: ${cfg.tiers}`,
+          cfg.flavor.trim() && `${K.flavor}: ${cfg.flavor.trim()}`,
+          cfg.filling.trim() && `${K.filling}: ${cfg.filling.trim()}`,
+          cfg.text.trim() && `${K.text}: „${cfg.text.trim()}“`,
+        ]
+          .filter(Boolean)
+          .join(" · ") + (wishes.trim() ? "\n" : "")
+      : "") + wishes.trim();
 
   useEffect(() => {
     const esc = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -442,16 +519,17 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
 
   /* In den Warenkorb: Name und E-Mail kommen dann an der Kasse dazu */
   function toCart() {
+    if (!foodOk && !b?.demo) return toast(F.missing);
     if (!date) return toast(R.needDate);
-    if (!okText(wishes)) return;
-    if (b && date < addDays(b.leadDays)) return toast(R.tooSoon(b.leadDays));
+    if (!okText(wishes, cfg.flavor, cfg.filling, cfg.text)) return;
+    if (date < addDays(lead)) return toast(R.tooSoon(lead));
     addCartRequest({
       sweetId: s.id,
       bakerId: s.bakerId,
       dateISO: date,
       qty: Math.max(minQty, qty),
       city: city.trim().slice(0, 80),
-      wishes: wishes.trim().slice(0, 800),
+      wishes: allWishes().slice(0, 800),
       estimate: estimate(s, Math.max(minQty, qty)),
       ...(fixed ? { direct: true } : {}),
     });
@@ -461,17 +539,18 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   }
 
   function send() {
+    if (!foodOk && !b?.demo) return toast(F.missing);
     if (!date || !name.trim() || !email.trim()) return toast(R.need);
-    if (!okText(wishes)) return;
+    if (!okText(wishes, cfg.flavor, cfg.filling, cfg.text)) return;
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast(R.mail);
-    if (b && date < addDays(b.leadDays)) return toast(R.tooSoon(b.leadDays));
+    if (date < addDays(lead)) return toast(R.tooSoon(lead));
     addRequest({
       sweetId: s.id,
       bakerId: s.bakerId,
       dateISO: date,
       qty: Math.max(minQty, qty),
       city: city.trim().slice(0, 80),
-      wishes: wishes.trim().slice(0, 800),
+      wishes: allWishes().slice(0, 800),
       name: name.trim().slice(0, 80),
       email: email.trim().slice(0, 120),
       estimate: est,
@@ -497,7 +576,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
               <b>{L(s.name)}</b>
               {b && (
                 <em>
-                  {L(b.name)} · {b.city} · {C.lead(b.leadDays)}
+                  {L(b.name)} · {b.city} · {C.lead(lead)}
                 </em>
               )}
             </span>
@@ -523,11 +602,43 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
             <span className="pe-label">{R.city}</span>
             <input value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} />
           </label>
+          {custom && (
+            <fieldset className="cake-cfg">
+              <legend className="pe-label">{K.h}</legend>
+              <div className="pe-grid2">
+                <label className="pe-field">
+                  <span className="pe-label">{K.tiers}</span>
+                  <select value={cfg.tiers} onChange={(e) => setCfg({ ...cfg, tiers: e.target.value })}>
+                    {["1", "2", "3", "4", "5"].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="pe-field">
+                  <span className="pe-label">{K.flavor}</span>
+                  <input value={cfg.flavor} maxLength={60} placeholder={K.flavorPh} onChange={(e) => setCfg({ ...cfg, flavor: e.target.value })} />
+                </label>
+                <label className="pe-field">
+                  <span className="pe-label">{K.filling}</span>
+                  <input value={cfg.filling} maxLength={60} placeholder={K.fillingPh} onChange={(e) => setCfg({ ...cfg, filling: e.target.value })} />
+                </label>
+                <label className="pe-field">
+                  <span className="pe-label">{K.text}</span>
+                  <input value={cfg.text} maxLength={60} placeholder={K.textPh} onChange={(e) => setCfg({ ...cfg, text: e.target.value })} />
+                </label>
+              </div>
+              <ContactHint text={[cfg.flavor, cfg.filling, cfg.text].join("\n")} />
+              {s.cat === "motif" && <p className="pe-hint">{K.photo}</p>}
+            </fieldset>
+          )}
           <label className="pe-field">
             <span className="pe-label">{R.wishes}</span>
             <textarea value={wishes} maxLength={800} placeholder={R.wishesPh} onChange={(e) => setWishes(e.target.value)} />
             <ContactHint text={wishes} />
           </label>
+          <FoodFacts f={food} demo={b?.demo} />
           <div className="req-sum">
             <span>
               <b>{fixed ? C.fixed : R.estimate}</b>

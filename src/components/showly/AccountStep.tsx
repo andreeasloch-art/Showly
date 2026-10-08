@@ -19,6 +19,7 @@ import { useEscape } from "@/showly/useEscape";
 import { authRedirectTo, supabase } from "@/lib/supabase";
 import { normalizePhone, prettyPhone } from "@/showly/phone";
 import { confirmSmsCode, requestSmsCode, smsMessage, type SmsVia } from "@/showly/smsLogin";
+import { captchaOptions } from "@/showly/captcha";
 
 const COPY = {
   de: {
@@ -144,7 +145,7 @@ export function AccountStep({
       setBusy(true);
       const { error } = await sb.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: true, emailRedirectTo: authRedirectTo(next) },
+        options: { shouldCreateUser: true, emailRedirectTo: authRedirectTo(next), ...(await captchaOptions()) },
       });
       setBusy(false);
       if (error) return setErr(error.message);

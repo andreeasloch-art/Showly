@@ -19,7 +19,7 @@ async function uidOrNull(): Promise<string | null> {
 const TOPICS: SupportTopic[] = ["booking", "payment", "account", "provider", "report", "other"];
 
 export const createTicket = createServerFn({ method: "POST" })
-  .inputValidator((d: { email: string; name?: string; topic: SupportTopic; body: string; hp?: string }) => {
+  .inputValidator((d: { email: string; name?: string; topic: SupportTopic; body: string; hp?: string; captcha?: string }) => {
     const email = String(d.email || "").trim().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Bitte eine gültige E-Mail-Adresse angeben");
     const body = String(d.body || "").trim().slice(0, 4000);
@@ -30,11 +30,14 @@ export const createTicket = createServerFn({ method: "POST" })
       topic: TOPICS.includes(d.topic) ? d.topic : ("other" as SupportTopic),
       body,
       hp: String(d.hp || ""),
+      captcha: typeof d.captcha === "string" ? d.captcha.slice(0, 4096) : undefined,
     };
   })
   .handler(async ({ data }): Promise<{ ok: true; id: number } | { error: string }> => {
     /* Unsichtbares Feld: Bots füllen es aus, Menschen nicht */
     if (data.hp) return { ok: true, id: 0 };
+    const { verifyCaptcha } = await import("@/lib/captcha.server");
+    if (!(await verifyCaptcha(data.captcha))) return { error: "Sicherheitsprüfung fehlgeschlagen. Bitte noch einmal versuchen." };
     const uid = await uidOrNull();
     if (!(await allow("support", uid ?? clientIp()))) return { error: TOO_MANY };
     const { data: row, error } = await adminClient()

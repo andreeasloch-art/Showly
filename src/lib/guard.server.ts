@@ -64,5 +64,11 @@ export const TOO_MANY = "Zu viele Anfragen in kurzer Zeit. Bitte versuche es gle
 export async function requireAdmin() {
   const ctx = await requireUser();
   if (ctx.profile?.role !== "admin") throw new Error("Keine Berechtigung");
+  /* Verwaltung nur mit Zwei-Faktor-Anmeldung: Hat die Person 2FA
+     eingerichtet, muss die Sitzung damit bestätigt sein (aal2). Ohne
+     eingerichtete 2FA lässt ADMIN_REQUIRE_2FA=1 gar nicht erst herein. */
+  const { data: aal } = await ctx.sb.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.currentLevel !== "aal2" && (aal?.nextLevel === "aal2" || process.env["ADMIN_REQUIRE_2FA"] === "1"))
+    throw new Error("Zwei-Faktor-Anmeldung erforderlich");
   return ctx;
 }

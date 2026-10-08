@@ -9,7 +9,8 @@ import { Icon } from "@/showly/ui";
 import { SWEETS, bakerOf } from "@/showly/sweets";
 import { SHOP_ITEMS } from "@/showly/data";
 import type { ShopOrderRow, SweetRequestRow } from "@/lib/database.types";
-import { providerInbox, respondSweet } from "@/utils/provider.functions";
+import { providerInbox, respondSweet, shopOrderAction } from "@/utils/provider.functions";
+import { useRentCopy } from "./Rental";
 import { Chat } from "./Chat";
 import { parsePrice } from "./BakerEditor";
 
@@ -79,6 +80,46 @@ const COPY = {
   },
 } as const;
 
+/* Versand und Rückgabe von Mietartikeln mit Zustandsprotokoll und Kaution */
+const RET = {
+  de: {
+    shipped: "Als versendet markieren",
+    returned: "Rückgabe bestätigen",
+    retP: (d: string) => `Kaution: ${d}. Sie wird erstattet, abzüglich eines Einbehalts für Schäden, Reinigung oder Verspätung.`,
+    keep: "Einbehalt (€)",
+    note: "Zustand bei Rückgabe",
+    notePh: "z. B. vollständig und sauber zurück · oder: Riss am Ärmel, Reparatur 15 €",
+    cancel: "Abbrechen",
+    confirm: "Rückgabe speichern",
+    doneShip: "Als versendet markiert.",
+    doneRet: (d: string) => `Rückgabe gespeichert, ${d} Kaution erstattet.`,
+  },
+  en: {
+    shipped: "Mark as shipped",
+    returned: "Confirm return",
+    retP: (d: string) => `Deposit: ${d}. It is refunded minus any amount kept for damage, cleaning or late return.`,
+    keep: "Amount kept (€)",
+    note: "Condition on return",
+    notePh: "e.g. complete and clean · or: tear on sleeve, repair €15",
+    cancel: "Cancel",
+    confirm: "Save return",
+    doneShip: "Marked as shipped.",
+    doneRet: (d: string) => `Return saved, ${d} deposit refunded.`,
+  },
+  es: {
+    shipped: "Marcar como enviado",
+    returned: "Confirmar devolución",
+    retP: (d: string) => `Fianza: ${d}. Se devuelve menos lo retenido por daños, limpieza o retraso.`,
+    keep: "Importe retenido (€)",
+    note: "Estado en la devolución",
+    notePh: "p. ej. completo y limpio · o: roto en la manga, reparación 15 €",
+    cancel: "Cancelar",
+    confirm: "Guardar devolución",
+    doneShip: "Marcado como enviado.",
+    doneRet: (d: string) => `Devolución guardada, ${d} de fianza devueltos.`,
+  },
+} as const;
+
 export function ProviderInbox() {
   const { lang, fmt, fmtDate, L, toast, myProviders } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
@@ -101,6 +142,21 @@ export function ProviderInbox() {
     const iv = window.setInterval(load, 30000);
     return () => window.clearInterval(iv);
   }, [load]);
+
+  const R = useRentCopy();
+  const K = RET[(lang as "de" | "en" | "es") ?? "de"] ?? RET.de;
+  const [ret, setRet] = useState<{ id: number; keep: string; note: string } | null>(null);
+
+  async function orderAct(o: ShopOrderRow, action: "shipped" | "returned") {
+    const keep = action === "returned" && ret ? Math.round((Number(ret.keep.replace(",", ".")) || 0) * 100) : 0;
+    const res = await shopOrderAction({
+      data: { orderId: o.id, action, ...(action === "returned" ? { keepCents: keep, note: ret?.note ?? "" } : {}) },
+    });
+    if ("error" in res) return toast(res.error);
+    toast(action === "shipped" ? K.doneShip : K.doneRet(fmt(res.refunded / 100)));
+    setRet(null);
+    load();
+  }
 
   async function answer(r: SweetRequestRow, accept: boolean) {
     const eur = parsePrice(price[r.id] ?? "");
@@ -184,6 +240,9 @@ export function ProviderInbox() {
                 return (
                   <small key={k}>
                     {i.qty}× {it ? String(L(it.name)) : "#" + i.shopId} ({i.mode === "rent" ? C.rent : C.buy})
+                    {i.from && i.to ? ` · ${fmtDate(i.from)} – ${fmtDate(i.to)}` : ""}
+                    {i.size ? ` · ${i.size}` : ""}
+                    {i.ship ? ` · ${R.shipL[i.ship]}` : ""}
                   </small>
                 );
               })}
@@ -191,7 +250,38 @@ export function ProviderInbox() {
             </div>
             <div className="prov-side">
               <span className={"my-req-st " + (o.status === "paid" ? "booked" : "sent")}>{C.ost[o.status]}</span>
+              {o.status === "paid" && (
+                <button className="home-btn soft" onClick={() => void orderAct(o, "shipped")}>
+                  {K.shipped}
+                </button>
+              )}
+              {(o.status === "paid" || o.status === "shipped") && o.items.some((i) => i.mode === "rent") && (
+                <button className="home-btn soft" onClick={() => setRet({ id: o.id, keep: "", note: "" })}>
+                  {K.returned}
+                </button>
+              )}
             </div>
+            {ret?.id === o.id && (
+              <div className="ret-box">
+                <p className="pe-hint">{K.retP(fmt((o.deposit_cents ?? 0) / 100))}</p>
+                <label className="pe-field">
+                  <span className="pe-label">{K.keep}</span>
+                  <input inputMode="decimal" value={ret.keep} placeholder="0" onChange={(e) => setRet({ ...ret, keep: e.target.value })} />
+                </label>
+                <label className="pe-field">
+                  <span className="pe-label">{K.note}</span>
+                  <textarea value={ret.note} maxLength={2000} placeholder={K.notePh} onChange={(e) => setRet({ ...ret, note: e.target.value })} />
+                </label>
+                <div className="acc-sec-actions">
+                  <button className="home-btn soft" onClick={() => setRet(null)}>
+                    {K.cancel}
+                  </button>
+                  <button className="home-btn primary" onClick={() => void orderAct(o, "returned")}>
+                    {K.confirm}
+                  </button>
+                </div>
+              </div>
+            )}
           </li>
         ))}
       </ul>

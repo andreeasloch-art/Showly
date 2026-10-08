@@ -5,6 +5,7 @@
  * der eingebaute Weg der Datenbank (Supabase Phone), falls dort einer
  * hinterlegt ist. */
 import { supabase } from "@/lib/supabase";
+import { captchaOptions } from "./captcha";
 
 export type SmsVia = "server" | "db";
 
@@ -56,13 +57,15 @@ export async function requestSmsCode(
 ): Promise<{ via: SmsVia; phone: string } | { error: SmsMsgKey }> {
   try {
     const { sendSmsCode } = await import("@/utils/sms.functions");
-    const r = await sendSmsCode({ data: { phone, lang } });
+    const { captchaToken } = await import("./captcha");
+    const captcha = await captchaToken(lang).catch(() => undefined);
+    const r = await sendSmsCode({ data: { phone, lang, ...(captcha ? { captcha } : {}) } });
     if ("ok" in r) return { via: "server", phone: r.phone };
     if (r.error !== "off") return { error: r.error };
   } catch {
     /* Server nicht erreichbar: eingebauten Weg versuchen */
   }
-  const { error } = await supabase().auth.signInWithOtp({ phone, options: { shouldCreateUser: true } });
+  const { error } = await supabase().auth.signInWithOtp({ phone, options: { shouldCreateUser: true, ...(await captchaOptions()) } });
   return error ? { error: "off" } : { via: "db", phone };
 }
 

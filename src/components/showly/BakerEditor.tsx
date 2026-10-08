@@ -23,6 +23,8 @@ import {
   isDirectSweet,
 } from "@/showly/sweets";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
+import { FoodFields, emptyFood, useFoodCopy } from "@/components/showly/FoodInfo";
+import { cleanFoodInfo, foodInfoComplete, type FoodInfo } from "@/showly/cakeRules";
 import { BankForm, ConnectBox } from "@/components/showly/PayoutPanel";
 
 const noop = () => undefined;
@@ -185,6 +187,7 @@ interface Draft {
   city: string;
   radiusKm: number;
   leadDays: number;
+  maxPerDay: number;
   specialties: SweetCat[];
   diets: string;
   photos: MediaRef[];
@@ -208,6 +211,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
     city: b.city,
     radiusKm: b.radiusKm,
     leadDays: b.leadDays,
+    maxPerDay: b.maxPerDay ?? 0,
     specialties: [...b.specialties],
     diets: (b.diets || []).join(", "),
     photos: [...(b.photos || [])],
@@ -263,6 +267,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
         city: draft.city.trim().slice(0, 60),
         radiusKm: draft.radiusKm,
         leadDays: Math.max(1, draft.leadDays),
+        maxPerDay: draft.maxPerDay,
         specialties: draft.specialties.length ? draft.specialties : b.specialties,
         photos: draft.photos,
         diets: draft.diets
@@ -286,6 +291,7 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
       city: draft.city.trim().slice(0, 60),
       radiusKm: draft.radiusKm,
       leadDays: Math.max(1, draft.leadDays),
+      maxPerDay: draft.maxPerDay,
       specialties: draft.specialties.length ? draft.specialties : b.specialties,
       diets: draft.diets
         .split(",")
@@ -439,6 +445,11 @@ export function BakerEditor({ b, onSaved }: { b: Baker; onSaved: () => void }) {
               <input type="number" min={1} max={120} value={draft.leadDays} onChange={(e) => set("leadDays", int(e.target.value, 120))} />
             </label>
           </div>
+          <label className="pe-field">
+            <span className="pe-label">{CAP[(lang as "de" | "en" | "es") ?? "de"]?.h ?? CAP.de.h}</span>
+            <input type="number" min={0} max={500} value={draft.maxPerDay} onChange={(e) => set("maxPerDay", int(e.target.value, 500))} />
+            <span className="pe-hint">{CAP[(lang as "de" | "en" | "es") ?? "de"]?.p ?? CAP.de.p}</span>
+          </label>
         </section>
 
         <section className="pe-card">
@@ -524,6 +535,13 @@ export function SpecPicker({ value, onChange }: { value: SweetCat[]; onChange: (
   );
 }
 
+/* Tageskapazität der Backstube */
+const CAP = {
+  de: { h: "Höchstens Aufträge pro Tag", p: "0 = ohne Grenze. Ist ein Tag voll, können Kunden ihn nicht mehr wählen." },
+  en: { h: "Max. orders per day", p: "0 = no limit. Once a day is full, customers can't pick it anymore." },
+  es: { h: "Máx. pedidos por día", p: "0 = sin límite. Cuando un día está completo, los clientes ya no pueden elegirlo." },
+} as const;
+
 export interface OfferDraft {
   id?: number | undefined;
   name: string;
@@ -536,6 +554,9 @@ export interface OfferDraft {
   img?: number | undefined;
   /** direkt buchbar zum Festpreis; ohne Angabe gilt die Regel je Kategorie */
   direct?: boolean | undefined;
+  /** Allergene, Zutaten, Haltbarkeit (Pflicht) */
+  food: FoodInfo;
+  leadDays?: number | undefined;
 }
 
 export const emptyOffer = (cat: SweetCat = "birthday"): OfferDraft => ({
@@ -545,6 +566,7 @@ export const emptyOffer = (cat: SweetCat = "birthday"): OfferDraft => ({
   price: "",
   unit: "set",
   minQty: 1,
+  food: emptyFood(),
 });
 
 export function parsePrice(v: string) {
@@ -652,6 +674,7 @@ export function OfferFields({
         <textarea value={d.desc} maxLength={600} onChange={(e) => up("desc", e.target.value)} />
         <ContactHint text={d.name + "\n" + d.desc} />
       </label>
+      <FoodFields f={d.food} onChange={(f) => up("food", f)} leadDays={d.leadDays} onLead={(n) => up("leadDays", n)} />
       <fieldset className="pe-mode">
         <legend className="pe-label">
           {DIRECT[lang as "de" | "en" | "es"]?.h ?? DIRECT.de.h}
@@ -692,6 +715,7 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
   const [, bump] = useState(0);
   const [open, setOpen] = useState<OfferDraft | null>(null);
   const list = sweetsOf(b.id);
+  const foodNeed = useFoodCopy().need;
 
   function edit(s: Sweet) {
     setOpen({
@@ -705,6 +729,8 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       photo: s.photo,
       img: s.img,
       direct: isDirectSweet(s),
+      food: s.food ?? emptyFood(),
+      leadDays: s.leadDays,
     });
   }
 
@@ -712,7 +738,9 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
     if (!open) return;
     const price = parsePrice(open.price);
     if (!open.name.trim() || !price) return toast(X.offerNeed);
+    if (!foodInfoComplete(cleanFoodInfo(open.food))) return toast(foodNeed);
     if (!okText(open.name, open.desc)) return;
+    const food = cleanFoodInfo(open.food)!;
     const prev = open.id ? list.find((s) => s.id === open.id) : undefined;
     if (prev?.photo && prev.photo.id !== open.photo?.id) void deleteMedia(prev.photo.id);
     if (cloud) {
@@ -726,6 +754,8 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
         minQty: open.unit === "set" ? 1 : open.minQty,
         img: open.img,
         direct: open.direct ?? isDirectSweet({ cat: open.cat }),
+        food,
+        leadDays: open.leadDays,
       }).then(async (r) => {
         if ("error" in r) return toast(r.error);
         await refreshCloud();
@@ -747,6 +777,8 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       photo: open.photo,
       img: open.photo ? undefined : open.img,
       direct: open.direct ?? isDirectSweet({ cat: open.cat }),
+      food,
+      leadDays: open.leadDays,
     });
     toast(X.offerSaved);
     setOpen(null);

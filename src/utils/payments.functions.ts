@@ -100,10 +100,30 @@ export const verifyShowlySession = createServerFn({ method: "POST" })
 
 /** Warenkorb bezahlen. Der Browser schickt nur Kennungen und Mengen, die
  *  Beträge rechnet der Server selbst aus dem Katalog nach. */
+/** Warenkorb zur offenen Zahlung merken (nur angemeldet, nur mit Datenbank) */
+async function saveDraft(sessionId: string, environment: StripeEnv, snapshot: unknown, holdKey: string | null) {
+  try {
+    const { adminClient, requireUser } = await import("@/lib/supabase.server");
+    const { cleanSnapshot } = await import("@/showly/cartSnapshot");
+    const { user } = await requireUser();
+    await adminClient()
+      .from("checkout_drafts")
+      .upsert({
+        session_id: sessionId,
+        customer: user.id,
+        environment,
+        snapshot: cleanSnapshot(snapshot as import("@/showly/cartSnapshot").Snapshot),
+        hold_key: holdKey,
+      });
+  } catch {
+    /* ohne Anmeldung oder Datenbank: Rückkehrseite verbucht wie bisher */
+  }
+}
+
 export const createCartCheckout = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
-      shop: { shopId: number; mode: "rent" | "buy"; qty: number }[];
+      shop: import("@/showly/pricing").CartShopLine[];
       bookings: {
         artistId: number;
         hours: number;
@@ -117,6 +137,9 @@ export const createCartCheckout = createServerFn({ method: "POST" })
       returnUrl: string;
       environment: StripeEnv;
       locale?: "de" | "en" | "es";
+      /** kompletter Warenkorb; der Stripe-Webhook verbucht damit die Zahlung,
+          auch wenn der Browser nach dem Bezahlen zugeht */
+      snapshot?: import("@/showly/cartSnapshot").Snapshot;
     }) => {
       if (!Array.isArray(data.shop) || !Array.isArray(data.bookings))
         throw new Error("Invalid cart");
@@ -138,6 +161,9 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         throw new Error("Cart too large");
       for (const l of data.shop) {
         if (!Number.isInteger(l.shopId) || (l.mode !== "rent" && l.mode !== "buy")) throw new Error("Invalid item");
+        if ((l.from && !/^\d{4}-\d{2}-\d{2}$/.test(l.from)) || (l.to && !/^\d{4}-\d{2}-\d{2}$/.test(l.to))) throw new Error("Invalid rental dates");
+        if (l.size !== undefined && (typeof l.size !== "string" || l.size.length > 20)) throw new Error("Invalid size");
+        if (l.ship !== undefined && !["pickup", "delivery", "shipping"].includes(l.ship)) throw new Error("Invalid delivery");
       }
       for (const b of data.bookings) {
         if (!Number.isInteger(b.artistId) || !/^\d{4}-\d{2}-\d{2}$/.test(b.dateISO) || !/^\d{2}:\d{2}$/.test(b.slot))
@@ -195,6 +221,18 @@ export const createCartCheckout = createServerFn({ method: "POST" })
     const total = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
     if (total < 50) return { error: "Amount must be at least 50 cents" };
 
+    /* Torten: Vorlauf, Tageskapazität und Allergenangaben auf dem Server prüfen */
+    if (data.sweets?.length) {
+      try {
+        const { adminClient } = await import("@/lib/supabase.server");
+        const { checkCakeOrders } = await import("@/lib/cakes.server");
+        const err = await checkCakeOrders(adminClient(), data.sweets);
+        if (err) return { error: err };
+      } catch {
+        /* ohne Datenbank (Vorschau) keine echten Anbieter */
+      }
+    }
+
     /* Termine echter Künstler während des Bezahlens reservieren. Die
        Datenbank sperrt dabei die Zeile des Künstlers und lässt keine
        Überschneidung zu (inkl. einer Stunde Fahrtzeit, auch mit Terminen aus
@@ -225,6 +263,32 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         holdKey = null; // ohne Datenbank (Vorschau) gibt es keine echten Termine
       }
     }
+    /* Mietartikel für den Zeitraum reservieren (Stückzahl, Reinigungspuffer) */
+    try {
+      const { rentalItems, claimRentals } = await import("@/lib/rentals.server");
+      const { findItem } = await import("@/showly/pricing");
+      const rent = rentalItems(data.shop, (id) => findItem(id, extra));
+      if (rent.length) {
+        const { newHoldKey, HOLD_MINUTES } = await import("@/lib/slots.server");
+        holdKey ??= newHoldKey();
+        holdUntil ??= new Date(Date.now() + HOLD_MINUTES * 60_000).toISOString();
+        const r = await claimRentals(rent, "hold", holdKey);
+        if (!r.ok) {
+          const { releaseHold } = await import("@/lib/slots.server");
+          await releaseHold(holdKey).catch(() => undefined);
+          return {
+            error:
+              lang === "en"
+                ? "A rental item is already taken for the chosen period. Please choose another period."
+                : lang === "es"
+                  ? "Un artículo de alquiler ya está reservado en ese periodo. Elige otro periodo."
+                  : "Ein Mietartikel ist im gewählten Zeitraum schon vergeben. Bitte einen anderen Zeitraum wählen.",
+          };
+        }
+      }
+    } catch {
+      /* ohne Datenbank (Vorschau) keine echten Mietartikel */
+    }
     try {
       const stripe = createStripeClient(data.environment);
       const session = await stripe.checkout.sessions.create({
@@ -239,6 +303,8 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         mode: "payment",
         ui_mode: "embedded_page",
         return_url: data.returnUrl,
+        /* Bestell-Button eindeutig („Bezahlen“, § 312j Abs. 3 BGB) */
+        submit_type: "pay",
         payment_intent_data: { description: "Showly Bestellung" },
         locale: lang,
         ...(data.customerEmail && { customer_email: data.customerEmail }),
@@ -248,6 +314,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
           ? { metadata: { hold_key: holdKey }, expires_at: Math.floor(Date.now() / 1000) + 30 * 60 }
           : {}),
       });
+      if (data.snapshot) await saveDraft(session.id, data.environment, data.snapshot, holdKey);
       return { clientSecret: session.client_secret ?? "", ...(holdKey && holdUntil ? { holdKey, holdUntil } : {}) };
     } catch (error) {
       if (holdKey) {

@@ -18,7 +18,7 @@ import { adminClient } from "./supabase.server";
 /** So lange bleibt ein Termin während des Bezahlens reserviert */
 export const HOLD_MINUTES = 15;
 
-export type ClaimReason = "busy" | "blocked" | "external" | "unknown";
+export type ClaimReason = "busy" | "blocked" | "external" | "hours" | "unknown";
 export type ClaimResult = { ok: true } | { ok: false; index: number; reason: ClaimReason };
 
 export interface ClaimItem {
@@ -63,6 +63,12 @@ export async function releaseHold(holdKey: string): Promise<void> {
 /** Verständliche Meldung, wenn ein Termin nicht (mehr) frei ist */
 export function claimMessage(reason: ClaimReason, lang: string, when: { day: string; slot: string }): string {
   const d = when.day.split("-").reverse().join(".");
+  if (reason === "hours")
+    return lang === "en"
+      ? `On ${d} at ${when.slot} the show is outside the artist's working hours. Please choose another time.`
+      : lang === "es"
+        ? `El ${d} a las ${when.slot} el show queda fuera del horario del artista. Elige otra hora.`
+        : `Am ${d} um ${when.slot} liegt die Show außerhalb der Arbeitszeiten des Künstlers. Bitte wähle eine andere Uhrzeit.`;
   if (lang === "en")
     return reason === "external"
       ? `The artist already has another commitment around ${when.slot} on ${d} (incl. one hour of travel time). Please choose another time.`

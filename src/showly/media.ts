@@ -77,18 +77,23 @@ async function shrinkImage(file: File): Promise<{ blob: Blob; ratio: number }> {
     });
     const ratio = img.naturalWidth / img.naturalHeight || 1;
     const scale = Math.min(1, MAX_EDGE / Math.max(img.naturalWidth, img.naturalHeight));
-    if (scale >= 1 && file.size < 900_000) return { blob: file, ratio };
+    /* Immer neu zeichnen, auch kleine Fotos: Dabei fallen EXIF-Daten mit
+       Aufnahmeort (GPS), Kamera und Datum weg. Die Drehung übernimmt der
+       Browser beim Zeichnen. */
 
     const canvas = document.createElement("canvas");
     canvas.width = Math.round(img.naturalWidth * scale);
     canvas.height = Math.round(img.naturalHeight * scale);
     const ctx = canvas.getContext("2d");
     if (!ctx) return { blob: file, ratio };
+    /* JPEG kennt keine Transparenz: weißer Grund statt schwarzer Flächen */
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     const blob = await new Promise<Blob | null>((r) =>
       canvas.toBlob(r, "image/jpeg", JPEG_QUALITY),
     );
-    return { blob: blob && blob.size < file.size ? blob : file, ratio };
+    return { blob: blob ?? file, ratio };
   } catch {
     return { blob: file, ratio: 1 };
   } finally {

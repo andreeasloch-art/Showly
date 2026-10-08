@@ -14,6 +14,8 @@ import { SHOP_ITEMS, type Lang, type LText, type ShopItem } from "./data";
 import type { MediaRef } from "./media";
 import { mediaUrlSync, preloadMedia } from "./media";
 import { loadJSON, saveJSON } from "./persist";
+import type { FoodInfo } from "./cakeRules";
+import type { RentTerms } from "./rental";
 
 export type SweetCat =
   | "wedding"
@@ -71,6 +73,8 @@ export interface Baker {
   specialties: SweetCat[];
   /** Vorlauf in Tagen */
   leadDays: number;
+  /** höchstens so viele Aufträge pro Tag (0 oder leer = ohne Grenze) */
+  maxPerDay?: number | undefined;
   /** Liefergebiet in Kilometern, 0 = nur Abholung */
   radiusKm: number;
   verified: boolean;
@@ -103,6 +107,10 @@ export interface Sweet {
   /** Festpreis-Paket, direkt buchbar (z. B. 20 Macarons). Ohne Angabe gilt
    *  die Regel in isDirectSweet: Spezial- und Motivtorten nur auf Anfrage. */
   direct?: boolean;
+  /** Allergene, Zutaten, Haltbarkeit (LMIV, cakeRules.ts) */
+  food?: FoodInfo | undefined;
+  /** eigener Vorlauf für dieses Angebot (z. B. Motivtorte 5 Tage) */
+  leadDays?: number | undefined;
 }
 
 /* Individuelle Torten brauchen Absprache (Motiv, Etagen, Text), feste
@@ -111,6 +119,42 @@ export interface Sweet {
 const REQUEST_CATS = ["wedding", "birthday", "motif"];
 export function isDirectSweet(s: Pick<Sweet, "cat" | "direct">): boolean {
   return s.direct ?? !REQUEST_CATS.includes(s.cat);
+}
+
+/* Beispielangebote: typische Angaben je Kategorie, damit die Vorschau zeigt,
+   wie Allergene und Zutaten vor dem Kauf erscheinen. Echte Anbieter müssen
+   ihre eigenen Angaben machen (cakeRules.foodInfoComplete). */
+const DEMO_FOOD: Partial<Record<SweetCat, Pick<FoodInfo, "allergens" | "ingredients" | "shelfLife" | "storage">>> = {
+  patisserie: {
+    allergens: ["nuts", "eggs", "milk", "gluten"],
+    ingredients: "Mandelmehl, Weizenmehl, Zucker, Eiweiß, Butter, Sahne, Lebensmittelfarbe",
+    shelfLife: "4 Tage",
+    storage: "cool",
+  },
+  candybar: {
+    allergens: ["gluten", "milk", "eggs", "soy", "nuts"],
+    ingredients: "Je nach Auswahl: Gebäck, Schokolade, Fruchtgummi, Marshmallows",
+    shelfLife: "3 Tage",
+    storage: "room",
+  },
+};
+const DEMO_FOOD_DEFAULT: Pick<FoodInfo, "allergens" | "ingredients" | "shelfLife" | "storage"> = {
+  allergens: ["gluten", "eggs", "milk"],
+  ingredients: "Weizenmehl, Zucker, Butter, Eier, Sahne, Frischkäse, Vanille, Lebensmittelfarbe",
+  shelfLife: "2 Tage",
+  storage: "cool",
+};
+
+/** Angaben zum Angebot; bei Beispielangeboten typische Werte */
+export function foodOf(s: Sweet): FoodInfo | undefined {
+  if (s.food) return s.food;
+  if (!bakerOf(s.bakerId)?.demo) return undefined;
+  return { ...(DEMO_FOOD[s.cat] ?? DEMO_FOOD_DEFAULT), noAllergens: false, traces: ["peanuts"] };
+}
+
+/** Vorlauf in Tagen: eigener Wert des Angebots, sonst der des Anbieters */
+export function leadOf(s: Sweet): number {
+  return s.leadDays ?? bakerOf(s.bakerId)?.leadDays ?? 3;
 }
 
 export interface SweetRequest {
@@ -531,6 +575,8 @@ export interface DecoInput {
   buy: number;
   rent: number;
   photo?: MediaRef | undefined;
+  /** Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
+  terms?: RentTerms | undefined;
 }
 
 function decoToItem(d: DecoInput & { id: number }): ShopItem {
@@ -547,6 +593,7 @@ function decoToItem(d: DecoInput & { id: number }): ShopItem {
     name: d.name,
     desc: d.desc,
     photo: d.photo,
+    ...(d.terms ?? {}),
     own: true,
   };
 }

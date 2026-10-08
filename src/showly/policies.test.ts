@@ -8,6 +8,7 @@ import {
   depositAutoRelease,
   frequentComplainer,
   guideline,
+  lateFeeCents,
   payoutFor,
   pickReplacements,
   policySnapshot,
@@ -105,6 +106,11 @@ describe("Reklamation, Schaden, Bewertung, Auszahlung", () => {
     expect(damageCents([{ key: "fleck" }, { key: "riss" }], { carefree: false, depositCents: 10000 })).toBe(4000);
     expect(damageCents([{ key: "fleck" }, { key: "riss" }], { carefree: true, depositCents: 10000 })).toBe(0);
     expect(damageCents([{ key: "verlust" }], { carefree: true, valueCents: 30000, depositCents: 10000 })).toBe(10000);
+  });
+  it("Verspätung: je Tag der Tagesmietpreis, höchstens 14 Tage", () => {
+    expect(lateFeeCents(2, 1500)).toBe(3000);
+    expect(lateFeeCents(30, 1000)).toBe(14000);
+    expect(lateFeeCents(0, 1000)).toBe(0);
   });
   it("Kaution nach 72 h automatisch frei", () => {
     const r = "2026-10-01T10:00:00Z";

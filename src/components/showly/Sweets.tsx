@@ -1,7 +1,7 @@
 /* Bausteine für Torten & Süßes: Texte, Anbieterkarte, Angebotskarte,
    Anfrage-Fenster und die Liste eigener Anfragen. */
-import { ComplaintForm } from "./Fair";
-import { complaintOpen } from "@/showly/policies";
+import { CancelPolicyNote, ComplaintForm } from "./Fair";
+import { complaintOpen, policySnapshot } from "@/showly/policies";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -424,6 +424,43 @@ function addDays(n: number) {
 
 /* Torten nach Wunsch: Größe (Personen), Etagen, Geschmack, Füllung, Aufschrift */
 const CUSTOM_CATS: SweetCat[] = ["wedding", "birthday", "motif"];
+/* Übergabe der Torte: Abholung oder Lieferung, Zeitfenster, Kühlkette */
+const HANDOVER = {
+  de: {
+    label: "Übergabe",
+    pickup: "Abholung",
+    delivery: "Lieferung",
+    upTo: (km: number) => `bis ${km} km`,
+    window: "Lieferfenster",
+    pickupTime: "Abholzeit",
+    any: "nach Absprache",
+    clock: "Uhr",
+    cool: "Kühlkette: Bei Abholung bitte gekühlt transportieren; bei Lieferung ist der Anbieter bis zur Übergabe verantwortlich.",
+  },
+  en: {
+    label: "Handover",
+    pickup: "Pickup",
+    delivery: "Delivery",
+    upTo: (km: number) => `up to ${km} km`,
+    window: "Delivery window",
+    pickupTime: "Pickup time",
+    any: "to be agreed",
+    clock: "",
+    cool: "Cold chain: please keep it chilled when you pick it up; for delivery the baker is responsible until handover.",
+  },
+  es: {
+    label: "Entrega",
+    pickup: "Recogida",
+    delivery: "Envío",
+    upTo: (km: number) => `hasta ${km} km`,
+    window: "Franja de entrega",
+    pickupTime: "Hora de recogida",
+    any: "a convenir",
+    clock: "h",
+    cool: "Cadena de frío: si la recoges, transpórtala refrigerada; con envío, el proveedor responde hasta la entrega.",
+  },
+};
+
 const CFG = {
   de: {
     h: "Deine Torte",
@@ -491,6 +528,11 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   /* Torten-Konfigurator (nur Torten nach Wunsch) */
   const custom = CUSTOM_CATS.includes(s.cat);
   const [cfg, setCfg] = useState({ tiers: "1", flavor: "", filling: "", text: "" });
+  /* Übergabe: Abholung oder Lieferung (nur im Liefergebiet) und Zeitfenster */
+  const canDeliver = (b?.radiusKm ?? 0) > 0;
+  const [handover, setHandover] = useState<"pickup" | "delivery">("pickup");
+  const [slot, setSlot] = useState("");
+  const H = HANDOVER[(lang as "de" | "en" | "es") ?? "de"] ?? HANDOVER.de;
   const K = CFG[(lang as "de" | "en" | "es") ?? "de"] ?? CFG.de;
   const food = foodOf(s);
   /* Lebensmittelrecht: ohne Allergen- und Zutatenangaben kein Verkauf */
@@ -499,6 +541,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   /* Festpreis-Paket: kommt als Buchung in den Warenkorb und wird bezahlt */
   const fixed = isDirectSweet(s);
   const allWishes = () =>
+    `${H.label}: ${handover === "delivery" ? H.delivery : H.pickup}${slot ? `, ${slot} ${H.clock}` : ""}\n` +
     (custom
       ? [
           `${K.tiers}: ${cfg.tiers}`,
@@ -604,6 +647,31 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
             <span className="pe-label">{R.city}</span>
             <input value={city} maxLength={80} onChange={(e) => setCity(e.target.value)} />
           </label>
+          <div className="pe-grid2">
+            <label className="pe-field">
+              <span className="pe-label">{H.label}</span>
+              <select value={handover} onChange={(e) => setHandover(e.target.value as "pickup" | "delivery")}>
+                <option value="pickup">{H.pickup}</option>
+                {canDeliver && (
+                  <option value="delivery">
+                    {H.delivery} ({H.upTo(b?.radiusKm ?? 0)})
+                  </option>
+                )}
+              </select>
+            </label>
+            <label className="pe-field">
+              <span className="pe-label">{handover === "delivery" ? H.window : H.pickupTime}</span>
+              <select value={slot} onChange={(e) => setSlot(e.target.value)}>
+                <option value="">{H.any}</option>
+                {["09–12", "12–15", "15–18", "18–20"].map((w) => (
+                  <option key={w} value={w}>
+                    {w} {H.clock}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <p className="pe-hint">{H.cool}</p>
           {custom && (
             <fieldset className="cake-cfg">
               <legend className="pe-label">{K.h}</legend>
@@ -641,6 +709,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
             <ContactHint text={wishes} />
           </label>
           <FoodFacts f={food} demo={b?.demo} />
+          <CancelPolicyNote policy={policySnapshot("cake", "moderat", lead)} compact />
           <div className="req-sum">
             <span>
               <b>{fixed ? C.fixed : R.estimate}</b>

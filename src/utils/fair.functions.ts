@@ -562,10 +562,11 @@ export const handoverConfirm = createServerFn({ method: "POST" })
 
 /** Schaden nach Katalog melden (bis 72 h nach Rückgabe); Rest der Kaution sofort zurück */
 export const reportDamage = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; items: { key: string; qty?: number }[]; valueCents?: number; note?: string }) => ({
+  .inputValidator((d: { orderId: number; items: { key: string; qty?: number }[]; valueCents?: number; lateDays?: number; note?: string }) => ({
     orderId: int(d.orderId, 0, 1e12),
     items: (Array.isArray(d.items) ? d.items : []).slice(0, 10).map((i) => ({ key: s(i?.key, 20), qty: int(i?.qty ?? 1, 1, 20) })),
     valueCents: int(d.valueCents, 0, 1e8),
+    lateDays: int(d.lateDays, 0, 14),
     note: s(d.note, 1000),
   }))
   .handler(async ({ data }): Promise<{ ok: true; keptCents: number } | { error: string }> => {
@@ -581,18 +582,36 @@ export const reportDamage = createServerFn({ method: "POST" })
     if (Date.now() > new Date(o.returned_at).getTime() + DAMAGE_REPORT_HOURS * 3600000)
       return { error: "Die Frist von 72 Stunden ist vorbei; die Kaution ist freigegeben" };
     const dep = (o.deposit_cents ?? 0) - (o.deposit_refunded_cents ?? 0);
-    const kept = damageCents(data.items, { carefree: o.carefree === true, valueCents: data.valueCents, depositCents: dep });
+    /* Verspätung: je Tag der Tagesmietpreis der gemieteten Artikel (aus dem Katalog) */
+    let lateCents = 0;
+    if (data.lateDays > 0) {
+      const { lateFeeCents } = await import("@/showly/policies");
+      const { loadCatalog } = await import("@/lib/catalog.server");
+      const { findItem } = await import("@/showly/pricing");
+      const rents = (o.items || []).filter((i) => i.mode === "rent");
+      const cat = await loadCatalog(db, { items: rents.map((i) => i.shopId) });
+      const dayRate = rents.reduce((n, i) => n + Math.round(((cat.extra.item?.(i.shopId) ?? findItem(i.shopId))?.rent ?? 0) * 100) * i.qty, 0);
+      lateCents = lateFeeCents(data.lateDays, dayRate);
+    }
+    const kept = Math.min(
+      dep,
+      damageCents(data.items, { carefree: o.carefree === true, valueCents: data.valueCents, depositCents: dep }) + lateCents,
+    );
     const now = new Date().toISOString();
     await db
       .from("shop_orders")
-      .update({ damage: { items: data.items, cents: kept, ...(data.note ? { note: data.note } : {}) }, damage_reported_at: now, deposit_released_at: now })
+      .update({
+        damage: { items: [...data.items, ...(data.lateDays ? [{ key: "spaet", qty: data.lateDays }] : [])], cents: kept, ...(data.note ? { note: data.note } : {}) },
+        damage_reported_at: now,
+        deposit_released_at: now,
+      })
       .eq("id", o.id);
     const { refundDeposit } = await import("@/lib/money.server");
     if (dep - kept > 0) await refundDeposit(o.id, dep - kept).catch(() => null);
     const { notify } = await import("@/lib/notify.server");
     await notify(o.customer, "Abrechnung deiner Kaution", [
       kept
-        ? `Der Anbieter hat einen Schaden nach dem Schadenskatalog gemeldet: ${euro(kept)} werden von der Kaution einbehalten${o.carefree ? " (kleine Schäden sind durch dein Sorglos-Paket abgedeckt)" : ""}. Der Rest kommt zurück.`
+        ? `Der Anbieter hat einen Schaden nach dem Schadenskatalog${data.lateDays ? ` bzw. eine verspätete Rückgabe (${data.lateDays} Tag(e), je Tag der Tagesmietpreis)` : ""} gemeldet: ${euro(kept)} werden von der Kaution einbehalten${o.carefree ? " (kleine Schäden sind durch dein Sorglos-Paket abgedeckt)" : ""}. Der Rest kommt zurück.`
         : `Kein Abzug${o.carefree ? " dank Sorglos-Paket" : ""}: Die Kaution kommt vollständig zurück.`,
       kept ? "Bist du nicht einverstanden, kannst du in der App widersprechen. Dann prüft das Showly-Team den Fall anhand der Übergabefotos." : "",
     ].filter(Boolean), { path: "/dashboard" }).catch(() => false);

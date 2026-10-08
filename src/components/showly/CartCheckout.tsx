@@ -17,12 +17,13 @@ import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
 import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice } from "@/showly/pricing";
 import { RentLineEditor, SizeSelect, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
-import { SWEETS, bakerOf, sweetBg } from "@/showly/sweets";
+import { SWEETS, bakerOf, leadOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
 import { GuaranteeBadge } from "@/components/showly/Guarantee";
 import { CancelPolicyNote } from "@/components/showly/Fair";
+import { policySnapshot } from "@/showly/policies";
 
 const TEXT = {
   de: {
@@ -595,6 +596,7 @@ export function CartCheckout() {
                               {b ? String(L(b.name)) : ""} · {fmtDate(r.dateISO)} · {r.qty}×
                             </small>
                             {r.wishes && <small className="co-wish">„{r.wishes}“</small>}
+                            {sw && <CancelPolicyNote policy={policySnapshot("cake", "moderat", leadOf(sw))} compact />}
                           </div>
                           <div className="co-line-end">
                             <b>

@@ -242,6 +242,8 @@ export type SweetRequestRow = {
   customer_name: string | null;
   price_cents: number;
   direct: boolean;
+  /** Stornoregel Torte (0018) */
+  policy?: PolicyJson | null;
   status: SweetStatus;
   stripe_session_id: string | null;
   created_at: string;

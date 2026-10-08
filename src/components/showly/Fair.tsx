@@ -524,7 +524,7 @@ export function DamageCatalog({ deposit }: { deposit?: number | undefined }) {
         ))}
       </ul>
       <p className="fair-muted">
-        Normale Reinigung ist im Preis enthalten. Abgezogen wird höchstens die Kaution{deposit ? ` (${euro(deposit)})` : ""}. Ausgabe und Rückgabe werden mit Fotos
+        Normale Reinigung ist im Preis enthalten. Bei verspäteter Rückgabe fällt je Tag der Tagesmietpreis an. Abgezogen wird höchstens die Kaution{deposit ? ` (${euro(deposit)})` : ""}. Ausgabe und Rückgabe werden mit Fotos
         protokolliert. Meldet der Vermieter innerhalb von 72 Stunden nach Rückgabe keinen Schaden, kommt die Kaution automatisch zurück; du kannst jedem Abzug
         widersprechen. Storno: kostenlos bis {RENT_FREE_HOURS / 24} Tage vor Mietbeginn, danach {Math.round(RENT_LATE_RATE * 100)} % plus Versand.
       </p>
@@ -622,6 +622,7 @@ export function HandoverTools({ orderId, returned, reported }: { orderId: number
   const [photos, setPhotos] = useState<string[]>([]);
   const [items, setItems] = useState<Record<string, number>>({});
   const [value, setValue] = useState("");
+  const [late, setLate] = useState("");
   const ref: EvRef = { kind: "order", id: orderId };
   async function record(step: "out" | "back") {
     const { handoverRecord } = await import("@/utils/fair.functions");
@@ -636,7 +637,7 @@ export function HandoverTools({ orderId, returned, reported }: { orderId: number
       .filter(([, q]) => q > 0)
       .map(([key, qty]) => ({ key, qty }));
     const r = await reportDamage({
-      data: { orderId, items: list, valueCents: Math.round(Number(value.replace(",", ".")) * 100) || 0 },
+      data: { orderId, items: list, valueCents: Math.round(Number(value.replace(",", ".")) * 100) || 0, lateDays: Number(late) || 0 },
     }).catch(() => ({ error: "Hat nicht geklappt" }));
     if ("error" in r) return toast(r.error);
     toast(r.keptCents ? `${euro(r.keptCents / 100)} einbehalten, Rest erstattet` : "Kaution vollständig erstattet");
@@ -675,8 +676,12 @@ export function HandoverTools({ orderId, returned, reported }: { orderId: number
           {(items["verlust"] ?? 0) > 0 && (
             <input inputMode="decimal" placeholder="Zeitwert in €" value={value} onChange={(e) => setValue(e.target.value)} aria-label="Zeitwert" />
           )}
+          <label className="fair-row">
+            <span>Verspätete Rückgabe (Tage, je Tag Tagesmietpreis)</span>
+            <input inputMode="numeric" placeholder="0" value={late} onChange={(e) => setLate(e.target.value.replace(/\D/g, "").slice(0, 2))} aria-label="Tage zu spät" />
+          </label>
           <button type="button" className="dash26-mini" onClick={() => void damage()}>
-            {Object.values(items).some((q) => q > 0) ? "Schaden melden, Rest erstatten" : "Kein Schaden: Kaution erstatten"}
+            {Object.values(items).some((q) => q > 0) || Number(late) > 0 ? "Abzug melden, Rest erstatten" : "Kein Schaden: Kaution erstatten"}
           </button>
         </>
       )}

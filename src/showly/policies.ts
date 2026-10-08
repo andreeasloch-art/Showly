@@ -316,6 +316,12 @@ export function damageCents(
   return Math.min(sum, opts.depositCents);
 }
 
+/** Verspätete Rückgabe: je weiterem Tag der Tagesmietpreis (AGB § 14 Abs. 4), höchstens 14 Tage */
+export function lateFeeCents(lateDays: number, dayRateCents: number): number {
+  const d = Math.max(0, Math.min(14, Math.round(lateDays) || 0));
+  return d * Math.max(0, Math.round(dayRateCents));
+}
+
 /** Meldefrist vorbei, ohne Schaden: Kaution automatisch freigeben */
 export function depositAutoRelease(returnedAt: string | null, damageReported: boolean, now: number): boolean {
   if (!returnedAt || damageReported) return false;

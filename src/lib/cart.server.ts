@@ -8,6 +8,7 @@ import type { BookingRow } from "@/lib/database.types";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
 import type { Snapshot } from "@/showly/cartSnapshot";
 import { policySnapshot } from "@/showly/policies";
+import { SWEETS, leadOf } from "@/showly/sweets";
 
 /* ---------------------------------------------------------------------------
  * Preise eines Künstlers: Katalog (Beispielprofile) oder Datenbank
@@ -380,6 +381,11 @@ export async function recordCartCore(
         status: direct ? "booked" : "sent",
         stripe_session_id: direct ? data.sessionId ?? null : null,
         sub_order_id: partSub.get(`sweet:${j}`) ?? null,
+        /* Stornoregel Torte (kostenlos bis Produktionsbeginn) mit der Bestellung speichern */
+        policy: policySnapshot("cake", "moderat", (() => {
+          const sweet = cat.extra?.sweet?.(r.sweetId) ?? SWEETS.find((x) => x.id === r.sweetId);
+          return sweet ? leadOf(sweet) : 0;
+        })()),
       })
       .select("id")
       .single();

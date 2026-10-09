@@ -310,21 +310,9 @@ export function ArtistDetail({ id }: { id: string }) {
             </div>
           </div>
 
-          <section className="detail-block">
-            <h2 className="detail-section-title">{t("detail.about", { name: L(a.name) })}</h2>
-            <p className="detail-text">{L(a.desc)}</p>
-            <p className="travel-line">
-              <Icon name="radius" /> {travelLabel(km, lang, L(a.loc))}
-            </p>
-            <p className="detail-text">
-              {t(shows > 0 ? "detail.aboutP" : "detail.aboutPNew", {
-                exp: L(a.exp),
-                ev: showsLabel,
-                name: L(a.name),
-                langs: (L(a.langs) ?? []).join(", "),
-              })}
-            </p>
-          </section>
+          <p className="travel-line travel-solo">
+            <Icon name="radius" /> {travelLabel(km, lang, L(a.loc))}
+          </p>
 
           {/* Leistung und Technik standen vorher als drei einzelne Abschnitte
               untereinander. Zusammengefasst liest sich das Profil ruhiger. */}

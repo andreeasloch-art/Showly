@@ -764,6 +764,7 @@ export type Database = {
       provision_korrekturen: Table<ProvisionKorrekturRow>;
       verrechnungen: Table<VerrechnungRow>;
       auszahlungen: Table<AuszahlungRow>;
+      spotlights: Table<SpotlightRow>;
     };
     Views: {
       artists_public: Table<
@@ -816,6 +817,10 @@ export type Database = {
       beleg_zaehlen: { Args: { p_anbieter: string; p_cent: number; p_buchungen: number }; Returns: AnbieterRow };
       anbieter_jahreswechsel: { Args: Record<string, never>; Returns: number };
       anbieter_praefix: { Args: { p_id: string }; Returns: string };
+      spotlight_reservieren: {
+        Args: { p: unknown };
+        Returns: { id?: number; error?: string };
+      };
       wochenabrechnung_buchen: {
         Args: { p: unknown };
         Returns: { status: "neu" | "vorhanden" | "gesperrt" | "unbekannt"; id?: number; provisionsrechnung_id?: number | null; abrechnung_id?: number };
@@ -835,3 +840,24 @@ export type Database = {
     };
   };
 }
+
+/** Top Act der Woche (0022) */
+export type SpotlightRow = {
+  id: number;
+  owner: string;
+  artist_id: number | null;
+  city: string;
+  city_slug: string;
+  name: string;
+  cat: string;
+  tagline: string;
+  link: string | null;
+  starts_on: string;
+  ends_on: string;
+  weeks: number;
+  amount_cents: number;
+  status: "reserved" | "paid" | "cancelled";
+  hold_until: string | null;
+  stripe_session_id: string | null;
+  created_at: string;
+};

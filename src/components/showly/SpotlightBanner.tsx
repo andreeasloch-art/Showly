@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { loadCloudSpotlights } from "@/showly/spotlight";
 import { useNavigate } from "@tanstack/react-router";
 import { useShowly } from "@/showly/store";
 import { Icon } from "@/showly/ui";
@@ -64,6 +65,11 @@ export function SpotlightBanner() {
     refresh();
     return subscribeSpotlights(refresh);
   }, [refresh]);
+
+  /* Gebuchte Top Acts aus der Datenbank laden (einmal je Seitenaufruf) */
+  useEffect(() => {
+    void loadCloudSpotlights();
+  }, []);
 
   if (!spot) return null;
 

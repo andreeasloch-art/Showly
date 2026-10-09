@@ -43,7 +43,7 @@ async function artistTerms(
   }
   const { data: a } = await admin
     .from("artists")
-    .select("id, cat, price_cents, instant_book, published, packages, cancel_tier, surcharges")
+    .select("id, cat, price_cents, instant_book, published, packages, cancel_tier, surcharges, created_at")
     .eq("id", artistId)
     .maybeSingle();
   if (!a || !a.published) return null;
@@ -73,8 +73,11 @@ async function artistTerms(
   const base = pk
     ? Math.round(withSurcharge(pk.price, sc, day) * 100)
     : Math.round(withSurcharge(a.price_cents / 100, sc, day) * 100) * h;
-  const { pickRate } = await import("@/showly/feeRules");
-  const fee = Math.round(base * pickRate(rules, { kind: "artist", providerId: a.id, category: a.cat }, FEE_RATE));
+  const { pickRate, inStartPhase } = await import("@/showly/feeRules");
+  /* Startphase: die ersten 3 Monate nach der Anmeldung ohne Provision */
+  const fee = inStartPhase((a as { created_at?: string }).created_at)
+    ? 0
+    : Math.round(base * pickRate(rules, { kind: "artist", providerId: a.id, category: a.cat }, FEE_RATE));
   return {
     artist_id: a.id as number | null,
     catalog_artist: null as number | null,

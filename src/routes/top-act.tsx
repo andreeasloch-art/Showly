@@ -1,5 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { EmbeddedCheckout, EmbeddedCheckoutProvider } from "@stripe/react-stripe-js";
+import { getStripe, getStripeEnvironment, isPaymentConfigured } from "@/lib/stripe";
+import { isBackendConfigured } from "@/lib/supabase";
 import { useShowly } from "@/showly/store";
 import { CATS } from "@/showly/data";
 import { Icon } from "@/showly/ui";
@@ -15,7 +18,15 @@ export const Route = createFileRoute("/top-act")({
   validateSearch: (search: Record<string, unknown>) => {
     const str = (k: string) =>
       typeof search[k] === "string" ? (search[k] as string).slice(0, 200) : undefined;
-    return { city: str("city"), name: str("name"), cat: str("cat"), link: str("link") };
+    const paid = str("bezahlt");
+    return {
+      city: str("city"),
+      name: str("name"),
+      cat: str("cat"),
+      link: str("link"),
+      /* Rückkehr aus der Zahlung (Stripe-Sitzung) */
+      ...(paid && /^cs_[A-Za-z0-9_]+$/.test(paid) ? { bezahlt: paid } : {}),
+    };
   },
   head: () => ({
     meta: [
@@ -113,10 +124,69 @@ const COPY = {
   },
 } as const;
 
+/* Texte für Wochenwahl, freien Termin und Zahlung */
+const W = {
+  de: {
+    weeks: "Dauer",
+    week: (n: number) => (n === 1 ? "1 Woche" : `${n} Wochen`),
+    total: (eur: number) => `Gesamt ${eur} €`,
+    pay: (eur: number) => `Jetzt buchen und bezahlen · ${eur} €`,
+    free: (d: string) => `Frei ab ${d}`,
+    busy: (d: string) => `Gerade belegt bis ${d}. Du kommst direkt danach dran.`,
+    fromProfile: "Name, Sparte, Bild und Link kommen aus deinem Künstlerprofil.",
+    login: "Den Top-Platz buchen Künstler mit ihrem Konto. Bitte melde dich an.",
+    loginBtn: "Anmelden",
+    booked: "Gebucht! Du bist Top Act der Woche. Die Bestätigung mit deinem Zeitraum kommt per E-Mail.",
+    paying: (a: string, b: string) => `Zeitraum ${a} bis ${b} ist 30 Minuten für dich reserviert.`,
+    back: "Zurück",
+  },
+  en: {
+    weeks: "Duration",
+    week: (n: number) => (n === 1 ? "1 week" : `${n} weeks`),
+    total: (eur: number) => `Total €${eur}`,
+    pay: (eur: number) => `Book and pay now · €${eur}`,
+    free: (d: string) => `Free from ${d}`,
+    busy: (d: string) => `Taken until ${d}. You are next right after.`,
+    fromProfile: "Name, category, image and link come from your artist profile.",
+    login: "Artists book the top spot with their account. Please sign in.",
+    loginBtn: "Sign in",
+    booked: "Booked! You are top act of the week. The confirmation with your dates follows by email.",
+    paying: (a: string, b: string) => `${a} to ${b} is reserved for you for 30 minutes.`,
+    back: "Back",
+  },
+  es: {
+    weeks: "Duración",
+    week: (n: number) => (n === 1 ? "1 semana" : `${n} semanas`),
+    total: (eur: number) => `Total ${eur} €`,
+    pay: (eur: number) => `Reservar y pagar · ${eur} €`,
+    free: (d: string) => `Libre desde ${d}`,
+    busy: (d: string) => `Ocupado hasta ${d}. Vas justo después.`,
+    fromProfile: "Nombre, categoría, imagen y enlace salen de tu perfil de artista.",
+    login: "Los artistas reservan el top act con su cuenta. Inicia sesión.",
+    loginBtn: "Iniciar sesión",
+    booked: "¡Reservado! Eres top act de la semana. Recibirás la confirmación con tus fechas por correo.",
+    paying: (a: string, b: string) => `Del ${a} al ${b} queda reservado 30 minutos para ti.`,
+    back: "Volver",
+  },
+} as const;
+
+const dmy = (d: string) => d.split("-").reverse().join(".");
+
 function TopActPage() {
   const { lang, catLabel, session } = useShowly() as any;
   const T = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
+  const X = W[(lang as "de" | "en" | "es") ?? "de"] ?? W.de;
   const navigate = useNavigate();
+  const { bezahlt } = Route.useSearch();
+  /* Mit Datenbank: echte Buchung über den Server, sonst Vorschau im Browser */
+  const cloud = isBackendConfigured();
+  const loggedIn = !!session?.backend;
+  const [weeks, setWeeks] = useState(1);
+  const [status, setStatus] = useState<{ nextFree: string; busyUntil: string | null } | null>(null);
+  const [pay, setPay] = useState<{ clientSecret: string; startsOn: string; endsOn: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [done, setDone] = useState<string | null>(null);
+  const total = SPOTLIGHT_PRICE * weeks;
   const { city: myCity } = useViewerCity();
   const { city: cityParam, name: nameParam, cat: catParam, link: linkParam } = Route.useSearch();
   const [f, setF] = useState({
@@ -140,26 +210,73 @@ function TopActPage() {
 
   const running = f.city.trim() ? getSpotlightFor(f.city.trim()) : null;
 
+  /* Freier Zeitraum in der gewählten Stadt */
+  useEffect(() => {
+    if (!cloud || f.city.trim().length < 2) return setStatus(null);
+    const t = window.setTimeout(async () => {
+      const { topActStatus } = await import("@/utils/spotlight.functions");
+      const r = await topActStatus({ data: { city: f.city.trim(), weeks } }).catch(() => null);
+      setStatus(r && !("error" in r) ? r : null);
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [cloud, f.city, weeks]);
+
+  /* Rückkehr aus der Zahlung: Platz fest buchen */
+  useEffect(() => {
+    if (!bezahlt) return;
+    void (async () => {
+      const { topActSettle } = await import("@/utils/spotlight.functions");
+      const r = await topActSettle({ data: { sessionId: bezahlt, environment: getStripeEnvironment() } }).catch(() => ({ error: "Zahlung konnte nicht geprüft werden" }));
+      if ("error" in r) setErr(r.error);
+      else {
+        setDone("ok");
+        const { loadCloudSpotlights } = await import("@/showly/spotlight");
+        void loadCloudSpotlights();
+      }
+    })();
+  }, [bezahlt]);
+
+  async function submitCloud() {
+    if (!f.city.trim() || !f.tagline.trim()) return setErr(T.err);
+    setErr("");
+    setBusy(true);
+    const { topActCheckout } = await import("@/utils/spotlight.functions");
+    const r = await topActCheckout({
+      data: {
+        city: f.city.trim(),
+        weeks,
+        tagline: f.tagline.trim(),
+        returnUrl: `${window.location.origin}/top-act?bezahlt={CHECKOUT_SESSION_ID}`,
+        environment: getStripeEnvironment(),
+      },
+    }).catch(() => ({ error: "Hat nicht geklappt" }));
+    setBusy(false);
+    if ("error" in r) return setErr(r.error);
+    setPay(r);
+  }
+
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (cloud) return void submitCloud();
     if (!f.name.trim() || !f.city.trim() || !f.tagline.trim()) {
       setErr(T.err);
       return;
     }
     setPending({
       kind: "spotlight",
-      total: SPOTLIGHT_PRICE,
+      total,
       title: T.title,
       lines: [
         {
           name: T.title,
           amountInCents: SPOTLIGHT_PRICE * 100,
-          quantity: 1,
+          quantity: weeks,
           priceId: SPOTLIGHT_PRICE_ID,
         },
       ],
       ...(f.email.trim() ? { email: f.email.trim() } : {}),
       spot: {
+        weeks,
         name: f.name.trim(),
         cat: f.cat,
         city: f.city.trim(),
@@ -199,22 +316,58 @@ function TopActPage() {
             </ul>
           </div>
 
+          {done ? (
+            <div className="topact-form">
+              <h2>{T.formH}</h2>
+              <p className="topact-ok">{X.booked}</p>
+              <button className="topact-pay" type="button" onClick={() => navigate({ to: "/" })}>
+                Showly
+              </button>
+            </div>
+          ) : pay ? (
+            <div className="topact-form">
+              <h2>{T.formH}</h2>
+              <p className="topact-scope">{X.paying(dmy(pay.startsOn), dmy(pay.endsOn))}</p>
+              <div id="checkout" className="topact-checkout">
+                <EmbeddedCheckoutProvider stripe={getStripe()} options={{ clientSecret: pay.clientSecret }}>
+                  <EmbeddedCheckout />
+                </EmbeddedCheckoutProvider>
+              </div>
+              <button className="topact-back" type="button" onClick={() => setPay(null)}>
+                {X.back}
+              </button>
+            </div>
+          ) : cloud && !loggedIn ? (
+            <div className="topact-form">
+              <h2>{T.formH}</h2>
+              <p className="topact-scope">{X.login}</p>
+              <button className="topact-pay" type="button" onClick={() => navigate({ to: "/anmelden" })}>
+                {X.loginBtn}
+              </button>
+            </div>
+          ) : (
           <form className="topact-form" onSubmit={submit}>
             <h2>{T.formH}</h2>
-            <label>
-              {T.name}
-              <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-            </label>
-            <label>
-              {T.cat}
-              <select value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })}>
-                {CATS.filter((c) => c.id !== "all").map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {catLabel(c.id)}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {cloud ? (
+              <p className="topact-scope">{X.fromProfile}</p>
+            ) : (
+              <>
+                <label>
+                  {T.name}
+                  <input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+                </label>
+                <label>
+                  {T.cat}
+                  <select value={f.cat} onChange={(e) => setF({ ...f, cat: e.target.value })}>
+                    {CATS.filter((c) => c.id !== "all").map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {catLabel(c.id)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </>
+            )}
             <label>
               {T.city}
               <input
@@ -228,34 +381,50 @@ function TopActPage() {
             <p className="topact-scope">
               {f.city.trim() ? T.scope(f.city.trim()) : T.scopeAny}
             </p>
-            {running && (
-              <p className="topact-taken">{T.taken(f.city.trim(), daysLeft(running))}</p>
+            {cloud && status ? (
+              <p className={status.busyUntil ? "topact-taken" : "topact-free"}>
+                {status.busyUntil ? X.busy(dmy(status.busyUntil)) + " " : ""}
+                {X.free(dmy(status.nextFree))}
+              </p>
+            ) : (
+              !cloud && running && <p className="topact-taken">{T.taken(f.city.trim(), daysLeft(running))}</p>
             )}
             <label>
+              {X.weeks}
+              <select value={weeks} onChange={(e) => setWeeks(Number(e.target.value))}>
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n}>
+                    {X.week(n)} · {SPOTLIGHT_PRICE * n} €
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               {T.tagline}
-              <input value={f.tagline} onChange={(e) => setF({ ...f, tagline: e.target.value })} />
+              <input value={f.tagline} maxLength={120} onChange={(e) => setF({ ...f, tagline: e.target.value })} />
             </label>
-            <label>
-              {T.image}
-              <input value={f.image} onChange={(e) => setF({ ...f, image: e.target.value })} />
-            </label>
-            <label>
-              {T.link}
-              <input value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} />
-            </label>
-            <label>
-              {T.email}
-              <input
-                type="email"
-                value={f.email}
-                onChange={(e) => setF({ ...f, email: e.target.value })}
-              />
-            </label>
+            {!cloud && (
+              <>
+                <label>
+                  {T.image}
+                  <input value={f.image} onChange={(e) => setF({ ...f, image: e.target.value })} />
+                </label>
+                <label>
+                  {T.link}
+                  <input value={f.link} onChange={(e) => setF({ ...f, link: e.target.value })} />
+                </label>
+                <label>
+                  {T.email}
+                  <input type="email" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} />
+                </label>
+              </>
+            )}
             {err && <div className="topact-err">{err}</div>}
-            <button className="topact-pay" type="submit">
-              {T.pay}
+            <button className="topact-pay" type="submit" disabled={busy || (cloud && !isPaymentConfigured())}>
+              {X.pay(total)}
             </button>
           </form>
+          )}
         </div>
       </section>
       <Footer />

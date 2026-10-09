@@ -25,3 +25,16 @@ describe("Provision je Kategorie oder Anbieter", () => {
     expect(cleanRate("x")).toBeNull();
   });
 });
+
+import { inStartPhase, startFreeUntil } from "./feeRules";
+describe("Startphase ohne Provision", () => {
+  it("3 Monate ab Anmeldung", () => {
+    expect(inStartPhase("2026-01-15T10:00:00Z", new Date("2026-04-14T10:00:00Z"))).toBe(true);
+    expect(inStartPhase("2026-01-15T10:00:00Z", new Date("2026-04-16T10:00:00Z"))).toBe(false);
+  });
+  it("Monatsende wird begrenzt (31.1. → 30.4.)", () => {
+    expect(startFreeUntil("2026-01-31T12:00:00").getMonth()).toBe(3);
+    expect(startFreeUntil("2026-01-31T12:00:00").getDate()).toBe(30);
+  });
+  it("ohne Datum keine Startphase", () => expect(inStartPhase(null)).toBe(false));
+});

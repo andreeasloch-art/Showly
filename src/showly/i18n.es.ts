@@ -489,7 +489,7 @@ export const ES: Record<string, string> = {
   "earn.note": "(20 % de {p} más 19 % de IVA)",
   "earn.howT": "Así funciona:",
   "earn.howP":
-    "Showly se queda con el 20 % de tu caché por la intermediación, el pago seguro y el soporte. El resto te lo pagamos 7 días después del evento.",
+    "Los 3 primeros meses no pagas comisión: cobras tu caché completo. Después, Showly se queda con el 20 % de tu caché por la intermediación, el pago seguro y el soporte. El resto te lo pagamos 7 días después del evento.",
   "reg.h2": "Regístrate gratis",
   "reg.sub": "Tu perfil estará en línea en pocos minutos.",
   "reg.first": "Nombre",

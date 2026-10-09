@@ -41,3 +41,26 @@ export function pickRate(
   }
   return fallback;
 }
+
+/* Startphase: Künstler zahlen in den ersten 3 Monaten nach der Anmeldung
+   keine Provision (AGB § 21 Abs. 1a). Maßgeblich ist der Tag der Buchung,
+   nicht der Auftrittstag. */
+export const START_FREE_MONTHS = 3;
+
+/** Ende der Startphase (Anmeldung + 3 Monate) */
+export function startFreeUntil(since: string | Date): Date {
+  const d = new Date(since);
+  const end = new Date(d);
+  end.setMonth(end.getMonth() + START_FREE_MONTHS);
+  /* 31. Januar + 3 Monate: auf den letzten Tag des Monats begrenzen */
+  if (end.getDate() !== d.getDate()) end.setDate(0);
+  return end;
+}
+
+/** Liegt der Buchungszeitpunkt noch in der provisionsfreien Startphase? */
+export function inStartPhase(since: string | Date | null | undefined, at: Date = new Date()): boolean {
+  if (!since) return false;
+  const s = new Date(since);
+  if (Number.isNaN(s.getTime())) return false;
+  return at.getTime() < startFreeUntil(s).getTime();
+}

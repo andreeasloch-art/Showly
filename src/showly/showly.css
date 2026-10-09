@@ -6643,3 +6643,8 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .prod-pics{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:rgba(20,10,40,.62);color:#fff}
 .prod-pics svg{width:13px;height:13px}
 .pd-badges .act-card-badge,.pd-badges .sweet-direct,.pd-badges .demo-badge{position:static;inset:auto;transform:none;margin:0}
+/* Top Act: freier Termin, Zahlung */
+.topact-free{margin:0;font-size:13.5px;font-weight:700;color:#127a4a}
+.topact-ok{font-size:15px;line-height:1.55;font-weight:600;color:#127a4a}
+.topact-checkout{background:#fff;border-radius:14px;overflow:hidden;min-height:320px}
+.topact-back{background:none;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;margin-top:8px}

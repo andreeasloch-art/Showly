@@ -40,6 +40,7 @@ export interface PendingSpotlight {
   lines: PendingLine[];
   email?: string;
   spot: {
+    weeks?: number;
     name: string;
     cat: string;
     city: string;

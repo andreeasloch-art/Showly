@@ -10,6 +10,8 @@ export const SPOTLIGHT_PRICE_ID = "spotlight_week_99";
 export const SPOTLIGHT_DAYS = 7;
 
 export interface SpotlightInput {
+  /** gebuchte Wochen (1 bis 4), Standard 1 */
+  weeks?: number | undefined;
   name: string;
   cat: string;
   city: string;
@@ -37,6 +39,15 @@ export function citySlug(city: string): string {
 }
 
 type Store = Record<string, Spotlight>;
+
+/* Gebuchte Top Acts aus der Datenbank (für alle sichtbar). Sie gehen den
+   Einträgen aus diesem Browser vor. */
+let cloud: Store = {};
+export function setCloudSpotlights(list: (SpotlightInput & { until: number })[]) {
+  cloud = {};
+  for (const s of list) cloud[citySlug(s.city)] = s;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
+}
 
 function read(): Store {
   if (typeof localStorage === "undefined") return {};
@@ -72,12 +83,14 @@ function read(): Store {
     }
   }
   if (changed) write(store);
-  return store;
+  return { ...store, ...Object.fromEntries(Object.entries(cloud).filter(([, v]) => v.until >= now)) };
 }
 
 function write(store: Store) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(store));
+    /* Einträge aus der Datenbank nicht in den Browser-Speicher schreiben */
+    const own = Object.fromEntries(Object.entries(store).filter(([k, v]) => cloud[k] !== v));
+    localStorage.setItem(KEY, JSON.stringify(own));
   } catch {
     /* Storage nicht verfügbar */
   }
@@ -219,7 +232,7 @@ export function getSpotlight(): Spotlight | null {
 }
 
 export function activateSpotlight(input: SpotlightInput): Spotlight {
-  const s: Spotlight = { ...input, until: Date.now() + SPOTLIGHT_DAYS * 864e5 };
+  const s: Spotlight = { ...input, until: Date.now() + SPOTLIGHT_DAYS * Math.max(1, Math.min(4, input.weeks ?? 1)) * 864e5 };
   const store = read();
   store[citySlug(input.city)] = s;
   write(store);
@@ -235,4 +248,30 @@ export function clearSpotlight(city?: string) {
 
 export function daysLeft(s: Spotlight): number {
   return Math.max(1, Math.ceil((s.until - Date.now()) / 864e5));
+}
+
+let cloudLoaded = false;
+/** Laufende Top Acts aus der Datenbank holen (nur mit angebundener Datenbank) */
+export async function loadCloudSpotlights() {
+  if (cloudLoaded || typeof window === "undefined") return;
+  cloudLoaded = true;
+  try {
+    const { isBackendConfigured } = await import("@/lib/supabase");
+    if (!isBackendConfigured()) return;
+    const { activeTopActs } = await import("@/utils/spotlight.functions");
+    const list = await activeTopActs();
+    setCloudSpotlights(
+      list.map((r) => ({
+        name: r.name,
+        cat: r.cat,
+        city: r.city,
+        tagline: r.tagline,
+        ...(r.link ? { link: r.link } : {}),
+        ...(r.artistId ? { image: `/api/bild/kuenstler/${r.artistId}` } : {}),
+        until: Date.parse(r.until + "T23:59:59"),
+      })),
+    );
+  } catch {
+    cloudLoaded = false;
+  }
 }

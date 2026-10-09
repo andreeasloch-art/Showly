@@ -45,6 +45,13 @@ async function onPaid(session: Stripe.Checkout.Session, env: StripeEnv) {
     await settleQuotePayment(session.id, env);
     return;
   }
+  /* Top Act der Woche */
+  if (session.metadata?.["kind"] === "spotlight") {
+    const { settleSpotlight } = await import("@/lib/spotlight.server");
+    const r = await settleSpotlight(session.id, env);
+    if ("error" in r) throw new Error(r.error);
+    return;
+  }
   const { adminClient } = await import("@/lib/supabase.server");
   const db = adminClient();
   const { data: draft } = await db.from("checkout_drafts").select("*").eq("session_id", session.id).maybeSingle();

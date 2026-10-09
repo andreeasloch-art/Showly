@@ -36,6 +36,26 @@ export const GUARANTEE = {
     ],
     why: "Bei Kleinanzeigen stehst du allein da, wenn jemand nicht kommt. Bei Showly haften die Künstler mit Vertragsstrafen, und daraus zahlen wir deinen Ersatz.",
     more: "So funktioniert die Garantie",
+    eyebrow: "Sicher buchen",
+    title: "Kommt dein Künstler nicht, bekommst du Ersatz oder dein Geld zurück.",
+    lead: "Das gilt nur, wenn du über Showly buchst und bezahlst.",
+    tiles: [
+      { icon: "money", t: "Geld sofort zurück", d: "Bei Absage oder Nichterscheinen der volle Betrag." },
+      { icon: "user", t: "3 Ersatz-Künstler", d: "Für denselben Termin. Aufpreis bis 100 € zahlen wir." },
+      { icon: "gift", t: "15 % Gutschein", d: "Als Entschuldigung obendrauf." },
+      { icon: "mail", t: "Support zuerst", d: "Unter 48 Stunden vor dem Event bearbeiten wir deinen Fall sofort." },
+    ],
+    vsH: "Über Showly oder direkt gebucht?",
+    vsUs: "Über Showly",
+    vsThem: "Direkt gebucht",
+    vs: [
+      "Ersatz-Künstler, wenn jemand ausfällt",
+      "Volles Geld zurück bei Absage",
+      "Künstler bekommt sein Geld erst nach dem Event",
+      "Vertragsstrafe, wenn der Künstler nicht kommt",
+      "Support, der sich um deinen Fall kümmert",
+    ],
+    note: "Bei Absprachen oder Zahlungen außerhalb von Showly greift die Garantie nicht.",
   },
   en: {
     name: "Showly replacement guarantee",
@@ -49,6 +69,26 @@ export const GUARANTEE = {
     ],
     why: "On classified ad sites you're on your own if someone doesn't show. At Showly, artists are liable through contractual penalties – and that's what pays for your replacement.",
     more: "How the guarantee works",
+    eyebrow: "Book safely",
+    title: "If your artist doesn't show, you get a replacement or your money back.",
+    lead: "Only when you book and pay through Showly.",
+    tiles: [
+      { icon: "money", t: "Money back now", d: "The full amount if the artist cancels or doesn't show." },
+      { icon: "user", t: "3 replacements", d: "For the same date. We cover up to €100 extra." },
+      { icon: "gift", t: "15% voucher", d: "As an apology on top." },
+      { icon: "mail", t: "Support first", d: "Less than 48 hours before the event we handle your case right away." },
+    ],
+    vsH: "Through Showly or booked directly?",
+    vsUs: "Through Showly",
+    vsThem: "Booked directly",
+    vs: [
+      "Replacement artist if someone drops out",
+      "Full refund if the artist cancels",
+      "Artist only gets paid after the event",
+      "Contractual penalty if the artist doesn't show",
+      "Support that takes care of your case",
+    ],
+    note: "The guarantee doesn't apply to arrangements or payments outside Showly.",
   },
   es: {
     name: "Garantía de sustitución Showly",
@@ -62,10 +102,46 @@ export const GUARANTEE = {
     ],
     why: "En los portales de anuncios estás solo si alguien no aparece. En Showly los artistas responden con penalizaciones, y con eso pagamos tu sustituto.",
     more: "Cómo funciona la garantía",
+    eyebrow: "Reserva segura",
+    title: "Si tu artista no viene, recibes un sustituto o te devolvemos el dinero.",
+    lead: "Solo si reservas y pagas a través de Showly.",
+    tiles: [
+      { icon: "money", t: "Dinero de vuelta ya", d: "El importe completo si el artista cancela o no aparece." },
+      { icon: "user", t: "3 sustitutos", d: "Para la misma fecha. Cubrimos hasta 100 € de diferencia." },
+      { icon: "gift", t: "Vale del 15 %", d: "Como disculpa, además." },
+      { icon: "mail", t: "Soporte prioritario", d: "A menos de 48 horas del evento tratamos tu caso enseguida." },
+    ],
+    vsH: "¿Con Showly o reservado directamente?",
+    vsUs: "Con Showly",
+    vsThem: "Directo",
+    vs: [
+      "Artista sustituto si alguien falla",
+      "Reembolso completo si el artista cancela",
+      "El artista cobra solo después del evento",
+      "Penalización si el artista no aparece",
+      "Soporte que se ocupa de tu caso",
+    ],
+    note: "La garantía no cubre acuerdos ni pagos fuera de Showly.",
   },
 };
 
-export type GuaranteeCopy = { name: string; short: string; claim: string; points: string[]; why: string; more: string };
+export type GuaranteeCopy = {
+  name: string;
+  short: string;
+  claim: string;
+  points: string[];
+  why: string;
+  more: string;
+  eyebrow: string;
+  title: string;
+  lead: string;
+  tiles: { icon: string; t: string; d: string }[];
+  vsH: string;
+  vsUs: string;
+  vsThem: string;
+  vs: string[];
+  note: string;
+};
 export function guaranteeCopy(lang: string): GuaranteeCopy {
   return (GUARANTEE as Record<string, GuaranteeCopy>)[lang] ?? GUARANTEE.de;
 }

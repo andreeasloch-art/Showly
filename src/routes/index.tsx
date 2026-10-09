@@ -275,7 +275,14 @@ function Home() {
               </li>
               <li>
                 <Icon name="shield" />
-                <span>{guaranteeCopy(lang).short}</span>
+                <a
+                  href="#sicher-buchen"
+                  className="hero-guar-link"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    document.getElementById("sicher-buchen")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >{guaranteeCopy(lang).short}</a>
               </li>
             </ul>
           </div>

@@ -16,7 +16,7 @@ export const Route = createFileRoute("/ratgeber/$slug")({
     if (!g) return {};
     const path = `/ratgeber/${g.slug}`;
     return {
-      ...seoHeadDe(path, `${g.title} | Showly Ratgeber`, g.description, { type: "article" }),
+      ...seoHeadDe(path, `${g.title} | Showly`, g.description, { type: "article" }),
       scripts: [{ type: "application/ld+json", children: articleGraph(path, g.title, g.description, g.updated) }],
     };
   },

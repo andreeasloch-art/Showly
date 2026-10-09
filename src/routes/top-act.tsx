@@ -4,6 +4,7 @@ import { useShowly } from "@/showly/store";
 import { CATS } from "@/showly/data";
 import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
+import { OG_IMAGE, SITE } from "@/showly/seo";
 import { setPending } from "@/showly/pending";
 import { SPOTLIGHT_PRICE, SPOTLIGHT_PRICE_ID, getSpotlightFor, daysLeft } from "@/showly/spotlight";
 import { useViewerCity } from "@/showly/useViewerCity";
@@ -29,8 +30,10 @@ export const Route = createFileRoute("/top-act")({
         content: "7 Tage ganz oben auf der Startseite – die sichtbarste Platzierung für deinen Act.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:image", content: OG_IMAGE },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: `${SITE}/top-act` }],
   }),
   component: TopActPage,
 });

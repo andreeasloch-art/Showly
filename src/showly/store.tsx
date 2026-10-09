@@ -694,7 +694,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     [t, toast],
   );
 
-  const cartTotal = useMemo(() => cartTotals(cart, cartBookings).total, [cart, cartBookings]);
+  /* wie an der Kasse: Wunschtorten werden zum Richtpreis sofort bezahlt */
+  const cartTotal = useMemo(() => cartTotals(cart, cartBookings, cartRequests).total, [cart, cartBookings, cartRequests]);
   const cartCount = useMemo(
     () => cart.reduce((s, c) => s + c.qty, 0) + cartBookings.length + cartRequests.length,
     [cart, cartBookings, cartRequests],

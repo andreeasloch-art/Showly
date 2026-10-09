@@ -102,8 +102,6 @@ export function Footer() {
               <li>
                 <Link to="/hilfe">{lang === "en" ? "Help & contact" : lang === "es" ? "Ayuda y contacto" : "Hilfe & Kontakt"}</Link>
               </li>
-              <li>{t("foot.jobs")}</li>
-              <li>{t("foot.press")}</li>
             </ul>
           </div>
           <div>

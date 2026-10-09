@@ -66,7 +66,7 @@ export const Route = createFileRoute("/torten/$id")({
 function bakerHead(idParam: string, lang: Lang) {
   const h = seoHead("/torten/$id", `/torten/${idParam}`, lang);
   const b = bakerOf(Number(idParam));
-  if (!b || b.demo) return { ...h, meta: [...h.meta, { name: "robots", content: "noindex, follow" }] };
+  if (!b) return { ...h, meta: [...h.meta, { name: "robots", content: "noindex, follow" }] };
   const tx = (v: unknown) => (typeof v === "string" ? v : ((v || {}) as Record<string, string>)[lang] || ((v || {}) as Record<string, string>)["de"] || "");
   const name = tx(b.name);
   const offers = sweetsOf(b.id);
@@ -78,7 +78,7 @@ function bakerHead(idParam: string, lang: Lang) {
         : `${name} – Torten & Süßes${b.city ? ` in ${b.city}` : ""} | Showly`;
   const raw = (tx(b.tagline) + " " + tx(b.about)).replace(/\s+/g, " ").trim();
   const description = raw.length > 155 ? raw.slice(0, 152).replace(/\s\S*$/, "") + " …" : raw || h.meta[1]!.content!;
-  const indexable = b.id >= 100000 && offers.length > 0;
+  const indexable = !b.demo && b.id >= 100000 && offers.length > 0;
   const meta = h.meta.map((m) =>
     "title" in m
       ? { title }

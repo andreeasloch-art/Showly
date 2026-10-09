@@ -155,6 +155,9 @@ function Home() {
   function pickCatFromSearch(id: string) {
     catFromSearch.current = true;
     setCat(id);
+    /* wie bei der Stadt: gleich zu den Treffern, sonst passiert am Handy
+       sichtbar nichts */
+    setTimeout(scrollToGrid, 60);
   }
   /* Tippt man nach der Auswahl weiter, gilt wieder nur der Text */
   function typeQuery(v: string) {

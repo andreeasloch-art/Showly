@@ -121,7 +121,9 @@ function Landing() {
             <Icon name="money" />{" "}
             {cake
               ? `Angebote ab ${fmt(Math.min(...prices))} laut Profilen`
-              : `Preise von ${fmt(Math.min(...prices))} bis ${fmt(Math.max(...prices))} pro Stunde laut Profilen`}
+              : Math.min(...prices) === Math.max(...prices)
+                ? `Preis ${fmt(prices[0]!)} pro Stunde laut Profil`
+                : `Preise von ${fmt(Math.min(...prices))} bis ${fmt(Math.max(...prices))} pro Stunde laut Profilen`}
             {reviewed > 0 ? ` · ${reviewed} mit Bewertungen` : ""}
           </p>
         )}

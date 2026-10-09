@@ -155,10 +155,10 @@ export function ArtistDetail({ id }: { id: string }) {
     .map((i) => SHOP_ITEMS.find((s) => s.id === i))
     .filter(Boolean) as (typeof SHOP_ITEMS)[number][];
   let similar = ARTISTS.filter((x) => x.id !== a.id && x.cat === a.cat);
-  if (similar.length < 3)
+  if (similar.length < 6)
     similar = similar
       .concat(ARTISTS.filter((x) => x.id !== a.id && x.cat !== a.cat).sort((p, q) => q.rating - p.rating))
-      .slice(0, 4);
+      .slice(0, 6);
 
   const picked = !!(cal.sel.date && cal.sel.slot);
   const chooseLbl = lang === "en" ? "Pick a date" : lang === "es" ? "Elegir fecha" : "Termin wählen";
@@ -511,10 +511,11 @@ export function ArtistDetail({ id }: { id: string }) {
           <section className="detail-block">
             <h2 className="detail-section-title">{t("detail.similarH")}</h2>
             <p className="detail-lead">{t("detail.similarP", { cat: catLabel(a.cat) })}</p>
-            <div className="similar-grid reveal-stagger">
-              {similar.slice(0, 4).map((s) => (
+            <div className="similar-grid similar-row" role="list">
+              {similar.slice(0, 10).map((s) => (
                 <button
                   className="similar-card"
+                  role="listitem"
                   key={s.id}
                   onClick={() => navigate({ to: "/kuenstler/$stadt/$kategorie/$name", params: artistParams(s) })}
                 >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookingPrice, cartTotals, priceLines, sweetPrice } from "./pricing";
+import { bookingPrice, cakePrice, cartTotals, priceLines, sweetPrice } from "./pricing";
 import { ARTISTS } from "./data";
 import { SWEETS, isDirectSweet } from "./sweets";
 
@@ -27,14 +27,15 @@ describe("Torten & Süßes: Direktbuchung", () => {
     expect(lines[0]!.amountInCents).toBe(Math.round(cupcakes.price * 2 * 100));
   });
 
-  it("Anfragen tauchen nicht als Bezahlposten auf", () => {
-    const { unknown } = priceLines([], [], name, labels, [
+  it("Wunschtorten werden zum Richtpreis sofort bezahlt", () => {
+    const { lines, unknown } = priceLines([], [], name, labels, [
       { sweetId: wedding.id, qty: 50, dateISO: "2026-10-10" },
     ]);
-    expect(unknown).toEqual([`sweet:${wedding.id}`]);
+    expect(unknown).toEqual([]);
+    expect(lines[0]!.amountInCents).toBe(Math.round(cakePrice(wedding.id, 50)! * 100));
   });
 
-  it("in der Summe zählen nur direkt gebuchte Pakete", () => {
+  it("in der Summe zählen Pakete und Wunschtorten", () => {
     const t = cartTotals(
       [],
       [],
@@ -43,8 +44,8 @@ describe("Torten & Süßes: Direktbuchung", () => {
         { sweetId: wedding.id, qty: 50, estimate: 400 },
       ],
     );
-    expect(t.sweets).toBe(cupcakes.price);
-    expect(t.total).toBe(cupcakes.price);
+    expect(t.sweets).toBe(cupcakes.price + cakePrice(wedding.id, 50)!);
+    expect(t.total).toBe(t.sweets);
   });
 });
 

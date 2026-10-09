@@ -28,8 +28,13 @@ import { ProviderOverview } from "@/components/showly/ProviderOverview";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
-  validateSearch: (search: Record<string, unknown>): { tab?: string } =>
-    typeof search["tab"] === "string" ? { tab: (search["tab"] as string).slice(0, 20) } : {},
+  validateSearch: (search: Record<string, unknown>): { tab?: string; nachzahlung?: string } => ({
+    ...(typeof search["tab"] === "string" ? { tab: (search["tab"] as string).slice(0, 20) } : {}),
+    /* Rückkehr von der Nachzahlung einer Wunschtorte (QuoteDecision) */
+    ...(typeof search["nachzahlung"] === "string" && /^cs_[A-Za-z0-9_]+$/.test(search["nachzahlung"] as string)
+      ? { nachzahlung: search["nachzahlung"] as string }
+      : {}),
+  }),
   head: (ctx) => seoHead("/dashboard", "/dashboard", headLang(ctx)),
   component: Dashboard,
 });
@@ -265,6 +270,7 @@ function Dashboard() {
     reportNoShow,
     vouchers,
     confirmPresence,
+    refreshCloud,
   } = useShowly();
   const [cancelAsk, setCancelAsk] = useState<number | null>(null);
   /* Umbuchen oder Reklamieren zu einer Buchung/Bestellung */
@@ -318,7 +324,19 @@ function Dashboard() {
         ["payments", "money", t("dash.payments"), ""],
         ["profile", "user", t("dash.profile"), ""],
       ];
-  const { tab } = Route.useSearch();
+  const { tab, nachzahlung } = Route.useSearch();
+  /* Nachzahlung einer Wunschtorte verbuchen (der Stripe-Webhook macht dasselbe) */
+  useEffect(() => {
+    if (!nachzahlung) return;
+    void (async () => {
+      const { quoteSettle } = await import("@/utils/wishcake.functions");
+      const { getStripeEnvironment } = await import("@/lib/stripe");
+      const r = await quoteSettle({ data: { sessionId: nachzahlung, environment: getStripeEnvironment() } }).catch(() => null);
+      toast(r && "ok" in r ? "Danke! Der neue Preis ist bestätigt, deine Torte ist fest gebucht." : "Zahlung wird noch geprüft. Schau gleich noch einmal nach.");
+      void refreshCloud();
+      navigate({ to: "/dashboard", search: { tab: "requests" }, replace: true });
+    })();
+  }, [nachzahlung]); // eslint-disable-line react-hooks/exhaustive-deps
   const [section, setSection] = useState(tab || items[0]![0]);
   const active = items.some((i) => i[0] === section) ? section : items[0]![0];
   const current = items.find((i) => i[0] === active)!;

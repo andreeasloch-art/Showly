@@ -403,3 +403,22 @@ export function orderPayoutDay(p: { cakeDays?: string[]; rentTo?: string[]; orde
   const event_day = dates[dates.length - 1] ?? p.orderDay;
   return { event_day, payout_on: addDays(event_day, PAYOUT_DAYS) };
 }
+
+/* ---------------------------------------------------------------------------
+ * Wunschtorten (lib/wishcake.server.ts, AGB § 17 Abs. 2): sofort bezahlt
+ * ------------------------------------------------------------------------ */
+export type WishOutcome =
+  | { status: "declined"; refundCents: number; dueCents: 0 }
+  | { status: "confirmed"; refundCents: number; dueCents: 0; priceCents: number }
+  | { status: "quoted"; refundCents: 0; dueCents: number; priceCents: number };
+
+/** Antwort der Konditorei: Absage = alles zurück; gleicher oder niedrigerer
+ *  Preis = zugesagt, Differenz zurück; höherer Preis = Kunde bestätigt und
+ *  zahlt die Differenz nach. Ohne Preisangabe gilt der bezahlte Richtpreis. */
+export function wishOutcome(p: { paidCents: number; accept: boolean; priceCents?: number }): WishOutcome {
+  const paid = Math.max(0, Math.round(p.paidCents));
+  if (!p.accept) return { status: "declined", refundCents: paid, dueCents: 0 };
+  const price = p.priceCents && p.priceCents > 0 ? Math.round(p.priceCents) : paid;
+  if (price <= paid) return { status: "confirmed", refundCents: paid - price, dueCents: 0, priceCents: price };
+  return { status: "quoted", refundCents: 0, dueCents: price - paid, priceCents: price };
+}

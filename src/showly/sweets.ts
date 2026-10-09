@@ -169,9 +169,14 @@ export interface SweetRequest {
   email: string;
   estimate: number;
   createdISO: string;
-  /** booked: direkt zum Festpreis gebucht */
-  status: "sent" | "confirmed" | "declined" | "booked";
+  /** booked: direkt zum Festpreis gebucht; quoted: höherer Preis wartet auf Bestätigung */
+  status: "sent" | "quoted" | "confirmed" | "declined" | "booked";
   direct?: boolean;
+  /** schon bezahlt (abzüglich Erstattungen), in Euro */
+  paid?: number;
+  /** neuer, höherer Preis der Konditorei, in Euro */
+  quote?: number;
+  quoteNote?: string;
 }
 
 const L = (de: string, en: string, es: string) => ({ de, en, es });

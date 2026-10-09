@@ -129,6 +129,17 @@ export function findItem(id: number, extra?: Extra) {
   return extra?.item?.(id) ?? SHOP_ITEMS.find((i) => i.id === id);
 }
 
+/** Preis jeder Torte bzw. jedes Süßwaren-Angebots aus dem Katalog: bei
+ *  Festpreis-Paketen der feste Preis, bei Wunschtorten der Richtpreis. Auch
+ *  Wunschtorten werden sofort bezahlt; die Konditorei sagt zu, senkt den Preis
+ *  (Rest zurück) oder nennt einen höheren, den der Kunde bestätigt und
+ *  nachzahlt (lib/wishcake.server.ts). */
+export function cakePrice(sweetId: number, qty: number, extra?: Extra): number | null {
+  const s = extra?.sweet?.(sweetId) ?? SWEETS.find((x) => x.id === sweetId);
+  if (!s || s.own) return null;
+  return estimate(s, Math.min(s.unit === "set" ? 20 : 2000, Math.max(1, Math.round(qty) || 1)));
+}
+
 /** Summen für den ganzen Warenkorb */
 /** Preis eines direkt buchbaren Süßwaren-Pakets, nur aus dem Katalog */
 export function sweetPrice(sweetId: number, qty: number, extra?: Extra): number | null {
@@ -165,7 +176,7 @@ export function cartTotals(
      dem Browser haben noch keinen Katalogpreis; dann gilt der angezeigte. */
   let sweets = 0;
   for (const r of requests)
-    if (r.direct) sweets += sweetPrice(r.sweetId, r.qty) ?? r.estimate;
+    sweets += (r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate;
   return {
     items,
     artists,
@@ -251,7 +262,7 @@ export function priceLines(
   }
   for (const x of sweets) {
     const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);
-    const price = sweetPrice(x.sweetId, x.qty, extra);
+    const price = cakePrice(x.sweetId, x.qty, extra);
     const demoBaker = !allowDemo && s && (extra?.sweet?.(x.sweetId) ? false : bakerIsDemo(s.bakerId));
     if (!s || price === null || demoBaker) {
       unknown.push(`sweet:${x.sweetId}`);

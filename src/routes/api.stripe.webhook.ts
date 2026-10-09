@@ -39,6 +39,12 @@ async function verify(body: string, sig: string): Promise<{ event: Stripe.Event;
 
 async function onPaid(session: Stripe.Checkout.Session, env: StripeEnv) {
   if (session.payment_status !== "paid") return;
+  /* Nachzahlung für eine Wunschtorte mit höherem Preis */
+  if (session.metadata?.["kind"] === "torte-nachzahlung") {
+    const { settleQuotePayment } = await import("@/lib/wishcake.server");
+    await settleQuotePayment(session.id, env);
+    return;
+  }
   const { adminClient } = await import("@/lib/supabase.server");
   const db = adminClient();
   const { data: draft } = await db.from("checkout_drafts").select("*").eq("session_id", session.id).maybeSingle();

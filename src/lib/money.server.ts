@@ -148,6 +148,24 @@ async function subOrderSource(db: Db, subId: number): Promise<PayoutSource | nul
   return { payable, session: order?.stripe_session_id ?? null, group: `order_${so.order_id}`, meta: { sub_order_id: String(so.id) } };
 }
 
+/** Wunschtorte (lib/wishcake.server.ts): zugesagt und bezahlt. Mit
+ *  Nachzahlung gibt es zwei Zahlungen; dann ohne feste Quelle überweisen. */
+async function sweetSource(db: Db, id: number): Promise<PayoutSource | null> {
+  const { data: r } = await db
+    .from("sweet_requests")
+    .select("id, status, paid_cents, extra_cents, refunded_cents, stripe_session_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!r) return null;
+  const payable = ["confirmed", "booked"].includes(r.status) && (r.paid_cents ?? 0) > (r.refunded_cents ?? 0);
+  return {
+    payable,
+    session: (r.extra_cents ?? 0) > 0 ? null : r.stripe_session_id,
+    group: `torte_${r.id}`,
+    meta: { sweet_request_id: String(r.id) },
+  };
+}
+
 /** Fällige Auszahlungen überweisen. Gibt zurück, was passiert ist. */
 export async function runDuePayouts(): Promise<{ paid: number; held: number; skipped: number; failed: number }> {
   const db = adminClient();
@@ -176,8 +194,14 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
     }
     let cents = first ? p.net_cents - p.reserve_cents : p.reserve_cents;
 
-    /* Woher das Geld kommt: Künstler-Buchung oder Teilbestellung (Torten, Deko, Verleih) */
-    const src = p.booking_id ? await bookingSource(db, p.booking_id) : p.sub_order_id ? await subOrderSource(db, p.sub_order_id) : null;
+    /* Woher das Geld kommt: Künstler-Buchung, Teilbestellung (Torten, Deko, Verleih) oder Wunschtorte */
+    const src = p.booking_id
+      ? await bookingSource(db, p.booking_id)
+      : p.sub_order_id
+        ? await subOrderSource(db, p.sub_order_id)
+        : p.sweet_request_id
+          ? await sweetSource(db, p.sweet_request_id)
+          : null;
     if (!src || !src.payable) {
       await db.from("payouts").update({ status: "cancelled", last_error: "Nicht (mehr) auszahlbar" }).eq("id", p.id);
       out.skipped++;

@@ -301,6 +301,8 @@ async function payoutFreeze(db: ReturnType<typeof adminClient>, t: Target, froze
     await db.from("payouts").update({ frozen }).eq("booking_id", t.booking_id).neq("status", "paid");
     return;
   }
+  /* Wunschtorte: eigene Auszahlung (lib/wishcake.server.ts) */
+  if (t.sweet_request_id) await db.from("payouts").update({ frozen }).eq("sweet_request_id", t.sweet_request_id).neq("status", "paid");
   /* Torten und Shop: Auszahlung hängt an der Teilbestellung */
   const { data: row } = t.shop_order_id
     ? await db.from("shop_orders").select("sub_order_id").eq("id", t.shop_order_id).maybeSingle()
@@ -308,6 +310,11 @@ async function payoutFreeze(db: ReturnType<typeof adminClient>, t: Target, froze
       ? await db.from("sweet_requests").select("sub_order_id").eq("id", t.sweet_request_id).maybeSingle()
       : { data: null };
   if (row?.sub_order_id) await db.from("payouts").update({ frozen }).eq("sub_order_id", row.sub_order_id).neq("status", "paid");
+}
+
+async function wishPayout(db: ReturnType<typeof adminClient>, sweetId: number) {
+  const { data } = await db.from("payouts").select("id, net_cents, gross_cents").eq("sweet_request_id", sweetId).neq("status", "paid").maybeSingle();
+  return data;
 }
 
 /** Erstattung nach Einigung oder Entscheidung; Auszahlung anteilig kürzen */
@@ -322,6 +329,13 @@ async function settle(db: ReturnType<typeof adminClient>, c: ComplaintRow, cents
         .from("payouts")
         .update({ net_cents: Math.max(0, p.net_cents - Math.round((cents * b.payout_cents) / b.amount_cents)) })
         .eq("id", p.id);
+  } else if (cents > 0 && c.sweet_request_id && (await wishPayout(db, c.sweet_request_id))) {
+    /* Wunschtorte: automatisch erstatten und eigene Auszahlung anteilig kürzen */
+    const po = (await wishPayout(db, c.sweet_request_id))!;
+    const { refundSweet } = await import("@/lib/wishcake.server");
+    await refundSweet(c.sweet_request_id, cents, reason).catch(() => null);
+    if (po.gross_cents > 0)
+      await db.from("payouts").update({ net_cents: Math.max(0, po.net_cents - Math.round((cents * po.net_cents) / po.gross_cents)) }).eq("id", po.id);
   } else if (cents > 0 && c.shop_order_id && c.category === "damage") {
     /* Einspruch gegen Schaden: einbehaltene Kaution zurück */
     const { refundDeposit } = await import("@/lib/money.server");

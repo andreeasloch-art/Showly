@@ -9,7 +9,7 @@ const COPY = {
     instant: "Sofort bestätigt",
     instantP: "Freie Termine sind direkt verbindlich gebucht.",
     request: "Bestätigung innerhalb von 48 Std.",
-    requestP: (n: string) => `${n} sagt zu oder ab. Bezahlt wird erst bei Zusage.`,
+    requestP: (n: string) => `${n} sagt innerhalb von 48 Stunden zu oder ab. Du bezahlst sofort; bei Absage bekommst du alles zurück.`,
   },
   en: {
     instant: "Instantly confirmed",

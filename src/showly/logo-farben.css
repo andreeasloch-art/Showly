@@ -894,3 +894,10 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .guide-card h2{margin:0 0 6px;font-size:18px}
 .guide-card p{margin:0;font-size:14px;color:var(--sh-muted,#554B6B)}
 .guide-card:hover,.guide-card:focus-visible{border-color:#6B4FD8}
+
+/* ---------- Wunschtorte: neuer Preis bestätigen (QuoteDecision.tsx) ---------- */
+.quote-box{flex-basis:100%;margin:8px 0 0;border:1px solid #F3D9A4;background:#FFF8E8;border-radius:14px;padding:12px 14px;display:grid;gap:8px;font-size:14px;line-height:1.45}
+.quote-box p{margin:0}
+.inb-quote{color:#A86B00;font-weight:700}
+.prov-note{flex-basis:100%}
+.my-req-st.quoted{background:#FFF1D6;color:#8A5600}

@@ -15,7 +15,7 @@ import { SHOP_ITEMS } from "@/showly/data";
 import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
-import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice } from "@/showly/pricing";
+import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice, cakePrice } from "@/showly/pricing";
 import { RentLineEditor, SizeSelect, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
 import { SWEETS, bakerOf, leadOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
@@ -37,7 +37,7 @@ const TEXT = {
     acts: "Künstler",
     items: "Artikel",
     requests: "Torten-Anfragen",
-    requestsP: "Der Anbieter bestätigt Termin und Preis. Bezahlt wird erst danach.",
+    requestsP: "Du bezahlst jetzt den Richtpreis. Die Konditorei bestätigt den Endpreis: günstiger = Differenz zurück, teurer = du bestätigst und zahlst nach, Absage = alles zurück.",
     hours: "Dauer",
     hoursVal: (n: number) => `${n} Std.`,
     remove: "Entfernen",
@@ -69,14 +69,14 @@ const TEXT = {
     sumSweets: "Torten & Süßes",
     fixed: "Festpreis",
     sumTotal: "Jetzt zu zahlen",
-    sumLater: "Torten-Anfragen (Preis folgt)",
+    sumLater: "davon Wunschtorten (Richtpreis)",
     splitH: "Aufgeteilt auf Anbieter",
     splitP: "Du zahlst einmal; jeder Anbieter bekommt seine eigene Teilbestellung und kümmert sich um seinen Teil.",
     splitOwn: "Showly-Shop",
     splitReq: "Anfrage",
     secure: "Sichere Zahlung über Stripe. Showly sieht keine Kartendaten.",
     cancel: "Storno nach der Stornostufe des Anbieters (steht bei jeder Buchung); einmal kostenlos umbuchen innerhalb von 6 Monaten.",
-    reqNote: "Einige Künstler bestätigen erst innerhalb von 48 Stunden. Für diese Buchungen wird erst bei Zusage abgebucht.",
+    reqNote: "Einige Künstler bestätigen innerhalb von 48 Stunden. Du bezahlst sofort; sagt ein Künstler ab oder antwortet nicht, bekommst du alles zurück.",
     offH: "Online-Zahlung noch nicht freigeschaltet",
     offP: "Du kannst trotzdem verbindlich reservieren. Künstler und Anbieter bestätigen, bezahlt wird danach. Jetzt wird nichts abgebucht.",
     offBtn: "Zahlungspflichtig reservieren",
@@ -85,7 +85,7 @@ const TEXT = {
     doneH: "Geschafft, danke!",
     donePaid: "Deine Bestellung ist bestätigt.",
     doneReserved: "Deine Reservierung ist eingegangen. Du findest sie in deinem Konto unter Buchungen und Bestellungen.",
-    doneReq: "Deine Torten-Anfragen sind unterwegs.",
+    doneReq: "Die Konditorei bestätigt deine Wunschtorte. Ist sie günstiger, bekommst du die Differenz zurück; ist sie teurer, bestätigst du den Preis in deinem Konto.",
     toDash: "Zu meinen Buchungen",
     more: "Weiter stöbern",
     unknown: "Einige Posten wurden in diesem Browser angelegt und können erst mit angeschlossener Datenbank online bezahlt werden.",
@@ -101,7 +101,7 @@ const TEXT = {
     acts: "Artists",
     items: "Items",
     requests: "Cake requests",
-    requestsP: "The baker confirms date and price. You pay only after that.",
+    requestsP: "You pay the estimate now. The baker confirms the final price: lower = difference refunded, higher = you confirm and pay the rest, declined = full refund.",
     hours: "Duration",
     hoursVal: (n: number) => `${n} hrs`,
     remove: "Remove",
@@ -133,14 +133,14 @@ const TEXT = {
     sumSweets: "Cakes & sweets",
     fixed: "Fixed price",
     sumTotal: "To pay now",
-    sumLater: "Cake requests (price follows)",
+    sumLater: "of which custom cakes (estimate)",
     splitH: "Split by provider",
     splitP: "You pay once; each provider gets its own sub-order and takes care of its part.",
     splitOwn: "Showly shop",
     splitReq: "request",
     secure: "Secure payment via Stripe. Showly never sees card details.",
     cancel: "Cancellation according to the provider's tier (shown with each booking); one free rebooking within 6 months.",
-    reqNote: "Some artists confirm within 48 hours. For those bookings, payment is only taken once they accept.",
+    reqNote: "Some artists confirm within 48 hours. You pay now; if an artist declines or does not answer, you get everything back.",
     offH: "Online payment is not switched on yet",
     offP: "You can still reserve. Artists and providers confirm, payment follows afterwards. Nothing is charged now.",
     offBtn: "Reserve with obligation to pay",
@@ -149,7 +149,7 @@ const TEXT = {
     doneH: "Done, thank you!",
     donePaid: "Your order is confirmed.",
     doneReserved: "Your reservation has been received. You'll find it in your account under bookings and orders.",
-    doneReq: "Your cake requests are on their way.",
+    doneReq: "The baker confirms your custom cake. If it is cheaper, you get the difference back; if it costs more, you confirm the price in your account.",
     toDash: "My bookings",
     more: "Keep browsing",
     unknown: "Some items were created in this browser and can only be paid online once the database is connected.",
@@ -165,7 +165,7 @@ const TEXT = {
     acts: "Artistas",
     items: "Artículos",
     requests: "Solicitudes de tartas",
-    requestsP: "El repostero confirma fecha y precio. Pagas después.",
+    requestsP: "Pagas ahora el precio orientativo. El repostero confirma el precio final: menor = te devolvemos la diferencia, mayor = lo confirmas y pagas el resto, rechazo = te devolvemos todo.",
     hours: "Duración",
     hoursVal: (n: number) => `${n} h`,
     remove: "Quitar",
@@ -197,14 +197,14 @@ const TEXT = {
     sumSweets: "Tartas y dulces",
     fixed: "Precio fijo",
     sumTotal: "A pagar ahora",
-    sumLater: "Solicitudes de tartas (precio a confirmar)",
+    sumLater: "de ello, tartas a medida (precio orientativo)",
     splitH: "Dividido por proveedor",
     splitP: "Pagas una vez; cada proveedor recibe su propio pedido parcial y se ocupa de su parte.",
     splitOwn: "Tienda Showly",
     splitReq: "solicitud",
     secure: "Pago seguro con Stripe. Showly no ve los datos de la tarjeta.",
     cancel: "Cancelación según el nivel del proveedor (indicado en cada reserva); un cambio de fecha gratuito en 6 meses.",
-    reqNote: "Algunos artistas confirman en 48 horas. En esas reservas solo se cobra cuando aceptan.",
+    reqNote: "Algunos artistas confirman en 48 horas. Pagas ahora; si un artista rechaza o no responde, te devolvemos todo.",
     offH: "El pago en línea todavía no está activado",
     offP: "Aun así puedes reservar. Artistas y proveedores confirman y el pago llega después. Ahora no se cobra nada.",
     offBtn: "Reservar con obligación de pago",
@@ -213,7 +213,7 @@ const TEXT = {
     doneH: "¡Listo, gracias!",
     donePaid: "Tu pedido está confirmado.",
     doneReserved: "Hemos recibido tu reserva. La encontrarás en tu cuenta, en reservas y pedidos.",
-    doneReq: "Tus solicitudes de tartas están en camino.",
+    doneReq: "El repostero confirma tu tarta a medida. Si es más barata, te devolvemos la diferencia; si cuesta más, confirmas el precio en tu cuenta.",
     toDash: "Mis reservas",
     more: "Seguir explorando",
     unknown: "Algunos artículos se crearon en este navegador y solo se pueden pagar en línea con la base de datos conectada.",
@@ -347,7 +347,7 @@ export function CartCheckout() {
     }
     for (const r of cartRequests) {
       const bk = bakerOf(r.bakerId);
-      add(`baker:${r.bakerId}`, bk ? String(L(bk.name)) : "", r.direct ? (sweetPrice(r.sweetId, r.qty) ?? r.estimate) : 0);
+      add(`baker:${r.bakerId}`, bk ? String(L(bk.name)) : "", (r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate);
     }
     for (const l of cart) {
       const it = findItem(l.shopId);
@@ -357,7 +357,7 @@ export function CartCheckout() {
     }
     return [...m.values()];
   })();
-  /* Nur echte Anfragen haben einen Richtpreis; Festpreis-Pakete sind in totals */
+  /* Wunschtorten zum Richtpreis (in totals enthalten, hier nur zur Info) */
   const askReqs = cartRequests.filter((r) => !r.direct);
   const reqSum = askReqs.reduce((s, r) => s + r.estimate, 0);
   const empty = !cart.length && !cartBookings.length && !cartRequests.length;
@@ -714,7 +714,6 @@ export function CartCheckout() {
                     <StripeCartCheckout
                       shop={cart}
                       sweets={cartRequests
-                        .filter((r) => r.direct)
                         .map((r) => ({
                           sweetId: r.sweetId,
                           qty: r.qty,
@@ -799,9 +798,7 @@ export function CartCheckout() {
                 {askReqs.length > 0 && (
                   <li className="later">
                     <span>{X.sumLater}</span>
-                    <span>
-                      {X.approx} {fmt(reqSum)}
-                    </span>
+                    <span>{fmt(reqSum)}</span>
                   </li>
                 )}
               </ul>

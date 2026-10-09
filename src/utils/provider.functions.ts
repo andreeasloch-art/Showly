@@ -280,18 +280,28 @@ export const shopOrderAction = createServerFn({ method: "POST" })
 
 /** Anbieter beantwortet eine Torten-Anfrage: annehmen (mit Endpreis) oder ablehnen */
 export const respondSweet = createServerFn({ method: "POST" })
-  .inputValidator((d: { requestId: number; accept: boolean; priceCents?: number }) => {
+  .inputValidator((d: { requestId: number; accept: boolean; priceCents?: number; note?: string }) => {
     if (!Number.isInteger(d.requestId)) throw new Error("Ungültige Anfrage");
-    return { requestId: d.requestId, accept: !!d.accept, priceCents: d.priceCents ? n(d.priceCents, 100, 10_000_000, 0) : 0 };
+    return {
+      requestId: d.requestId,
+      accept: !!d.accept,
+      priceCents: d.priceCents ? n(d.priceCents, 100, 10_000_000, 0) : 0,
+      note: typeof d.note === "string" ? d.note.trim().slice(0, 500) : "",
+    };
   })
-  .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
+  .handler(async ({ data }): Promise<{ ok: true; status?: string } | { error: string }> => {
     const ctx = await ctxOrError();
     if (!ctx) return { error: "Bitte melde dich an" };
     if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
     const admin = adminClient();
-    const { data: r } = await admin.from("sweet_requests").select("id, baker_owner, status, customer, day").eq("id", data.requestId).maybeSingle();
+    const { data: r } = await admin.from("sweet_requests").select("*").eq("id", data.requestId).maybeSingle();
     if (!r || r.baker_owner !== ctx.user.id) return { error: "Keine Berechtigung" };
     if (r.status !== "sent") return { error: "Anfrage ist nicht mehr offen" };
+    /* Schon bezahlt (Regelfall): Zusage, niedrigerer oder höherer Preis, Absage */
+    if ((r.paid_cents ?? 0) > 0) {
+      const { answerPaidWish } = await import("@/lib/wishcake.server");
+      return answerPaidWish(r, data.accept, data.priceCents, data.note);
+    }
     await admin
       .from("sweet_requests")
       .update(data.accept ? { status: "confirmed", ...(data.priceCents ? { price_cents: data.priceCents } : {}) } : { status: "declined" })

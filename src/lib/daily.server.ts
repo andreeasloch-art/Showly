@@ -46,6 +46,31 @@ export async function runDaily(): Promise<DailyResult> {
     await notifyBookingChange("declined", b).catch(() => false);
   }
 
+  /* Wunschtorten (lib/wishcake.server.ts): bis 2 Tage vor dem Liefertag
+     nicht zugesagt bzw. höherer Preis nicht bestätigt: Geld zurück */
+  {
+    const limit = new Date(Date.now() + 2 * 86_400_000).toISOString().slice(0, 10);
+    const { data: stale } = await db
+      .from("sweet_requests")
+      .select("*")
+      .in("status", ["sent", "quoted"])
+      .gt("paid_cents", 0)
+      .lte("day", limit)
+      .limit(200);
+    const { refundSweet } = await import("./wishcake.server");
+    for (const r of stale || []) {
+      const ref = await refundSweet(
+        r.id,
+        (r.paid_cents ?? 0) - (r.refunded_cents ?? 0),
+        r.status === "quoted" ? "Neuer Preis nicht rechtzeitig bestätigt" : "Die Konditorei hat nicht rechtzeitig zugesagt",
+      ).catch(() => null);
+      if (ref && "ok" in ref) {
+        await db.from("sweet_requests").update({ status: "cancelled", quote_cents: null }).eq("id", r.id);
+        lapsed++;
+      }
+    }
+  }
+
   const reminded = await remindOpenRequests().catch(() => 0);
   /* Erinnerung vor dem Event, Bewertungsanfrage danach, Rückgabe beim Verleih */
   const { eventMails } = await import("./notify.server");

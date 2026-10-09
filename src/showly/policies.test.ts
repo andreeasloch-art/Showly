@@ -10,6 +10,7 @@ import {
   guideline,
   lateFeeCents,
   orderPayoutDay,
+  wishOutcome,
   payoutFor,
   pickReplacements,
   policySnapshot,
@@ -136,5 +137,21 @@ describe("Reklamation, Schaden, Bewertung, Auszahlung", () => {
     expect(payoutFor("2026-10-01", 10000, "standard")).toMatchObject({ payout_on: "2026-10-08", net_cents: 10000 });
     expect(payoutFor("2026-10-01", 10000, "fast")).toMatchObject({ payout_on: "2026-10-04", express_fee_cents: 1000 });
     expect(payoutFor("2026-10-01", 10000, "express")).toMatchObject({ payout_on: "2026-10-03", net_cents: 8000 });
+  });
+});
+
+describe("Wunschtorten: sofort bezahlt", () => {
+  it("Absage: alles zurück", () => {
+    expect(wishOutcome({ paidCents: 12000, accept: false })).toEqual({ status: "declined", refundCents: 12000, dueCents: 0 });
+  });
+  it("Zusage ohne Preis oder zum gleichen Preis", () => {
+    expect(wishOutcome({ paidCents: 12000, accept: true })).toMatchObject({ status: "confirmed", refundCents: 0, priceCents: 12000 });
+    expect(wishOutcome({ paidCents: 12000, accept: true, priceCents: 12000 })).toMatchObject({ status: "confirmed", refundCents: 0 });
+  });
+  it("niedrigerer Preis: Differenz zurück", () => {
+    expect(wishOutcome({ paidCents: 12000, accept: true, priceCents: 9500 })).toMatchObject({ status: "confirmed", refundCents: 2500, priceCents: 9500 });
+  });
+  it("höherer Preis: Kunde bestätigt und zahlt nach", () => {
+    expect(wishOutcome({ paidCents: 12000, accept: true, priceCents: 15000 })).toEqual({ status: "quoted", refundCents: 0, dueCents: 3000, priceCents: 15000 });
   });
 });

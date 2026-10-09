@@ -1,5 +1,6 @@
 /* Bausteine für Torten & Süßes: Texte, Anbieterkarte, Angebotskarte,
    Anfrage-Fenster und die Liste eigener Anfragen. */
+import { QuoteDecision } from "./QuoteDecision";
 import { CancelPolicyNote, ComplaintForm } from "./Fair";
 import { complaintOpen, policySnapshot } from "@/showly/policies";
 import { DemoBadge } from "@/components/showly/DemoBadge";
@@ -39,7 +40,7 @@ export const SWEETS_COPY = {
     ph: "Torte, Anbieter oder Stadt …",
     trust1: "Pakete zum Festpreis direkt buchen",
     trust2: "Konditoreien und Privatpersonen",
-    trust3: "Wunschtorten: bezahlt wird erst nach Zusage",
+    trust3: "Wunschtorten: Absage oder günstiger = Geld zurück",
     all: "Alles",
     kindAll: "Alle Anbieter",
     business: "Konditorei",
@@ -78,7 +79,8 @@ export const SWEETS_COPY = {
     moreForEventP: "Künstler und Deko, die zu dieser Feier passen",
     mine: "Deine Anfragen",
     status: {
-      sent: "Gesendet",
+      sent: "Wartet auf Zusage",
+      quoted: "Neuer Preis – bitte bestätigen",
       confirmed: "Zugesagt",
       declined: "Abgesagt",
       booked: "Gebucht",
@@ -98,7 +100,7 @@ export const SWEETS_COPY = {
       name: "Dein Name",
       email: "E-Mail",
       estimate: "Richtpreis",
-      estimateP: "Der Anbieter bestätigt den Endpreis. Bezahlt wird erst nach der Zusage.",
+      estimateP: "Du bezahlst den Richtpreis sofort. Die Konditorei bestätigt den Endpreis: günstiger = Differenz zurück, teurer = du bestätigst und zahlst nach, Absage = alles zurück.",
       send: "Anfrage senden",
       need: "Bitte Datum, Name und E-Mail angeben.",
       tooSoon: (d: number) => `Dieser Anbieter braucht mindestens ${d} Tage Vorlauf.`,
@@ -113,7 +115,7 @@ export const SWEETS_COPY = {
     ph: "Cake, baker or city …",
     trust1: "Book packages at a fixed price",
     trust2: "Patisseries and home bakers",
-    trust3: "Custom cakes: pay only after confirmation",
+    trust3: "Custom cakes: declined or cheaper = money back",
     all: "All",
     kindAll: "All providers",
     business: "Patisserie",
@@ -152,7 +154,8 @@ export const SWEETS_COPY = {
     moreForEventP: "Artists and decor that suit this celebration",
     mine: "Your requests",
     status: {
-      sent: "Sent",
+      sent: "Awaiting confirmation",
+      quoted: "New price – please confirm",
       confirmed: "Confirmed",
       declined: "Declined",
       booked: "Booked",
@@ -172,7 +175,7 @@ export const SWEETS_COPY = {
       name: "Your name",
       email: "Email",
       estimate: "Estimate",
-      estimateP: "The baker confirms the final price. You pay only after confirmation.",
+      estimateP: "You pay the estimate now. The baker confirms the final price: lower = difference refunded, higher = you confirm and pay the rest, declined = full refund.",
       send: "Send request",
       need: "Please add a date, your name and email.",
       tooSoon: (d: number) => `This baker needs at least ${d} days notice.`,
@@ -187,7 +190,7 @@ export const SWEETS_COPY = {
     ph: "Tarta, repostero o ciudad …",
     trust1: "Paquetes a precio fijo, al momento",
     trust2: "Pastelerías y particulares",
-    trust3: "Tartas a medida: pagas tras la confirmación",
+    trust3: "Tartas a medida: si rechaza o baja el precio, te devolvemos",
     all: "Todo",
     kindAll: "Todos",
     business: "Pastelería",
@@ -226,7 +229,8 @@ export const SWEETS_COPY = {
     moreForEventP: "Artistas y decoración para esta celebración",
     mine: "Tus solicitudes",
     status: {
-      sent: "Enviada",
+      sent: "Espera confirmación",
+      quoted: "Nuevo precio: confírmalo",
       confirmed: "Confirmada",
       declined: "Rechazada",
       booked: "Reservada",
@@ -246,7 +250,7 @@ export const SWEETS_COPY = {
       name: "Tu nombre",
       email: "Correo",
       estimate: "Precio orientativo",
-      estimateP: "El repostero confirma el precio final. Pagas tras la confirmación.",
+      estimateP: "Pagas ahora el precio orientativo. El repostero confirma el precio final: menor = te devolvemos la diferencia, mayor = lo confirmas y pagas el resto, rechazo = te devolvemos todo.",
       send: "Enviar solicitud",
       need: "Indica fecha, nombre y correo.",
       tooSoon: (d: number) => `Este repostero necesita al menos ${d} días de antelación.`,
@@ -806,6 +810,7 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
                 </em>
               </span>
               <span className={"my-req-st " + r.status}>{C.status[r.status]}</span>
+              {r.status === "quoted" && <QuoteDecision r={r} />}
               {r.status !== "declined" && (
                 <button type="button" className="dash26-mini outline chat26-open" onClick={() => setChatFor(r)}>
                   <Icon name="comment" /> {C.msgs}

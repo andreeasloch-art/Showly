@@ -66,7 +66,7 @@ function copy(lang: Lang) {
           h: "How booking works",
           list: [
             "Open a profile, choose date, time and duration in the live calendar and pay at checkout.",
-            `Artists with instant booking are confirmed immediately. Request-based artists answer within ${RESPOND_HOURS} hours; the payment is only charged once they accept.`,
+            `Artists with instant booking are confirmed immediately. Request-based artists answer within ${RESPOND_HOURS} hours; payment is taken right away and fully refunded if they decline.`,
             "Showly keeps one hour of travel time free before and after every show, so artists arrive on time.",
             "At the event the customer gives the artist a check-in code; this confirms that the show took place.",
             "Each provider chooses a cancellation tier (flexible, moderate, strict) that is saved with the booking. If an artist cancels or does not show up, the customer gets everything back immediately, replacement suggestions and a 15 % voucher.",
@@ -140,7 +140,7 @@ function copy(lang: Lang) {
           h: "Cómo funciona una reserva",
           list: [
             "Abre un perfil, elige fecha, hora y duración en el calendario y paga en la caja.",
-            `Los artistas con reserva inmediata quedan confirmados al momento. Los demás responden en ${RESPOND_HOURS} horas; el pago solo se cobra cuando aceptan.`,
+            `Los artistas con reserva inmediata quedan confirmados al momento. Los demás responden en ${RESPOND_HOURS} horas; se paga al momento y, si rechazan, se devuelve todo.`,
             "Showly deja libre una hora de desplazamiento antes y después de cada show para que el artista llegue a tiempo.",
             "En el evento, el cliente da al artista un código de check-in que confirma que la actuación tuvo lugar.",
             "Cada proveedor elige un nivel de cancelación (flexible, moderado, estricto) que se guarda con la reserva. Si el artista cancela o no aparece, el cliente recupera todo al instante, recibe propuestas de sustitución y un vale del 15 %.",
@@ -213,7 +213,7 @@ function copy(lang: Lang) {
         h: "So läuft eine Buchung",
         list: [
           "Profil öffnen, Datum, Uhrzeit und Dauer im Live-Kalender wählen und an der Kasse bezahlen.",
-          `Künstler mit Sofortbuchung sind sofort bestätigt. Künstler, die auf Anfrage arbeiten, antworten innerhalb von ${RESPOND_HOURS} Stunden; abgebucht wird erst bei Zusage.`,
+          `Künstler mit Sofortbuchung sind sofort bestätigt. Künstler, die auf Anfrage arbeiten, antworten innerhalb von ${RESPOND_HOURS} Stunden; bezahlt wird sofort, bei Absage gibt es alles zurück.`,
           "Showly hält vor und nach jeder Show eine Stunde Fahrtzeit frei, damit der Künstler pünktlich ankommt.",
           "Beim Event nennt der Kunde dem Künstler einen Check-in-Code; damit ist bestätigt, dass der Auftritt stattgefunden hat.",
           "Jeder Anbieter wählt eine Stornostufe (Flexibel, Moderat, Streng), die mit der Buchung gespeichert wird. Sagt ein Künstler ab oder erscheint nicht, bekommt der Kunde sofort alles zurück, Ersatz-Vorschläge und einen Gutschein über 15 %.",

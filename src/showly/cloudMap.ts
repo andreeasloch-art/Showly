@@ -112,6 +112,9 @@ export function sweetFromRow(r: SweetRequestRow, email = ""): SweetRequest {
     createdISO: r.created_at,
     status: r.status === "cancelled" ? "declined" : r.status,
     ...(r.direct ? { direct: true } : {}),
+    ...(r.paid_cents ? { paid: euro(r.paid_cents - (r.refunded_cents ?? 0)) } : {}),
+    ...(r.quote_cents ? { quote: euro(r.quote_cents) } : {}),
+    ...(r.quote_note ? { quoteNote: r.quote_note } : {}),
   };
 }
 

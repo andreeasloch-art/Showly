@@ -45,7 +45,7 @@ function copy(lang: Lang) {
         {
           h: "Instant booking or request",
           p: [
-            `Some artists can be booked instantly; the date is fixed straight away. Others confirm each request themselves within ${RESPOND_HOURS} hours, and your payment is only charged once they accept.`,
+            `Some artists can be booked instantly; the date is fixed straight away. Others confirm each request themselves within ${RESPOND_HOURS} hours, You pay right away; if they decline or do not answer, you get everything back.`,
           ],
         },
         {
@@ -101,7 +101,7 @@ function copy(lang: Lang) {
         {
           h: "Reserva inmediata o solicitud",
           p: [
-            `Algunos artistas se reservan al instante y la fecha queda fijada. Otros confirman cada solicitud en ${RESPOND_HOURS} horas; el pago solo se cobra cuando aceptan.`,
+            `Algunos artistas se reservan al instante y la fecha queda fijada. Otros confirman cada solicitud en ${RESPOND_HOURS} horas; pagas al momento; si rechazan o no responden, te devolvemos todo.`,
           ],
         },
         {
@@ -156,7 +156,7 @@ function copy(lang: Lang) {
       {
         h: "Sofortbuchung oder Anfrage",
         p: [
-          `Manche Künstler sind sofort buchbar; der Termin steht dann direkt fest. Andere bestätigen jede Anfrage selbst innerhalb von ${RESPOND_HOURS} Stunden, und abgebucht wird erst bei ihrer Zusage.`,
+          `Manche Künstler sind sofort buchbar; der Termin steht dann direkt fest. Andere bestätigen jede Anfrage selbst innerhalb von ${RESPOND_HOURS} Stunden, Du bezahlst sofort; sagen sie ab oder antworten nicht, bekommst du alles zurück.`,
         ],
       },
       {

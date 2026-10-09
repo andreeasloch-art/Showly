@@ -109,7 +109,7 @@ export async function recordCartCore(
     items: snap.shop.map((l) => l.shopId),
   });
   const { newCheckinCode } = await import("@/showly/booking");
-  const { findItem, shopLineParts, sweetPrice } = await import("@/showly/pricing");
+  const { cakePrice, findItem, shopLineParts, sweetPrice } = await import("@/showly/pricing");
   const { plannedPayout } = await import("@/showly/cloudRules");
 
   /* Bezahlt? Nur Stripe selbst gibt darüber Auskunft. Dieselbe Zahlung
@@ -155,7 +155,8 @@ export async function recordCartCore(
       snap.bookings,
       () => "",
       { rent: "", buy: "" },
-      snap.requests.filter((r) => r.direct).map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
+      /* Alle Torten werden sofort bezahlt: Pakete zum Festpreis, Wunschtorten zum Richtpreis */
+      snap.requests.map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
       cat.extra,
       { allowDemo: false },
     );
@@ -201,8 +202,10 @@ export async function recordCartCore(
   }
   const sw = snap.requests.map((r) => {
     const fixed = r.direct ? sweetPrice(r.sweetId, r.qty, cat.extra) : null;
+    /* Was für diese Torte bezahlt wurde (Festpreis bzw. Richtpreis) */
+    const charged = paid ? cakePrice(r.sweetId, r.qty, cat.extra) : null;
     /* Direkt buchen geht nur mit Katalogpreis und nur bezahlt */
-    return { r, fixed, direct: fixed !== null && paid };
+    return { r, fixed, charged, direct: fixed !== null && paid };
   });
 
   const sh = snap.shop
@@ -406,7 +409,7 @@ export async function recordCartCore(
 
   /* ---- Torten & Süßes ---- */
   const sweetIds: number[] = [];
-  for (const [j, { r, fixed, direct }] of sw.entries()) {
+  for (const [j, { r, fixed, charged, direct }] of sw.entries()) {
     const { data: ins } = await admin
       .from("sweet_requests")
       .insert({
@@ -419,10 +422,13 @@ export async function recordCartCore(
         city: r.city,
         wishes: r.wishes,
         customer_name: snap.contact.name || null,
-        price_cents: Math.round((fixed ?? r.estimate) * 100),
+        price_cents: Math.round((fixed ?? charged ?? r.estimate) * 100),
         direct,
         status: direct ? "booked" : "sent",
-        stripe_session_id: direct ? data.sessionId ?? null : null,
+        /* Wunschtorten sind ebenfalls bezahlt; die Konditorei sagt zu, senkt
+           oder erhöht den Preis (lib/wishcake.server.ts) */
+        stripe_session_id: paid ? (data.sessionId ?? null) : null,
+        paid_cents: charged !== null ? Math.round(charged * 100) : 0,
         sub_order_id: partSub.get(`sweet:${j}`) ?? null,
         /* Stornoregel Torte (kostenlos bis Produktionsbeginn) mit der Bestellung speichern */
         policy: policySnapshot("cake", "moderat", (() => {

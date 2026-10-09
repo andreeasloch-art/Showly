@@ -20,7 +20,7 @@ export type BookingStatus =
 export type PenaltyReason = "late" | "noshow";
 export type PenaltyStatus = "hearing" | "due" | "proof" | "waived";
 export type PayoutStatus = "scheduled" | "held" | "paid" | "cancelled";
-export type SweetStatus = "sent" | "confirmed" | "declined" | "booked" | "cancelled";
+export type SweetStatus = "sent" | "quoted" | "confirmed" | "declined" | "booked" | "cancelled";
 export type ReportTarget = "post" | "comment" | "review" | "profile";
 export type ReportStatus = "open" | "removed" | "kept";
 export type VerificationStatus =
@@ -209,6 +209,8 @@ export type PayoutRow = {
   artist_id: number | null;
   /** null bei Teilbestellungen von Konditoreien und Deko-Anbietern (0019) */
   booking_id: number | null;
+  /** Wunschtorte (0020) */
+  sweet_request_id?: number | null;
   sub_order_id?: number | null;
   owner?: string | null;
   kind?: "artist" | "baker" | "deco";
@@ -256,6 +258,13 @@ export type SweetRequestRow = {
   policy?: PolicyJson | null;
   status: SweetStatus;
   stripe_session_id: string | null;
+  /** Wunschtorten (0020): bezahlt, davon nachgezahlt, erstattet, höherer Preis */
+  paid_cents?: number;
+  extra_cents?: number;
+  refunded_cents?: number;
+  quote_cents?: number | null;
+  quote_note?: string | null;
+  extra_session_id?: string | null;
   created_at: string;
 }
 

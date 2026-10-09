@@ -24,13 +24,17 @@ const COPY = {
     sweets: "Torten-Anfragen",
     orders: "Deko-Bestellungen",
     qty: (n: number) => `${n}×`,
-    est: "Richtpreis",
+    est: "Richtpreis, bezahlt",
     fixed: "Festpreis, bezahlt",
     final: "Endpreis in €",
+    note: "Begründung bei höherem Preis (z. B. dritte Etage)",
+    howto: "Der Kunde hat den Richtpreis schon bezahlt. Gleicher oder niedrigerer Endpreis: sofort zugesagt, die Differenz geht zurück. Höherer Endpreis: der Kunde bestätigt und zahlt nach. Ablehnen: der Kunde bekommt alles zurück.",
+    quoted: (n: string) => `Neuer Preis ${n} – wartet auf Bestätigung des Kunden`,
+    sentQuote: "Neuer Preis geschickt. Der Kunde bestätigt und zahlt nach.",
     accept: "Annehmen",
     decline: "Ablehnen",
     msgs: "Nachrichten",
-    st: { sent: "offen", confirmed: "angenommen", declined: "abgelehnt", booked: "gebucht", cancelled: "storniert" },
+    st: { sent: "offen", quoted: "neuer Preis, wartet auf Kunde", confirmed: "angenommen", declined: "abgelehnt", booked: "gebucht", cancelled: "storniert" },
     ost: { pending: "offen", paid: "bezahlt", shipped: "versendet", returned: "zurück", cancelled: "storniert" },
     done: "Gespeichert",
     wishes: "Wünsche",
@@ -45,13 +49,17 @@ const COPY = {
     sweets: "Cake requests",
     orders: "Decor orders",
     qty: (n: number) => `${n}×`,
-    est: "Estimate",
+    est: "Estimate, paid",
     fixed: "Fixed price, paid",
     final: "Final price in €",
+    note: "Reason for a higher price (e.g. third tier)",
+    howto: "The customer has already paid the estimate. Same or lower final price: confirmed at once, the difference is refunded. Higher price: the customer confirms and pays the rest. Decline: the customer gets everything back.",
+    quoted: (n: string) => `New price ${n} – waiting for the customer`,
+    sentQuote: "New price sent. The customer confirms and pays the rest.",
     accept: "Accept",
     decline: "Decline",
     msgs: "Messages",
-    st: { sent: "open", confirmed: "accepted", declined: "declined", booked: "booked", cancelled: "cancelled" },
+    st: { sent: "open", quoted: "new price, awaiting customer", confirmed: "accepted", declined: "declined", booked: "booked", cancelled: "cancelled" },
     ost: { pending: "open", paid: "paid", shipped: "shipped", returned: "returned", cancelled: "cancelled" },
     done: "Saved",
     wishes: "Wishes",
@@ -66,13 +74,17 @@ const COPY = {
     sweets: "Solicitudes de tartas",
     orders: "Pedidos de decoración",
     qty: (n: number) => `${n}×`,
-    est: "Precio orientativo",
+    est: "Precio orientativo, pagado",
     fixed: "Precio fijo, pagado",
     final: "Precio final en €",
+    note: "Motivo de un precio mayor (p. ej. tercer piso)",
+    howto: "El cliente ya ha pagado el precio orientativo. Precio final igual o menor: confirmado al instante, se devuelve la diferencia. Precio mayor: el cliente confirma y paga el resto. Rechazar: el cliente recupera todo.",
+    quoted: (n: string) => `Nuevo precio ${n}: espera la confirmación del cliente`,
+    sentQuote: "Nuevo precio enviado. El cliente confirma y paga el resto.",
     accept: "Aceptar",
     decline: "Rechazar",
     msgs: "Mensajes",
-    st: { sent: "abierta", confirmed: "aceptada", declined: "rechazada", booked: "reservada", cancelled: "cancelada" },
+    st: { sent: "abierta", quoted: "nuevo precio, espera al cliente", confirmed: "aceptada", declined: "rechazada", booked: "reservada", cancelled: "cancelada" },
     ost: { pending: "abierto", paid: "pagado", shipped: "enviado", returned: "devuelto", cancelled: "cancelado" },
     done: "Guardado",
     wishes: "Deseos",
@@ -127,6 +139,7 @@ export function ProviderInbox() {
   const [sweets, setSweets] = useState<SweetRequestRow[]>([]);
   const [orders, setOrders] = useState<ShopOrderRow[]>([]);
   const [price, setPrice] = useState<Record<number, string>>({});
+  const [note, setNote] = useState<Record<number, string>>({});
   const [chat, setChat] = useState<SweetRequestRow | null>(null);
 
   const load = useCallback(() => {
@@ -162,10 +175,15 @@ export function ProviderInbox() {
   async function answer(r: SweetRequestRow, accept: boolean) {
     const eur = parsePrice(price[r.id] ?? "");
     const res = await respondSweet({
-      data: { requestId: r.id, accept, ...(accept && eur ? { priceCents: Math.round(eur * 100) } : {}) },
+      data: {
+        requestId: r.id,
+        accept,
+        ...(accept && eur ? { priceCents: Math.round(eur * 100) } : {}),
+        ...(accept && note[r.id] ? { note: note[r.id] } : {}),
+      },
     });
     if ("error" in res) return toast(res.error);
-    toast(C.done);
+    toast(res.status === "quoted" ? C.sentQuote : C.done);
     load();
   }
 
@@ -201,6 +219,8 @@ export function ProviderInbox() {
                 <small>
                   {r.direct ? C.fixed : C.est}: {fmt(r.price_cents / 100)}
                 </small>
+                {r.status === "quoted" && r.quote_cents ? <small className="inb-quote">{C.quoted(fmt(r.quote_cents / 100))}</small> : null}
+                {r.status === "sent" && !r.direct && (r.paid_cents ?? 0) > 0 && <small className="fair-muted">{C.howto}</small>}
               </div>
               <div className="prov-side">
                 <span className={"my-req-st " + r.status}>{C.st[r.status]}</span>
@@ -213,6 +233,15 @@ export function ProviderInbox() {
                       value={price[r.id] ?? ""}
                       onChange={(e) => setPrice((p) => ({ ...p, [r.id]: e.target.value }))}
                     />
+                    {parsePrice(price[r.id] ?? "") * 100 > r.price_cents && (
+                      <input
+                        className="prov-price prov-note"
+                        maxLength={300}
+                        placeholder={C.note}
+                        value={note[r.id] ?? ""}
+                        onChange={(e) => setNote((p) => ({ ...p, [r.id]: e.target.value }))}
+                      />
+                    )}
                     <button type="button" className="dash26-mini inb-accept" onClick={() => void answer(r, true)}>
                       {C.accept}
                     </button>

@@ -815,6 +815,7 @@ function Dashboard() {
           <PayoutPanel artistId={myProfile.id} />
         )}
 
+        {active === "payments" && !myProfile && (myProviders.baker || myProviders.deco) && <PayoutPanel />}
         {active === "payments" && !myProfile && (
           <>
             <div className="dash26-panel">

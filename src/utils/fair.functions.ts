@@ -16,11 +16,6 @@ import type { ComplaintRow, HandoverRow } from "@/lib/database.types";
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const int = (v: unknown, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(v) || 0)));
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const addDaysISO = (d: string, n: number) => {
-  const x = new Date(d.slice(0, 10) + "T12:00:00Z");
-  x.setUTCDate(x.getUTCDate() + n);
-  return x.toISOString().slice(0, 10);
-};
 const SLOT_RE = /^\d{2}:\d{2}$/;
 const euro = (c: number) => (c / 100).toFixed(2).replace(".", ",") + " €";
 const dateDe = (iso: string) => iso.slice(0, 10).split("-").reverse().join(".");
@@ -184,8 +179,6 @@ export const choosePayoutSpeed = createServerFn({ method: "POST" })
       day = b?.day ?? null;
     }
     if (!day) return { error: "Termin nicht gefunden" };
-    /* Kauf im Shop: Auszahlung erst nach der Widerrufsfrist, nicht schneller */
-    if (p.kind === "deco" && p.payout_on > addDaysISO(day, 7)) return { error: "Bei Käufen wird erst nach der Widerrufsfrist ausgezahlt" };
     const { payoutFor, speedOf } = await import("@/showly/policies");
     const base = p.net_cents + (p.express_fee_cents ?? 0);
     const next = payoutFor(day, base, speedOf(data.speed));

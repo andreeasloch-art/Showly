@@ -285,19 +285,27 @@ export async function recordCartCore(
         const id = subId.get(d.key);
         if (id) for (const p of d.parts) partSub.set(`${p.type}:${p.index}`, id);
       }
-      /* Auszahlung an Konditoreien und Deko-/Kostümanbieter planen (wie bei
-         Künstlern): 7 Tage nach Liefertag bzw. Mietende, Käufe nach der
-         Widerrufsfrist (policies.ts) */
+      /* Auszahlung an Konditoreien und Deko-/Kostümanbieter planen, genau
+         wie bei Künstlern: 7 Tage nach Liefertag, Mietende bzw. Bestelltag,
+         Sicherheitseinbehalt bei den ersten 5 Aufträgen (policies.ts,
+         cloudRules.ts) */
       const { orderPayoutDay } = await import("@/showly/policies");
+      const { reserveFor } = await import("@/showly/cloudRules");
+      const earlier = new Map<string, number>();
       const orderDay = new Date().toISOString().slice(0, 10);
-      const plans = drafts
-        .filter((d) => (d.kind === "baker" || d.kind === "deco") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"))
+      const due = drafts.filter((d) => (d.kind === "baker" || d.kind === "deco") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"));
+      for (const o of new Set(due.map((d) => d.owner!))) {
+        const { count } = await admin.from("payouts").select("id", { count: "exact", head: true }).eq("owner", o);
+        earlier.set(o, count || 0);
+      }
+      const plans = due
         .map((d) => {
           const cakeDays = d.parts.filter((p) => p.type === "sweet").map((p) => sw[p.index]?.r.dateISO ?? "");
           const lines = d.parts.filter((p) => p.type === "shop").map((p) => sh[p.index]);
           const rentTo = lines.filter((l) => l?.mode === "rent").map((l) => l?.to ?? "");
-          const buy = lines.some((l) => l?.mode === "buy");
-          const when = orderPayoutDay({ cakeDays, rentTo, buy, orderDay });
+          const when = orderPayoutDay({ cakeDays, rentTo, orderDay });
+          const n = earlier.get(d.owner!) ?? 0;
+          earlier.set(d.owner!, n + 1);
           return {
             sub_order_id: subId.get(d.key)!,
             owner: d.owner,
@@ -309,6 +317,7 @@ export async function recordCartCore(
             net_cents: d.payoutCents,
             event_day: when.event_day,
             payout_on: when.payout_on,
+            ...reserveFor(when.event_day, d.payoutCents, n),
           };
         })
         .filter((x) => x.sub_order_id);

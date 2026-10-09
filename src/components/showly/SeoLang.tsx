@@ -5,7 +5,9 @@ import { useShowly } from "@/showly/store";
 import { OG_LOCALE, langUrl, seoText } from "@/showly/seo";
 
 function keyForPath(pathname: string): string {
-  if (pathname.startsWith("/kuenstler/")) return "/kuenstler/$id";
+  /* Profile, Stadtseiten und Ratgeber setzen eigene Titel (head() der Route);
+     die allgemeinen Texte würden sie überschreiben */
+  if (/^\/(kuenstler|torten\/\d|buchen|ratgeber)/.test(pathname)) return "";
   if (pathname.startsWith("/rechtliches/")) return "/rechtliches/$doc";
   const clean = pathname.replace(/\/+$/, "") || "/";
   return clean;

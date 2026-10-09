@@ -34,14 +34,20 @@ import { Route as ApiCheckinRouteImport } from './routes/api.checkin'
 import { Route as ApiStatusRouteImport } from './routes/api.status'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
+import { Route as BuchenIndexRouteImport } from './routes/buchen.index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
 import { Route as KuenstlerIdRouteImport } from './routes/kuenstler.$id'
+import { Route as RatgeberIndexRouteImport } from './routes/ratgeber.index'
+import { Route as RatgeberSlugRouteImport } from './routes/ratgeber.$slug'
 import { Route as RechtlichesDocRouteImport } from './routes/rechtliches.$doc'
 import { Route as TortenIndexRouteImport } from './routes/torten.index'
 import { Route as TortenIdRouteImport } from './routes/torten.$id'
 import { Route as TortenAnbietenRouteImport } from './routes/torten.anbieten'
 import { Route as ApiKalenderTokenRouteImport } from './routes/api.kalender.$token'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api.stripe.webhook'
+import { Route as BuchenLeistungStadtRouteImport } from './routes/buchen.$leistung.$stadt'
+import { Route as ApiBildKindIdRouteImport } from './routes/api.bild.$kind.$id'
+import { Route as KuenstlerStadtKategorieNameRouteImport } from './routes/kuenstler.$stadt.$kategorie.$name'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -168,6 +174,11 @@ const AuthRueckkehrRoute = AuthRueckkehrRouteImport.update({
   path: '/auth/rueckkehr',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuchenIndexRoute = BuchenIndexRouteImport.update({
+  id: '/buchen/',
+  path: '/buchen/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
   id: '/checkout_/return',
   path: '/checkout/return',
@@ -176,6 +187,16 @@ const CheckoutReturnRoute = CheckoutReturnRouteImport.update({
 const KuenstlerIdRoute = KuenstlerIdRouteImport.update({
   id: '/kuenstler/$id',
   path: '/kuenstler/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RatgeberIndexRoute = RatgeberIndexRouteImport.update({
+  id: '/ratgeber/',
+  path: '/ratgeber/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RatgeberSlugRoute = RatgeberSlugRouteImport.update({
+  id: '/ratgeber/$slug',
+  path: '/ratgeber/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RechtlichesDocRoute = RechtlichesDocRouteImport.update({
@@ -208,6 +229,22 @@ const ApiStripeWebhookRoute = ApiStripeWebhookRouteImport.update({
   path: '/api/stripe/webhook',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BuchenLeistungStadtRoute = BuchenLeistungStadtRouteImport.update({
+  id: '/buchen/$leistung/$stadt',
+  path: '/buchen/$leistung/$stadt',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiBildKindIdRoute = ApiBildKindIdRouteImport.update({
+  id: '/api/bild/$kind/$id',
+  path: '/api/bild/$kind/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KuenstlerStadtKategorieNameRoute =
+  KuenstlerStadtKategorieNameRouteImport.update({
+    id: '/kuenstler/$stadt/$kategorie/$name',
+    path: '/kuenstler/$stadt/$kategorie/$name',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -237,12 +274,18 @@ export interface FileRoutesByFullPath {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
+  '/buchen/': typeof BuchenIndexRoute
+  '/ratgeber/': typeof RatgeberIndexRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/buchen/$leistung/$stadt': typeof BuchenLeistungStadtRoute
+  '/api/bild/$kind/$id': typeof ApiBildKindIdRoute
+  '/kuenstler/$stadt/$kategorie/$name': typeof KuenstlerStadtKategorieNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -272,12 +315,18 @@ export interface FileRoutesByTo {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
+  '/buchen': typeof BuchenIndexRoute
+  '/ratgeber': typeof RatgeberIndexRoute
   '/torten': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/buchen/$leistung/$stadt': typeof BuchenLeistungStadtRoute
+  '/api/bild/$kind/$id': typeof ApiBildKindIdRoute
+  '/kuenstler/$stadt/$kategorie/$name': typeof KuenstlerStadtKategorieNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -308,12 +357,18 @@ export interface FileRoutesById {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
+  '/buchen/': typeof BuchenIndexRoute
+  '/ratgeber/': typeof RatgeberIndexRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
+  '/buchen/$leistung/$stadt': typeof BuchenLeistungStadtRoute
+  '/api/bild/$kind/$id': typeof ApiBildKindIdRoute
+  '/kuenstler/$stadt/$kategorie/$name': typeof KuenstlerStadtKategorieNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -345,12 +400,18 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
+    | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
+    | '/buchen/'
+    | '/ratgeber/'
     | '/torten/'
     | '/api/kalender/$token'
     | '/api/stripe/webhook'
+    | '/buchen/$leistung/$stadt'
+    | '/api/bild/$kind/$id'
+    | '/kuenstler/$stadt/$kategorie/$name'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -380,12 +441,18 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
+    | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
+    | '/buchen'
+    | '/ratgeber'
     | '/torten'
     | '/api/kalender/$token'
     | '/api/stripe/webhook'
+    | '/buchen/$leistung/$stadt'
+    | '/api/bild/$kind/$id'
+    | '/kuenstler/$stadt/$kategorie/$name'
   id:
     | '__root__'
     | '/'
@@ -415,12 +482,18 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout_/return'
     | '/kuenstler/$id'
+    | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
+    | '/buchen/'
+    | '/ratgeber/'
     | '/torten/'
     | '/api/kalender/$token'
     | '/api/stripe/webhook'
+    | '/buchen/$leistung/$stadt'
+    | '/api/bild/$kind/$id'
+    | '/kuenstler/$stadt/$kategorie/$name'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -451,12 +524,18 @@ export interface RootRouteChildren {
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   KuenstlerIdRoute: typeof KuenstlerIdRoute
+  RatgeberSlugRoute: typeof RatgeberSlugRoute
   RechtlichesDocRoute: typeof RechtlichesDocRoute
   TortenIdRoute: typeof TortenIdRoute
   TortenAnbietenRoute: typeof TortenAnbietenRoute
+  BuchenIndexRoute: typeof BuchenIndexRoute
+  RatgeberIndexRoute: typeof RatgeberIndexRoute
   TortenIndexRoute: typeof TortenIndexRoute
   ApiKalenderTokenRoute: typeof ApiKalenderTokenRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
+  BuchenLeistungStadtRoute: typeof BuchenLeistungStadtRoute
+  ApiBildKindIdRoute: typeof ApiBildKindIdRoute
+  KuenstlerStadtKategorieNameRoute: typeof KuenstlerStadtKategorieNameRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -636,6 +715,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRueckkehrRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/buchen/': {
+      id: '/buchen/'
+      path: '/buchen'
+      fullPath: '/buchen/'
+      preLoaderRoute: typeof BuchenIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checkout_/return': {
       id: '/checkout_/return'
       path: '/checkout/return'
@@ -648,6 +734,20 @@ declare module '@tanstack/react-router' {
       path: '/kuenstler/$id'
       fullPath: '/kuenstler/$id'
       preLoaderRoute: typeof KuenstlerIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ratgeber/': {
+      id: '/ratgeber/'
+      path: '/ratgeber'
+      fullPath: '/ratgeber/'
+      preLoaderRoute: typeof RatgeberIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ratgeber/$slug': {
+      id: '/ratgeber/$slug'
+      path: '/ratgeber/$slug'
+      fullPath: '/ratgeber/$slug'
+      preLoaderRoute: typeof RatgeberSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rechtliches/$doc': {
@@ -692,6 +792,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiStripeWebhookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/buchen/$leistung/$stadt': {
+      id: '/buchen/$leistung/$stadt'
+      path: '/buchen/$leistung/$stadt'
+      fullPath: '/buchen/$leistung/$stadt'
+      preLoaderRoute: typeof BuchenLeistungStadtRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/bild/$kind/$id': {
+      id: '/api/bild/$kind/$id'
+      path: '/api/bild/$kind/$id'
+      fullPath: '/api/bild/$kind/$id'
+      preLoaderRoute: typeof ApiBildKindIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kuenstler/$stadt/$kategorie/$name': {
+      id: '/kuenstler/$stadt/$kategorie/$name'
+      path: '/kuenstler/$stadt/$kategorie/$name'
+      fullPath: '/kuenstler/$stadt/$kategorie/$name'
+      preLoaderRoute: typeof KuenstlerStadtKategorieNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -723,12 +844,18 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   KuenstlerIdRoute: KuenstlerIdRoute,
+  RatgeberSlugRoute: RatgeberSlugRoute,
   RechtlichesDocRoute: RechtlichesDocRoute,
   TortenIdRoute: TortenIdRoute,
   TortenAnbietenRoute: TortenAnbietenRoute,
+  BuchenIndexRoute: BuchenIndexRoute,
+  RatgeberIndexRoute: RatgeberIndexRoute,
   TortenIndexRoute: TortenIndexRoute,
   ApiKalenderTokenRoute: ApiKalenderTokenRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
+  BuchenLeistungStadtRoute: BuchenLeistungStadtRoute,
+  ApiBildKindIdRoute: ApiBildKindIdRoute,
+  KuenstlerStadtKategorieNameRoute: KuenstlerStadtKategorieNameRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

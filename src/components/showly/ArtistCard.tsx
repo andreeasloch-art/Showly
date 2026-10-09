@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { artistParams } from "@/showly/slugs";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { useShowly } from "@/showly/store";
 import { CATS, ICON, type Artist } from "@/showly/data";
@@ -54,8 +55,8 @@ export function ArtistCard({ a }: { a: Artist }) {
           <h3 className="act-card-name">
             <Link
               className="act-card-link"
-              to="/kuenstler/$id"
-              params={{ id: String(a.id) }}
+              to="/kuenstler/$stadt/$kategorie/$name"
+              params={artistParams(a)}
               onClick={(e) => {
                 /* Nur das angetippte Bild bekommt den Übergangsnamen, den auch
                    das Profilbild trägt: es wächst flüssig in die Profilseite.

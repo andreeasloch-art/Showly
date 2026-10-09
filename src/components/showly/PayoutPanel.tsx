@@ -26,7 +26,7 @@ const COPY = {
   de: {
     bankH: "Auszahlungskonto",
     bankP:
-      "Deine Gage wird immer 7 Tage nach dem Event auf dieses Konto überwiesen. Schneller geht gegen Gebühr: 3 Tage nach dem Event (10 %) oder innerhalb von 48 Stunden (20 %).",
+      "Dein Geld wird immer 7 Tage nach dem Event, der Lieferung bzw. dem Mietende auf dieses Konto überwiesen. Schneller geht gegen Gebühr: nach 3 Tagen (10 %) oder innerhalb von 48 Stunden (20 %). Gleiche Regeln für Künstler, Torten, Deko und Kostüme.",
     missing:
       "Hinterlege dein Konto, sonst können wir deine Gage nicht auszahlen.",
     holder: "Kontoinhaber",
@@ -48,7 +48,7 @@ const COPY = {
     reserve: (a: string, d: string) =>
       `davon ${a} Sicherheitseinbehalt, Auszahlung am ${d}`,
     reserveInfo:
-      "Von deinen ersten 5 Buchungen behalten wir 20 % der Gage 30 Tage als Sicherheit ein und zahlen sie danach aus (AGB § 21).",
+      "Von deinen ersten 5 Buchungen bzw. Bestellungen behalten wir 20 % 30 Tage als Sicherheit ein und zahlen sie danach aus (AGB § 21).",
     cxP: "Kontodaten und Ausweis gibst du direkt bei unserem Zahlungsdienst Stripe ein. Showly sieht deine IBAN nicht.",
     cxStart: "Auszahlungskonto einrichten",
     cxGoOn: "Einrichtung fortsetzen",
@@ -286,14 +286,16 @@ export function ConnectBox({ onState }: { onState: (ready: boolean) => void }) {
   );
 }
 
-export function PayoutPanel({ artistId }: { artistId: number }) {
+/** Ohne artistId: Auszahlungen der Konditorei bzw. des Deko-/Kostümanbieters
+ *  (gleiche Regeln, die Datenbank liefert nur die eigenen) */
+export function PayoutPanel({ artistId }: { artistId?: number | undefined }) {
   const { lang, fmt, fmtDate, payouts, bankAccounts, session } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
-  const key = `artist:${artistId}`;
+  const key = artistId !== undefined ? `artist:${artistId}` : "provider";
   const cloud = !!session?.backend;
   const [connectReady, setConnectReady] = useState(false);
   const hasBank = cloud ? connectReady : !!bankAccounts[key];
-  const mine = payouts.filter((p) => p.artistId === artistId);
+  const mine = payouts.filter((p) => p.artistId === (artistId ?? 0));
   const today = new Date().toISOString().slice(0, 10);
   const due = (p: Payout) => p.payoutOn || payoutDate(p.dateISO);
 

@@ -9,6 +9,7 @@
  * Gründer, Gründungsdatum und Mitarbeiterzahl fehlen bewusst, solange das
  * Impressum Platzhalter ("Muster") enthält. Keine Bewertungssterne aus
  * Beispielprofilen. */
+import { artistPath } from "./slugs";
 import type { Artist, Lang } from "./data";
 import { SITE, SOCIAL_PROFILES, langUrl } from "./seo";
 
@@ -148,7 +149,7 @@ export function profileIndexable(a: Artist): boolean {
  *  PerformingGroup, Angebot über Showly und Brotkrumen. Bewertungen nur,
  *  wenn es echte gibt. */
 export function artistGraph(a: Artist, lang: Lang, catLabel: string): string {
-  const path = `/kuenstler/${a.id}`;
+  const path = artistPath(a);
   const url = langUrl(path, lang);
   const name = txt(a.name, lang);
   const performer: Json = {
@@ -218,5 +219,91 @@ export function pageGraph(lang: Lang, path: string, title: string, crumb: string
       about: { "@id": ORG_ID },
     },
     breadcrumbs([["Showly", "/"], [crumb, path]], lang),
+  );
+}
+
+/** Konditorei bzw. Hobbybäckerin: Bakery mit Angeboten (Product + Offer).
+ *  Privatpersonen ohne Ladengeschäft als Person, nicht als LocalBusiness. */
+export function bakerGraph(
+  b: { id: number; kind: string; name: unknown; city: string; about: unknown; tagline: unknown; rating: number; reviews: number },
+  offers: { id: number; name: unknown; desc: unknown; price: number }[],
+  lang: Lang,
+): string {
+  const path = `/torten/${b.id}`;
+  const url = langUrl(path, lang);
+  const name = txt(b.name, lang);
+  const seller: Json = {
+    "@type": b.kind === "private" ? "Person" : "Bakery",
+    "@id": `${url}#seller`,
+    name,
+    url,
+    description: (txt(b.about, lang) || txt(b.tagline, lang)).slice(0, 500),
+    ...(b.city ? (b.kind === "private" ? { homeLocation: { "@type": "Place", name: b.city } } : { address: { "@type": "PostalAddress", addressLocality: b.city } }) : {}),
+    ...(b.reviews > 0 && b.rating > 0
+      ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Number(b.rating).toFixed(1), reviewCount: b.reviews, bestRating: 5, worstRating: 1 } }
+      : {}),
+  };
+  const products: Json[] = offers.slice(0, 30).map((o) => ({
+    "@type": "Product",
+    "@id": `${url}#angebot-${o.id}`,
+    name: txt(o.name, lang),
+    description: txt(o.desc, lang).slice(0, 300) || undefined,
+    url: `${url}${url.includes("?") ? "&" : "?"}angebot=${o.id}`,
+    offers: {
+      "@type": "Offer",
+      price: Number(o.price).toFixed(2),
+      priceCurrency: "EUR",
+      availability: "https://schema.org/InStock",
+      seller: { "@id": `${url}#seller` },
+    },
+  }));
+  return graph(
+    { "@type": "ProfilePage", "@id": `${url}#page`, url, name, inLanguage: lang, isPartOf: { "@id": WEBSITE_ID }, mainEntity: { "@id": `${url}#seller` } },
+    seller,
+    ...products,
+    breadcrumbs([["Showly", "/"], ["Torten & Süßes", "/torten"], [name, path]], lang),
+  );
+}
+
+/** Stadtseite: Liste der Anbieter mit Brotkrumen */
+export function landingGraph(path: string, title: string, items: { name: string; url: string }[], crumbs: [string, string][]): string {
+  const url = langUrl(path, "de");
+  return graph(
+    {
+      "@type": "CollectionPage",
+      "@id": `${url}#page`,
+      url,
+      name: title,
+      inLanguage: "de",
+      isPartOf: { "@id": WEBSITE_ID },
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: items.length,
+        itemListElement: items.slice(0, 50).map((x, i) => ({ "@type": "ListItem", position: i + 1, name: x.name, url: `${SITE}${x.url}` })),
+      },
+    },
+    breadcrumbs([["Showly", "/"], ...crumbs], "de"),
+  );
+}
+
+/** Ratgeber-Artikel */
+export function articleGraph(path: string, title: string, description: string, updated: string): string {
+  const url = langUrl(path, "de");
+  return graph(
+    {
+      "@type": "Article",
+      "@id": `${url}#article`,
+      url,
+      headline: title,
+      description,
+      inLanguage: "de",
+      dateModified: updated,
+      datePublished: updated,
+      author: { "@id": ORG_ID },
+      publisher: { "@id": ORG_ID },
+      isPartOf: { "@id": WEBSITE_ID },
+      mainEntityOfPage: url,
+    },
+    breadcrumbs([["Showly", "/"], ["Ratgeber", "/ratgeber"], [title, path]], "de"),
   );
 }

@@ -280,19 +280,23 @@ export function hearingOver(p: { status: string; hearing_until: string | null },
   return p.status === "hearing" && !!p.hearing_until && new Date(p.hearing_until).getTime() < now;
 }
 
+/** Sicherheitseinbehalt (AGB § 21 Abs. 4): 20 % bei den ersten 5 Aufträgen,
+ *  für alle Anbietenden gleich, 30 Tage nach dem Stichtag ausgezahlt */
+export function reserveFor(day: string, netCents: number, earlierPayouts: number) {
+  const reserve = earlierPayouts < RESERVE_FIRST_BOOKINGS ? Math.round(netCents * RESERVE_RATE) : 0;
+  return { reserve_cents: reserve, reserve_until: reserve ? new Date(berlinStart(day, "12:00") + RESERVE_DAYS * DAY).toISOString().slice(0, 10) : null };
+}
+
 /** Geplante Auszahlung zu einer Buchung (AGB § 21) */
 export function plannedPayout(
   b: { day: string; amount_cents: number; payout_cents: number },
   earlierPayouts: number,
 ) {
-  const reserve = earlierPayouts < RESERVE_FIRST_BOOKINGS ? Math.round(b.payout_cents * RESERVE_RATE) : 0;
-  const reserveUntil = new Date(berlinStart(b.day, "12:00") + RESERVE_DAYS * DAY).toISOString().slice(0, 10);
   return {
     gross_cents: b.amount_cents,
     fee_cents: b.amount_cents - b.payout_cents,
     net_cents: b.payout_cents,
-    reserve_cents: reserve,
-    reserve_until: reserve ? reserveUntil : null,
+    ...reserveFor(b.day, b.payout_cents, earlierPayouts),
     payout_on: payoutDate(b.day),
   };
 }

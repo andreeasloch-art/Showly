@@ -406,3 +406,32 @@ export function seoHead(key: string, path: string, lang: Lang = DEFAULT_LANG) {
     links: hreflangLinks(clean, lang),
   };
 }
+
+/** head()-Block für Seiten mit eigenem Text, die es nur auf Deutsch gibt
+ *  (Stadtseiten, Ratgeber): Canonical ohne Sprachvarianten. */
+export function seoHeadDe(path: string, title: string, description: string, opts: { noindex?: boolean; type?: string } = {}) {
+  const clean = path.startsWith("/") ? path : `/${path}`;
+  const url = `${SITE}${clean}`;
+  return {
+    meta: [
+      { title },
+      { name: "description", content: description },
+      { name: "language", content: "de" },
+      { property: "og:site_name", content: "Showly" },
+      { property: "og:type", content: opts.type || "website" },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
+      { property: "og:url", content: url },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:locale", content: OG_LOCALE.de },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: description },
+      { name: "twitter:image", content: OG_IMAGE },
+      ...(opts.noindex ? [{ name: "robots", content: "noindex, follow" }] : []),
+    ],
+    links: [{ rel: "canonical", href: url }],
+  };
+}

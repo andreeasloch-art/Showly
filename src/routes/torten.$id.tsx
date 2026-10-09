@@ -1,8 +1,11 @@
-import { headLang, seoHead } from "@/showly/seo";
+import { SITE, headLang, seoHead } from "@/showly/seo";
+import type { Lang } from "@/showly/data";
 import { countView } from "@/showly/viewCount";
 import { DemoNote } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
+import { upsertPublicBaker } from "@/showly/cloudProviders";
+import { bakerGraph } from "@/showly/schema";
 import { useEffect, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
@@ -41,14 +44,60 @@ export const Route = createFileRoute("/torten/$id")({
     if (Number.isInteger(a) && a > 0) out.angebot = a;
     return out;
   },
-  head: (ctx) => {
-    const h = seoHead("/torten/$id", `/torten/${ctx.params.id}`, headLang(ctx));
-    /* Beispiel-Anbieter zeigen nur, wie ein Angebot aussieht: nicht in den Suchindex */
-    const demo = BAKERS.find((b) => String(b.id) === ctx.params.id)?.demo;
-    return demo ? { ...h, meta: [...h.meta, { name: "robots", content: "noindex, follow" }] } : h;
+  /* Echte Profile schon auf dem Server laden, damit Suchmaschinen Text,
+     Angebote und Preise ohne JavaScript sehen. Gibt es ein Profil aus der
+     Datenbank nicht (mehr), antwortet der Server mit 404. */
+  loader: async ({ params }) => {
+    const id = Number(params.id);
+    if (!(id >= 100000)) return { wire: null };
+    const { publicBaker, parseBakers } = await import("@/utils/seo.functions");
+    const wire = await publicBaker({ data: { id } }).catch(() => null);
+    const [pb] = parseBakers(wire);
+    if (pb) upsertPublicBaker(pb.provider, pb.offers);
+    else if (typeof window === "undefined") throw notFound();
+    return { wire };
   },
+  head: (ctx) => bakerHead(ctx.params.id, headLang(ctx)),
   component: BakerProfile,
 });
+
+/* Titel, Beschreibung, Vorschaubild und strukturierte Daten je Profil.
+   Beispiel-Anbieter und Profile ohne Angebote bleiben aus dem Suchindex. */
+function bakerHead(idParam: string, lang: Lang) {
+  const h = seoHead("/torten/$id", `/torten/${idParam}`, lang);
+  const b = bakerOf(Number(idParam));
+  if (!b || b.demo) return { ...h, meta: [...h.meta, { name: "robots", content: "noindex, follow" }] };
+  const tx = (v: unknown) => (typeof v === "string" ? v : ((v || {}) as Record<string, string>)[lang] || ((v || {}) as Record<string, string>)["de"] || "");
+  const name = tx(b.name);
+  const offers = sweetsOf(b.id);
+  const title =
+    lang === "en"
+      ? `${name} – cakes & sweets${b.city ? ` in ${b.city}` : ""} | Showly`
+      : lang === "es"
+        ? `${name} – tartas y dulces${b.city ? ` en ${b.city}` : ""} | Showly`
+        : `${name} – Torten & Süßes${b.city ? ` in ${b.city}` : ""} | Showly`;
+  const raw = (tx(b.tagline) + " " + tx(b.about)).replace(/\s+/g, " ").trim();
+  const description = raw.length > 155 ? raw.slice(0, 152).replace(/\s\S*$/, "") + " …" : raw || h.meta[1]!.content!;
+  const indexable = b.id >= 100000 && offers.length > 0;
+  const meta = h.meta.map((m) =>
+    "title" in m
+      ? { title }
+      : m.name === "description" || m.property === "og:description" || m.name === "twitter:description"
+        ? { ...m, content: description }
+        : m.property === "og:title" || m.name === "twitter:title"
+          ? { ...m, content: title }
+          : m.property === "og:image" || m.name === "twitter:image"
+            ? { ...m, content: `${SITE}/api/bild/torten/${b.id}` }
+            : m.property === "og:image:alt"
+              ? { ...m, content: name }
+              : m,
+  ).filter((m) => !("property" in m) || (m.property !== "og:image:width" && m.property !== "og:image:height"));
+  return {
+    meta: indexable ? meta : [...meta, { name: "robots", content: "noindex, follow" }],
+    links: h.links,
+    ...(indexable ? { scripts: [{ type: "application/ld+json", children: bakerGraph(b, offers, lang) }] } : {}),
+  };
+}
 
 const COPY = {
   de: {

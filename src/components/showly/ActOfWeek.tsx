@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { artistParams } from "@/showly/slugs";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ARTISTS, type Artist } from "@/showly/data";
@@ -137,8 +138,8 @@ export function ActOfWeek() {
           return (
             <Link
               key={a.id}
-              to="/kuenstler/$id"
-              params={{ id: String(a.id) }}
+              to="/kuenstler/$stadt/$kategorie/$name"
+              params={artistParams(a)}
               className={"aotw-card" + (slot === -1 ? " wait" : "")}
               style={{ ["--slot" as string]: slot }}
               tabIndex={slot === 0 ? 0 : -1}

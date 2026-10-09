@@ -111,7 +111,7 @@ describe("Reklamation, Schaden, Bewertung, Auszahlung", () => {
   it("Auszahlung Torte/Verleih 7 Tage danach, Kauf nach der Widerrufsfrist", () => {
     expect(orderPayoutDay({ cakeDays: ["2026-10-10"], orderDay: "2026-10-01" })).toEqual({ event_day: "2026-10-10", payout_on: "2026-10-17" });
     expect(orderPayoutDay({ rentTo: ["2026-10-12", "2026-10-14"], orderDay: "2026-10-01" }).payout_on).toBe("2026-10-21");
-    expect(orderPayoutDay({ buy: true, orderDay: "2026-10-01" }).payout_on).toBe("2026-10-22");
+    expect(orderPayoutDay({ orderDay: "2026-10-01" })).toEqual({ event_day: "2026-10-01", payout_on: "2026-10-08" });
   });
   it("Verspätung: je Tag der Tagesmietpreis, höchstens 14 Tage", () => {
     expect(lateFeeCents(2, 1500)).toBe(3000);

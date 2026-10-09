@@ -881,3 +881,16 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .pr-season{display:grid;gap:8px;border:1px solid #ECE7F6;background:#FBF9FF;border-radius:12px;padding:10px}
 .pr-season input,.pr-row input{border:1px solid #DDD5EE;border-radius:10px;padding:8px 10px;font:inherit;background:#fff;min-height:40px;box-sizing:border-box}
 .pr-presets{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ---------- Stadtseiten (/buchen) und Ratgeber ---------- */
+.land26-facts{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 14px;font-weight:700;color:#4A32B5;font-size:14px}
+.land26-facts span{display:inline-flex}
+.land26-grid{margin:8px 0 20px}
+.land26-hub ul{list-style:none;padding:0;margin:0;display:flex;flex-wrap:wrap;gap:6px}
+.land26-hub li a{display:inline-block;border:1.5px solid #E4DDF5;border-radius:999px;padding:6px 12px;font-size:13.5px;font-weight:600;text-decoration:none;color:inherit;background:#fff}
+.land26-hub li a:hover,.land26-hub li a:focus-visible{border-color:#6B4FD8;color:#4A32B5}
+.guide-list{display:grid;gap:12px;margin-top:8px}
+.guide-card{display:block;border:1px solid #ECE7F6;background:#fff;border-radius:16px;padding:14px 16px;text-decoration:none;color:inherit}
+.guide-card h2{margin:0 0 6px;font-size:18px}
+.guide-card p{margin:0;font-size:14px;color:var(--sh-muted,#554B6B)}
+.guide-card:hover,.guide-card:focus-visible{border-color:#6B4FD8}

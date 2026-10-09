@@ -21,6 +21,8 @@ export function buildLlmsTxt(): string {
     `- [What is Showly?](${SITE}/ueber-showly?lang=en): definition, audience, booking process, terms for artists`,
     `- [How Showly works](${SITE}/wie-funktioniert-showly?lang=en): booking in 4 steps, cancellation, travel time between shows`,
     `- [Help & FAQ](${SITE}/hilfe?lang=en)`,
+    `- [Local pages (German)](${SITE}/buchen): artists, cakes and more by city, e.g. /buchen/zauberer/berlin`,
+    `- [Guides (German)](${SITE}/ratgeber): children's birthday ideas, booking checklist, ordering a themed cake, wedding entertainment`,
     "",
     "## Book",
     `- [Find artists](${SITE}/?lang=en): magicians, DJs, bands, musicians, character performers, clowns, acrobats and more`,

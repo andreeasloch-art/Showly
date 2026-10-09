@@ -20,8 +20,8 @@ import { cleanRentTerms } from "./rental";
 export const DB_FROM = 100000;
 export const isCloudId = (id: number) => id >= DB_FROM;
 
-type Row = { id: number; kind: string; data: Record<string, unknown> };
-type OfferRow = {
+export type Row = { id: number; kind: string; data: Record<string, unknown> };
+export type OfferRow = {
   id: number;
   provider_id: number;
   kind: string;
@@ -100,6 +100,14 @@ function itemFromOffer(o: OfferRow, vendor: string): ShopItem {
     desc: L(d["desc"]),
     ...cleanRentTerms(d),
   };
+}
+
+/** Öffentliches Konditorei-Profil (vom Server geladen, z. B. für Suchmaschinen) in den Katalog übernehmen */
+export function upsertPublicBaker(p: Row, offers: OfferRow[]) {
+  const b = bakerFromRow(p, false, true);
+  upsert(BAKERS, b);
+  for (const o of offers) if (o.kind === "sweet") upsert(SWEETS, sweetFromOffer(o));
+  return b;
 }
 
 function upsert<T extends { id: number }>(list: T[], x: T) {

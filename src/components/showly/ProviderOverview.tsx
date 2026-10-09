@@ -120,7 +120,7 @@ export function ProviderOverview({ artistId, onGo }: { artistId?: number | undef
         <div className="ov-card">
           <span className="ov-k">Noch offen insgesamt</span>
           <b className="ov-v">{euro(o.openCents)}</b>
-          <small>immer 7 Tage nach dem Termin</small>
+          <small>7 Tage nach Termin, Lieferung oder Mietende</small>
         </div>
         <div className="ov-card">
           <span className="ov-k">Dieser Monat</span>
@@ -164,7 +164,7 @@ export function ProviderOverview({ artistId, onGo }: { artistId?: number | undef
         ) : (
           <p className="fair-muted">Gerade keine offenen Auszahlungen.</p>
         )}
-        {onGo && artistId !== undefined && (
+        {onGo && (
           <button type="button" className="dash26-mini outline" onClick={() => onGo("payments")}>
             Schneller auszahlen lassen <Icon name="arrow" />
           </button>

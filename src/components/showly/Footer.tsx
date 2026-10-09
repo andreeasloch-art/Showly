@@ -71,6 +71,9 @@ export function Footer() {
                 <Link to="/torten">{t("nav.sweets")}</Link>
               </li>
               <li>
+                <Link to="/buchen">{lang === "en" ? "In your city" : lang === "es" ? "En tu ciudad" : "In deiner Stadt"}</Link>
+              </li>
+              <li>
                 <Link to="/mitmachen">{t("foot.become")}</Link>
               </li>
               {session && <li>
@@ -89,6 +92,9 @@ export function Footer() {
               </li>
               <li>
                 <Link to="/blog">{t("foot.blog")}</Link>
+              </li>
+              <li>
+                <Link to="/ratgeber">{lang === "en" ? "Guides" : lang === "es" ? "Guías" : "Ratgeber"}</Link>
               </li>
               <li>
                 <Link to="/wie-funktioniert-showly">{lang === "en" ? "How it works" : lang === "es" ? "Cómo funciona" : "So funktioniert's"}</Link>

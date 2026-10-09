@@ -4,6 +4,7 @@
  * wer Ballons kauft, das Helium dazu. Die Auswahl hängt am Anlass: Eine
  * Märchenfee spielt meist auf Kindergeburtstagen, eine Band auf Hochzeiten.
  * Torten von Anbietern aus derselben Stadt kommen zuerst. */
+import { artistParams } from "@/showly/slugs";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { ARTISTS, SHOP_ADDONS, SHOP_ITEMS, type Artist, type ShopItem } from "@/showly/data";
@@ -404,7 +405,7 @@ export function AddOnShelf({
             <span className="shelf-price">
               {fmt(a.price)} <small>{X.perH}</small>
             </span>
-            <Link className="shelf-btn" to="/kuenstler/$id" params={{ id: String(a.id) }} onClick={onLeave}>
+            <Link className="shelf-btn" to="/kuenstler/$stadt/$kategorie/$name" params={artistParams(a)} onClick={onLeave}>
               {X.view}
             </Link>
           </article>

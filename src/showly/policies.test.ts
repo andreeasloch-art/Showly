@@ -9,6 +9,7 @@ import {
   frequentComplainer,
   guideline,
   lateFeeCents,
+  orderPayoutDay,
   payoutFor,
   pickReplacements,
   policySnapshot,
@@ -106,6 +107,11 @@ describe("Reklamation, Schaden, Bewertung, Auszahlung", () => {
     expect(damageCents([{ key: "fleck" }, { key: "riss" }], { carefree: false, depositCents: 10000 })).toBe(4000);
     expect(damageCents([{ key: "fleck" }, { key: "riss" }], { carefree: true, depositCents: 10000 })).toBe(0);
     expect(damageCents([{ key: "verlust" }], { carefree: true, valueCents: 30000, depositCents: 10000 })).toBe(10000);
+  });
+  it("Auszahlung Torte/Verleih 7 Tage danach, Kauf nach der Widerrufsfrist", () => {
+    expect(orderPayoutDay({ cakeDays: ["2026-10-10"], orderDay: "2026-10-01" })).toEqual({ event_day: "2026-10-10", payout_on: "2026-10-17" });
+    expect(orderPayoutDay({ rentTo: ["2026-10-12", "2026-10-14"], orderDay: "2026-10-01" }).payout_on).toBe("2026-10-21");
+    expect(orderPayoutDay({ buy: true, orderDay: "2026-10-01" }).payout_on).toBe("2026-10-22");
   });
   it("Verspätung: je Tag der Tagesmietpreis, höchstens 14 Tage", () => {
     expect(lateFeeCents(2, 1500)).toBe(3000);

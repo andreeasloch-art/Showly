@@ -98,6 +98,11 @@ export type ArtistRow = {
   cancel_tier?: "flexibel" | "moderat" | "streng";
   standby?: boolean;
   cancel_rate?: number;
+  /** Wochenendzuschlag und Saisonpreise (0019), showly/surcharges.ts */
+  surcharges?: { weekend: number; seasons: { from: string; to: string; pct: number; label: string }[] } | null;
+  /** Urlaubsmodus von–bis einschließlich (0019) */
+  away_from?: string | null;
+  away_until?: string | null;
   owner: string;
   cat: string;
   name: LText;
@@ -202,7 +207,12 @@ export type VoucherRow = {
 export type PayoutRow = {
   id: number;
   artist_id: number | null;
-  booking_id: number;
+  /** null bei Teilbestellungen von Konditoreien und Deko-Anbietern (0019) */
+  booking_id: number | null;
+  sub_order_id?: number | null;
+  owner?: string | null;
+  kind?: "artist" | "baker" | "deco";
+  event_day?: string | null;
   gross_cents: number;
   fee_cents: number;
   net_cents: number;
@@ -442,6 +452,8 @@ export type Database = {
       }>;
       bookings: Table<BookingRow>;
       reviews: Table<ReviewRow>;
+      /** Aufrufe je Profil und Tag, ohne Personendaten (0019) */
+      provider_views: Table<{ kind: "artist" | "baker" | "deco"; ref: number; day: string; views: number }>;
       /** Reklamationen (0016) */
       complaints: Table<ComplaintRow>;
       /** Bewertung des Kunden durch den Künstler, verdeckt (0016) */
@@ -598,6 +610,10 @@ export type Database = {
     };
     Functions: {
       /** Schlüssel des Datenbank-Zeitplans prüfen (0017) */
+      bump_view: {
+        Args: { p_kind: string; p_ref: number };
+        Returns: undefined;
+      };
       cron_token_ok: {
         Args: { p_token: string };
         Returns: boolean;

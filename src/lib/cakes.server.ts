@@ -45,6 +45,10 @@ export async function checkCakeOrders(
     const od = (offer.get(first.sweetId)!.data || {}) as Record<string, unknown>;
     const leadDays = od["leadDays"] != null ? Number(od["leadDays"]) || 0 : Number(pd["leadDays"]) || 0;
     const maxPerDay = Number(pd["maxPerDay"]) || 0;
+    /* Urlaubsmodus der Konditorei */
+    const awayUntil = String(pd["awayUntil"] || "");
+    if (awayUntil && day <= awayUntil)
+      return `Die Konditorei ist bis ${awayUntil.split("-").reverse().join(".")} im Urlaub. Bitte wähle einen späteren Tag.`;
     let taken = 0;
     if (maxPerDay > 0) {
       const { count } = await admin

@@ -24,6 +24,7 @@ import { BlockedList } from "@/components/showly/BlockedList";
 import { PayoutPanel } from "@/components/showly/PayoutPanel";
 import { Chat, unreadFor, useUnread } from "@/components/showly/Chat";
 import { ProviderInbox } from "@/components/showly/ProviderInbox";
+import { ProviderOverview } from "@/components/showly/ProviderOverview";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -291,6 +292,7 @@ function Dashboard() {
   useEffect(() => setSweetReqCount(listRequests().length), []);
   const items: [string, string, string, string | number][] = myProfile
     ? [
+        ["overview", "chart", "Übersicht", ""],
         ["incoming", "clipboard", C.incoming, bookings.filter((b) => b.artistId === myProfile.id && b.status === "requested").length || ""],
         ["edit", "sparkle", C.edit, ""],
         ["calendar", "calendar", t("dash.calendar"), ""],
@@ -306,6 +308,9 @@ function Dashboard() {
         ["profile", "user", C.account, ""],
       ]
     : [
+        ...((myProviders.baker || myProviders.deco
+          ? [["overview", "chart", "Übersicht", ""]]
+          : []) as [string, string, string, string | number][]),
         ["bookings", "clipboard", t("dash.bookings"), bookings.length],
         ["orders", "bag", t("dash.orders"), orders.length],
         ["requests", "gift", C.sweetReq, sweetReqCount],
@@ -886,6 +891,7 @@ function Dashboard() {
           </>
         )}
 
+        {active === "overview" && <ProviderOverview artistId={myProfile?.id} onGo={setSection} />}
         {active === "incoming" && myProfile && (
           <IncomingBookings artistId={myProfile.id} onEditProfile={() => setSection("edit")} />
         )}

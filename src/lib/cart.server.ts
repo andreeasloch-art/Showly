@@ -21,6 +21,7 @@ async function artistTerms(
   hours: number,
   pkg?: string,
   rules: import("@/showly/feeRules").FeeRule[] = [],
+  day?: string,
 ) {
   const { bookingPrice, findArtist, FEE_RATE, MAX_HOURS } = await import("@/showly/pricing");
   const { isInstant, standingOf } = await import("@/showly/booking");
@@ -28,7 +29,7 @@ async function artistTerms(
   if (artistId < REAL_ARTIST_FROM) {
     const a = findArtist(artistId);
     if (!a || a.demo) return null; // Beispielprofile sind nicht buchbar
-    const p = bookingPrice(a, hours, pkg);
+    const p = bookingPrice(a, hours, pkg, day);
     return {
       artist_id: null as number | null,
       catalog_artist: artistId,
@@ -42,7 +43,7 @@ async function artistTerms(
   }
   const { data: a } = await admin
     .from("artists")
-    .select("id, cat, price_cents, instant_book, published, packages, cancel_tier")
+    .select("id, cat, price_cents, instant_book, published, packages, cancel_tier, surcharges")
     .eq("id", artistId)
     .maybeSingle();
   if (!a || !a.published) return null;
@@ -66,7 +67,12 @@ async function artistTerms(
   const { cleanPackages } = await import("@/showly/plannerPackages");
   const pk = pkg ? cleanPackages(a.packages).find((p) => p.id === pkg) : undefined;
   if (pkg && !pk) return null;
-  const base = pk ? Math.round(pk.price * 100) : a.price_cents * h;
+  /* Wochenendzuschlag und Saisonpreis wie in der App (showly/surcharges.ts) */
+  const { cleanSurcharges, withSurcharge } = await import("@/showly/surcharges");
+  const sc = cleanSurcharges(a.surcharges);
+  const base = pk
+    ? Math.round(withSurcharge(pk.price, sc, day) * 100)
+    : Math.round(withSurcharge(a.price_cents / 100, sc, day) * 100) * h;
   const { pickRate } = await import("@/showly/feeRules");
   const fee = Math.round(base * pickRate(rules, { kind: "artist", providerId: a.id, category: a.cat }, FEE_RATE));
   return {
@@ -176,7 +182,7 @@ export async function recordCartCore(
   const { loadFeeRules } = await import("@/lib/fees.server");
   const { pickRate } = await import("@/showly/feeRules");
   const feeRules = await loadFeeRules(admin);
-  const bk = (await Promise.all(snap.bookings.map((b) => artistTerms(admin, b.artistId, b.hours, b.pkg, feeRules))))
+  const bk = (await Promise.all(snap.bookings.map((b) => artistTerms(admin, b.artistId, b.hours, b.pkg, feeRules, b.dateISO))))
     .map((t, i) => ({ b: snap.bookings[i]!, t, i }))
     .filter((x): x is { b: Snapshot["bookings"][number]; t: NonNullable<typeof x.t>; i: number } => !!x.t);
   const artistIds = [...new Set(bk.map((x) => x.t.artist_id).filter((x): x is number => !!x))];
@@ -279,6 +285,34 @@ export async function recordCartCore(
         const id = subId.get(d.key);
         if (id) for (const p of d.parts) partSub.set(`${p.type}:${p.index}`, id);
       }
+      /* Auszahlung an Konditoreien und Deko-/Kostümanbieter planen (wie bei
+         Künstlern): 7 Tage nach Liefertag bzw. Mietende, Käufe nach der
+         Widerrufsfrist (policies.ts) */
+      const { orderPayoutDay } = await import("@/showly/policies");
+      const orderDay = new Date().toISOString().slice(0, 10);
+      const plans = drafts
+        .filter((d) => (d.kind === "baker" || d.kind === "deco") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"))
+        .map((d) => {
+          const cakeDays = d.parts.filter((p) => p.type === "sweet").map((p) => sw[p.index]?.r.dateISO ?? "");
+          const lines = d.parts.filter((p) => p.type === "shop").map((p) => sh[p.index]);
+          const rentTo = lines.filter((l) => l?.mode === "rent").map((l) => l?.to ?? "");
+          const buy = lines.some((l) => l?.mode === "buy");
+          const when = orderPayoutDay({ cakeDays, rentTo, buy, orderDay });
+          return {
+            sub_order_id: subId.get(d.key)!,
+            owner: d.owner,
+            kind: d.kind as "baker" | "deco",
+            booking_id: null,
+            artist_id: null,
+            gross_cents: d.amountCents,
+            fee_cents: d.feeCents,
+            net_cents: d.payoutCents,
+            event_day: when.event_day,
+            payout_on: when.payout_on,
+          };
+        })
+        .filter((x) => x.sub_order_id);
+      if (plans.length) await admin.from("payouts").upsert(plans, { onConflict: "sub_order_id" });
     }
   }
 

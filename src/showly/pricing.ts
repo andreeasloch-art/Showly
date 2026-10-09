@@ -8,6 +8,7 @@ import { ARTISTS, SHOP_ITEMS, type Artist, type ShopItem } from "./data";
 import { BAKERS, SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
 import { depositOf, rentDays, shipFee, type Ship } from "./rental";
 import { CAREFREE_EUR } from "./policies";
+import { cleanSurcharges, withSurcharge } from "./surcharges";
 
 const bakerIsDemo = (id: number) => !!BAKERS.find((b) => b.id === id)?.demo;
 
@@ -79,11 +80,13 @@ export function packageOf(a: Artist, pkgId?: string) {
   return list.find((p) => p.id === pkgId) ?? null;
 }
 
-export function bookingPrice(a: Artist, hours: number, pkgId?: string) {
+export function bookingPrice(a: Artist, hours: number, pkgId?: string, dateISO?: string) {
   const pkg = packageOf(a, pkgId);
   const h = Math.min(MAX_HOURS, Math.max(minHoursOf(a), Math.round(hours) || 1));
-  const hourly = a.price;
-  const base = pkg ? pkg.price : hourly * h;
+  /* Wochenendzuschlag und Saisonpreis für den gewählten Tag (surcharges.ts) */
+  const sc = cleanSurcharges((a as { surcharges?: unknown }).surcharges);
+  const hourly = withSurcharge(a.price, sc, dateISO);
+  const base = pkg ? withSurcharge(pkg.price, sc, dateISO) : hourly * h;
   const fee = Math.round(base * FEE_RATE);
   /* total = was der Kunde zahlt (Endpreis), fee = Showly-Provision,
      payout = was beim Künstler ankommt */
@@ -156,7 +159,7 @@ export function cartTotals(
   for (const b of bookings) {
     const a = findArtist(b.artistId);
     if (!a) continue;
-    artists += bookingPrice(a, b.hours, b.pkg).total;
+    artists += bookingPrice(a, b.hours, b.pkg, b.dateISO).total;
   }
   /* Direkt gebuchte Süßwaren zählen zu den Artikeln. Eigene Angebote aus
      dem Browser haben noch keinen Katalogpreis; dann gilt der angezeigte. */
@@ -199,7 +202,7 @@ export function priceLines(
       unknown.push(`artist:${b.artistId}`);
       continue;
     }
-    const p = bookingPrice(a, b.hours, b.pkg);
+    const p = bookingPrice(a, b.hours, b.pkg, b.dateISO);
     lines.push(
       p.pkg
         ? { name: `${name(a.name)} · ${name(p.pkg.name)} · ${b.dateISO} ${b.slot}`, amountInCents: Math.round(p.base * 100), quantity: 1 }

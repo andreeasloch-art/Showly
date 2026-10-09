@@ -82,7 +82,7 @@ export function payoutFromRow(r: PayoutRow, dayOf: (bookingId: number) => string
     id: localIdOf(r.id),
     artistId: r.artist_id ?? 0,
     artistName: name,
-    dateISO: dayOf(r.booking_id),
+    dateISO: r.booking_id != null ? dayOf(r.booking_id) : (r.event_day ?? r.payout_on),
     gross: euro(r.gross_cents),
     fee: euro(r.fee_cents),
     net: euro(r.net_cents),

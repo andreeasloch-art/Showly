@@ -72,6 +72,14 @@ function policyRule(p: PolicySnapshot, lang: string): string {
       : `Kostenlos bis ${days(p.free)} vorher, bis ${days(p.half)} vorher 50 %, danach 100 %.`;
 }
 
+/** Kurzer Hinweis im Buchungsfeld: bis wann kostenlos stornierbar */
+export function freeCancelText(tier: CancelTier | undefined, lang: string): string {
+  const t = CANCEL_TIERS[tierOf(tier)];
+  if (lang === "en") return `Free cancellation up to ${daysEn(t.free)} before`;
+  if (lang === "es") return `Cancelación gratuita hasta ${daysEs(t.free)} antes`;
+  return `Kostenlos stornierbar bis ${days(t.free)} vorher`;
+}
+
 const POLICY_COPY = {
   de: {
     h: "Stornobedingungen",

@@ -132,7 +132,7 @@ export function CartDrawer() {
               {cartBookings.map((b) => {
                 const a = findArtist(b.artistId);
                 if (!a) return null;
-                const p = bookingPrice(a, b.hours, b.pkg);
+                const p = bookingPrice(a, b.hours, b.pkg, b.dateISO);
                 return (
                   <div className="cart-item" key={b.key}>
                     <div className="cart-img" style={bgOf(a)} />

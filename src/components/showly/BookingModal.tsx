@@ -1,4 +1,7 @@
 /* Dreistufiges Buchungs-Modal: Details → Zahlung → Bestätigung. */
+import { cleanSurcharges, withSurcharge } from "@/showly/surcharges";
+import { tierRule } from "./Fair";
+import { tierOf } from "@/showly/policies";
 import { useEscape } from "@/showly/useEscape";
 import { useState } from "react";
 import { BookingModeNote } from "@/components/showly/BookingModeNote";
@@ -51,8 +54,9 @@ export function BookingModal({
 
   /* Gage pro Stunde mal Dauer. Feste Pakete der Planer kosten einmal ihren
      Paketpreis, unabhängig von Stunden. */
-  const hourly = a.price;
-  const base = pkg ? pkg.price : hourly * hours;
+  const sc = cleanSurcharges(a.surcharges);
+  const hourly = withSurcharge(a.price, sc, date);
+  const base = pkg ? withSurcharge(pkg.price, sc, date) : hourly * hours;
   const total = base;
 
   const [occasion, setOccasion] = useState("");
@@ -227,7 +231,7 @@ export function BookingModal({
                 </div>
                 <BookingModeNote artist={a} />
                 <div className="policy-box">
-                  <Icon name="lock" /> <strong>{t("mod.cancelPolicy")}</strong> {t("mod.cancelText")}
+                  <Icon name="lock" /> <strong>{t("mod.cancelPolicy")}</strong> {tierRule(tierOf(a.cancelTier), lang)}
                 </div>
                 <div className="mod-actions">
                   <button className="btn-secondary" onClick={() => setStep(1)}>

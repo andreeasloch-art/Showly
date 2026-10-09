@@ -393,3 +393,16 @@ export function payoutFor(eventDay: string, baseNetCents: number, speed: PayoutS
   const fee = Math.round(baseNetCents * s.fee);
   return { payout_on: addDays(eventDay, s.days), express_fee_cents: fee, net_cents: baseNetCents - fee, speed };
 }
+
+/** Auszahlungstag für Konditoreien und Deko-/Kostümanbieter: 7 Tage nach
+ *  dem Liefertag bzw. Mietende; bei Käufen erst nach der Widerrufsfrist
+ *  (14 Tage ab Bestellung, plus Versand). Gibt Ereignistag und Auszahlungstag. */
+export const BUY_PAYOUT_DAYS = 21;
+export function orderPayoutDay(p: { cakeDays?: string[]; rentTo?: string[]; buy?: boolean; orderDay: string }): { event_day: string; payout_on: string } {
+  const dates = [...(p.cakeDays || []), ...(p.rentTo || [])].filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)).sort();
+  const last = dates[dates.length - 1];
+  const viaEvent = last ? addDays(last, PAYOUT_DAYS) : null;
+  const viaBuy = p.buy ? addDays(p.orderDay, BUY_PAYOUT_DAYS) : null;
+  const payout_on = [viaEvent, viaBuy].filter((x): x is string => !!x).sort().pop() ?? addDays(p.orderDay, PAYOUT_DAYS);
+  return { event_day: last ?? p.orderDay, payout_on };
+}

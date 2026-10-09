@@ -12,6 +12,7 @@ import { preloadMedia } from "./media";
 import { cleanWorkHours } from "./workHours";
 import { cleanPackages } from "./plannerPackages";
 import { tierOf } from "./policies";
+import { cleanSurcharges } from "./surcharges";
 
 /* Titelbilder werden synchron als Hintergrund gesetzt; deshalb ihre Adressen
    gleich nach dem Laden der Profile holen (nur freigegebene kommen zurück). */
@@ -74,6 +75,8 @@ export function artistFromRow(r: PublicRow): Artist {
     cancelTier: tierOf(r.cancel_tier),
     standby: r.standby === true,
     cancelRate: Number(r.cancel_rate) || 0,
+    surcharges: cleanSurcharges(r.surcharges),
+    awayUntil: r.away_until ?? null,
     fromDb: true,
   };
 }

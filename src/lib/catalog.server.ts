@@ -36,7 +36,7 @@ export async function loadCatalog(
   if (aIds.length) {
     const { data } = await admin
       .from("artists")
-      .select("id, name, price_cents, published, blocked, cat, packages")
+      .select("id, name, price_cents, published, blocked, cat, packages, surcharges")
       .in("id", aIds);
     for (const r of data || []) {
       if (!r.published || r.blocked) continue;
@@ -48,6 +48,7 @@ export async function loadCatalog(
         price: r.price_cents / 100,
         minHours: 1,
         packages: cleanPackages(r.packages),
+        surcharges: r.surcharges ?? null,
         rating: 0,
         reviews: 0,
         name: { de: name.de || "", en: name.en || name.de || "" },

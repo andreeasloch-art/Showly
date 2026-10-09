@@ -113,6 +113,41 @@ export async function refundDeposit(
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+type Db = ReturnType<typeof adminClient>;
+interface PayoutSource {
+  payable: boolean;
+  session: string | null;
+  group: string;
+  meta: Record<string, string>;
+  artistId?: number | null;
+}
+
+async function bookingSource(db: Db, bookingId: number): Promise<PayoutSource | null> {
+  const { data: b } = await db
+    .from("bookings")
+    .select("id, status, paid, amount_cents, refunded_cents, stripe_session_id, artist_id, cancelled_by")
+    .eq("id", bookingId)
+    .maybeSingle();
+  if (!b) return null;
+  /* Keine Auszahlung bei Absage durch den Künstler, Nichterscheinen oder
+     voller Erstattung. Bei später Stornierung durch den Kunden wird der
+     einbehaltene Anteil ausgezahlt (net_cents ist dann schon gekürzt). */
+  const payable =
+    b.paid &&
+    b.refunded_cents < b.amount_cents &&
+    (["confirmed", "completed", "pending"].includes(b.status) || (b.status === "cancelled" && b.cancelled_by === "customer"));
+  return { payable, session: b.stripe_session_id, group: `booking_${b.id}`, meta: { booking_id: String(b.id) }, artistId: b.artist_id };
+}
+
+/** Teilbestellung einer Konditorei oder eines Deko-/Kostümanbieters */
+async function subOrderSource(db: Db, subId: number): Promise<PayoutSource | null> {
+  const { data: so } = await db.from("sub_orders").select("id, order_id, status").eq("id", subId).maybeSingle();
+  if (!so) return null;
+  const { data: order } = await db.from("orders").select("status, stripe_session_id").eq("id", so.order_id).maybeSingle();
+  const payable = order?.status === "paid" && !["cancelled", "declined", "refunded", "requested", "pending"].includes(so.status);
+  return { payable, session: order?.stripe_session_id ?? null, group: `order_${so.order_id}`, meta: { sub_order_id: String(so.id) } };
+}
+
 /** Fällige Auszahlungen überweisen. Gibt zurück, was passiert ist. */
 export async function runDuePayouts(): Promise<{ paid: number; held: number; skipped: number; failed: number }> {
   const db = adminClient();
@@ -141,33 +176,29 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
     }
     let cents = first ? p.net_cents - p.reserve_cents : p.reserve_cents;
 
-    const { data: b } = await db
-      .from("bookings")
-      .select("id, status, paid, amount_cents, refunded_cents, stripe_session_id, artist_id, cancelled_by")
-      .eq("id", p.booking_id)
-      .maybeSingle();
-    /* Keine Auszahlung bei Absage durch den Künstler, Nichterscheinen oder
-       voller Erstattung. Bei später Stornierung durch den Kunden wird der
-       einbehaltene Anteil ausgezahlt (net_cents ist dann schon gekürzt). */
-    const payable =
-      !!b &&
-      b.paid &&
-      b.refunded_cents < b.amount_cents &&
-      (["confirmed", "completed", "pending"].includes(b.status) || (b.status === "cancelled" && b.cancelled_by === "customer"));
-    if (!b || !payable) {
-      await db.from("payouts").update({ status: "cancelled", last_error: "Buchung nicht (mehr) auszahlbar" }).eq("id", p.id);
+    /* Woher das Geld kommt: Künstler-Buchung oder Teilbestellung (Torten, Deko, Verleih) */
+    const src = p.booking_id ? await bookingSource(db, p.booking_id) : p.sub_order_id ? await subOrderSource(db, p.sub_order_id) : null;
+    if (!src || !src.payable) {
+      await db.from("payouts").update({ status: "cancelled", last_error: "Nicht (mehr) auszahlbar" }).eq("id", p.id);
       out.skipped++;
       continue;
     }
     /* Offene Meldung oder Strafe: erst klären */
-    const { data: pen } = await db.from("penalties").select("status").eq("booking_id", p.booking_id).maybeSingle();
-    if (pen && pen.status !== "waived") {
-      await db.from("payouts").update({ last_error: "Wartet auf Klärung einer Meldung" }).eq("id", p.id);
-      out.skipped++;
-      continue;
+    if (p.booking_id) {
+      const { data: pen } = await db.from("penalties").select("status").eq("booking_id", p.booking_id).maybeSingle();
+      if (pen && pen.status !== "waived") {
+        await db.from("payouts").update({ last_error: "Wartet auf Klärung einer Meldung" }).eq("id", p.id);
+        out.skipped++;
+        continue;
+      }
     }
 
-    const { data: artist } = await db.from("artists").select("owner").eq("id", p.artist_id ?? b.artist_id ?? 0).maybeSingle();
+    let ownerId = p.owner ?? null;
+    if (!ownerId) {
+      const { data: artist } = await db.from("artists").select("owner").eq("id", p.artist_id ?? src.artistId ?? 0).maybeSingle();
+      ownerId = artist?.owner ?? null;
+    }
+    const artist = ownerId ? { owner: ownerId } : null;
     const { data: acc } = artist?.owner
       ? await db.from("payout_accounts").select("stripe_account_id, payouts_enabled").eq("profile_id", artist.owner).maybeSingle()
       : { data: null };
@@ -204,17 +235,17 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
 
     try {
       if (cents > 0) {
-        const pay = await paymentOf(b.stripe_session_id, env).catch(() => null);
+        const pay = await paymentOf(src.session, env).catch(() => null);
         const t = await createStripeClient(env).transfers.create(
           {
             amount: cents,
             currency: "eur",
             destination: acc.stripe_account_id,
-            transfer_group: `booking_${b.id}`,
+            transfer_group: src.group,
             /* Mit der Zahlung als Quelle geht die Überweisung auch, bevor
                das Geld auf dem Showly-Konto verfügbar ist */
             ...(pay?.charge ? { source_transaction: pay.charge } : {}),
-            metadata: { booking_id: String(b.id), payout_id: String(p.id), part: first ? "gage" : "einbehalt" },
+            metadata: { ...src.meta, payout_id: String(p.id), part: first ? "gage" : "einbehalt" },
           },
           { idempotencyKey: `payout-${p.id}-${first ? "gage" : "einbehalt"}` },
         );
@@ -230,8 +261,8 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
       if (first && artist?.owner) {
         const to = await emailOf(artist.owner);
         if (to)
-          await sendMail(to, "Showly hat deine Gage überwiesen", [
-            `Für deinen Auftritt haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.${offset ? ` Verrechnet mit einer Vertragsstrafe: ${euro(offset)}.` : ""}${p.express_fee_cents ? ` Gebühr für schnellere Auszahlung: ${euro(p.express_fee_cents)}.` : ""}`,
+          await sendMail(to, p.booking_id ? "Showly hat deine Gage überwiesen" : "Showly hat deine Einnahmen überwiesen", [
+            `${p.booking_id ? "Für deinen Auftritt" : "Für deine Bestellung"} haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.${offset ? ` Verrechnet mit einer Vertragsstrafe: ${euro(offset)}.` : ""}${p.express_fee_cents ? ` Gebühr für schnellere Auszahlung: ${euro(p.express_fee_cents)}.` : ""}`,
             p.reserve_cents > 0
               ? `Der Sicherheitseinbehalt von ${euro(p.reserve_cents)} folgt am ${p.reserve_until?.split("-").reverse().join(".")}.`
               : "Je nach Bank ist das Geld in 1 bis 3 Werktagen auf deinem Konto.",

@@ -11,6 +11,8 @@ import { useCheckedUpload } from "@/components/showly/useCheckedUpload";
 import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { updateArtistProfile } from "@/showly/persist";
 import { TierPicker } from "./Fair";
+import { PriceRules } from "./PriceRules";
+import { cleanSurcharges, type Surcharges } from "@/showly/surcharges";
 import { tierOf, type CancelTier } from "@/showly/policies";
 import { PackagesEditor, draftsFrom, draftsToRaw, usePkgCopy, type PkgDrafts } from "@/components/showly/PackagesEditor";
 import { TIERS, cleanPackages, fromPrice, isPlannerCat, packagesProblem, type PlannerPackage } from "@/showly/plannerPackages";
@@ -284,6 +286,8 @@ type Draft = {
   contact: Contact;
   /** Pakete Basic/Premium/Luxus (nur Planer) */
   pkgs: PkgDrafts;
+  /** Wochenendzuschlag und Saisonpreise (surcharges.ts) */
+  surcharges: Surcharges | null;
   /** Stornostufe und Springer-Liste (policies.ts) */
   cancelTier: CancelTier;
   standby: boolean;
@@ -356,6 +360,7 @@ function initialDraft(a: Artist, lang: string): Draft {
     pkgs: draftsFrom(packagesOf(a, lang), (lang as "de" | "en" | "es") ?? "de"),
     cancelTier: tierOf(a.cancelTier),
     standby: a.standby === true,
+    surcharges: cleanSurcharges(a.surcharges),
     contact: {
       email: c.email || "",
       phone: c.phone || "",
@@ -473,6 +478,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
       instantBook: draft.instantBook,
       cancelTier: draft.cancelTier,
       standby: draft.standby,
+      surcharges: cleanSurcharges(draft.surcharges),
       loc: draft.loc.trim(),
       radiusKm: draft.radiusKm,
       photos: draft.photos,
@@ -548,6 +554,7 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
               instantBook: patch.instantBook,
               cancelTier: patch.cancelTier,
               standby: patch.standby,
+              surcharges: patch.surcharges,
             },
           }),
         )
@@ -929,6 +936,20 @@ export function ProfileEditor({ artist: a }: { artist: Artist }) {
           </fieldset>
         </section>
         )}
+
+        {/* Wochenendzuschlag und Saisonpreise */}
+        <section className="pe-card">
+          <div className="pe-card-head">
+            <span className="pe-ic">
+              <Icon name="calendar" />
+            </span>
+            <div>
+              <h3>Saisonpreise und Wochenendzuschlag</h3>
+              <p>Gilt für Stundensatz und Pakete. Auch Rabatte für ruhige Wochen sind möglich.</p>
+            </div>
+          </div>
+          <PriceRules value={draft.surcharges} onChange={(v) => set("surcharges", v)} price={Number(draft.price) || 0} />
+        </section>
 
         {/* Stornostufe und Springer-Liste */}
         <section className="pe-card">

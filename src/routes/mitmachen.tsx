@@ -129,9 +129,9 @@ function Become() {
     {
       de: {
         rules:
-          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen, danach 50 % der Gage als Vertragsstrafe, bei Nichterscheinen 100 %, außer bei einem belegten Notfall (AGB § 9).",
+          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage ab 14 Tagen vorher ohne Folgen, darunter 15 % der Gage als Vertragsstrafe, unter 48 Stunden 25 %, bei Nichterscheinen 100 %, außer bei einem belegten Notfall. Strafen werden mit der nächsten Auszahlung verrechnet; 3 Verwarnungen in 12 Monaten führen zur Sperre (AGB § 9).",
         rulesPriv:
-          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage bis 24 Stunden vorher ohne Folgen. Spätere Absagen und Nichterscheinen ohne belegten Notfall führen zu Verwarnung, Einschränkung und Sperre des Profils (AGB § 9).",
+          "Ich kenne die Regeln bei Absage und Nichterscheinen: Absage ab 14 Tagen vorher ohne Folgen. Spätere Absagen und Nichterscheinen ohne belegten Notfall sind Verwarnungen; 3 in 12 Monaten führen zur Sperre des Profils (AGB § 9).",
         rulesLink: "AGB lesen",
         adult: "Ich bin mindestens 18 Jahre alt.",
         adultNeed: "Anbieten können nur Volljährige. Bitte bestätige, dass du mindestens 18 bist.",
@@ -157,9 +157,9 @@ function Become() {
       },
       en: {
         rules:
-          "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences, after that a penalty of 50% of the fee, 100% for a no-show, unless there is a proven emergency (T&C § 9).",
+          "I know the rules for cancellations and no-shows: cancelling 14 days or more before is free, below that a penalty of 15% of the fee, 25% under 48 hours, 100% for a no-show, unless there is a proven emergency. Penalties are offset against the next payout; 3 warnings in 12 months lead to a ban (T&C § 9).",
         rulesPriv:
-          "I know the rules for cancellations and no-shows: cancel up to 24 hours before without consequences. Later cancellations and no-shows without a proven emergency lead to a warning, restrictions and suspension of the profile (T&C § 9).",
+          "I know the rules for cancellations and no-shows: cancelling 14 days or more before is free. Later cancellations and no-shows without a proven emergency are warnings; 3 in 12 months lead to suspension of the profile (T&C § 9).",
         rulesLink: "Read T&C",
         adult: "I am at least 18 years old.",
         adultNeed: "Only adults can offer services. Please confirm that you are at least 18.",
@@ -185,9 +185,9 @@ function Become() {
       },
       es: {
         rules:
-          "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias; después, penalización del 50 % del caché y del 100 % si no me presento, salvo emergencia justificada (CG § 9).",
+          "Conozco las reglas de cancelación y ausencia: cancelar con 14 días o más de antelación es gratis; después, penalización del 15 % del caché, del 25 % a menos de 48 horas y del 100 % si no me presento, salvo emergencia justificada. Se descuenta del próximo pago; 3 avisos en 12 meses llevan al bloqueo (CG § 9).",
         rulesPriv:
-          "Conozco las reglas de cancelación y ausencia: cancelar hasta 24 horas antes sin consecuencias. Las cancelaciones posteriores y las ausencias sin emergencia justificada llevan a aviso, restricción y bloqueo del perfil (CG § 9).",
+          "Conozco las reglas de cancelación y ausencia: cancelar con 14 días o más de antelación es gratis. Las cancelaciones posteriores y las ausencias sin emergencia justificada son avisos; 3 en 12 meses llevan al bloqueo del perfil (CG § 9).",
         rulesLink: "Leer CG",
         adult: "Tengo al menos 18 años.",
         adultNeed: "Solo pueden ofrecer servicios mayores de edad. Confirma que tienes al menos 18 años.",

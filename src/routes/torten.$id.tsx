@@ -1,4 +1,5 @@
 import { headLang, seoHead } from "@/showly/seo";
+import { countView } from "@/showly/viewCount";
 import { DemoNote } from "@/components/showly/DemoBadge";
 import { ProviderStatusNote } from "@/components/showly/ProviderNotices";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
@@ -134,6 +135,7 @@ function BakerProfile() {
 
   useEffect(() => {
     setMine(myBakerIds().includes(Number(id)));
+    countView("baker", Number(id));
   }, [id]);
 
   /* Kommt man über eine Angebotskarte, steht das Angebot mitten im Bild und

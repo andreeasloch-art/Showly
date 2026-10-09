@@ -343,7 +343,7 @@ export function CartCheckout() {
     };
     for (const b of cartBookings) {
       const a = findArtist(b.artistId);
-      if (a) add(`artist:${a.id}`, String(L(a.name)), bookingPrice(a, b.hours, b.pkg).total);
+      if (a) add(`artist:${a.id}`, String(L(a.name)), bookingPrice(a, b.hours, b.pkg, b.dateISO).total);
     }
     for (const r of cartRequests) {
       const bk = bakerOf(r.bakerId);
@@ -510,7 +510,7 @@ export function CartCheckout() {
                     {cartBookings.map((b) => {
                       const a = findArtist(b.artistId);
                       if (!a) return null;
-                      const p = bookingPrice(a, b.hours, b.pkg);
+                      const p = bookingPrice(a, b.hours, b.pkg, b.dateISO);
                       const min = minHoursOf(a);
                       return (
                         <div className="co-line" key={b.key}>

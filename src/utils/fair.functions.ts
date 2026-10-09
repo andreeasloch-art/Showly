@@ -16,6 +16,11 @@ import type { ComplaintRow, HandoverRow } from "@/lib/database.types";
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const int = (v: unknown, min: number, max: number) => Math.max(min, Math.min(max, Math.round(Number(v) || 0)));
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const addDaysISO = (d: string, n: number) => {
+  const x = new Date(d.slice(0, 10) + "T12:00:00Z");
+  x.setUTCDate(x.getUTCDate() + n);
+  return x.toISOString().slice(0, 10);
+};
 const SLOT_RE = /^\d{2}:\d{2}$/;
 const euro = (c: number) => (c / 100).toFixed(2).replace(".", ",") + " €";
 const dateDe = (iso: string) => iso.slice(0, 10).split("-").reverse().join(".");
@@ -55,6 +60,7 @@ export interface ProfilePatch {
   instantBook: boolean;
   cancelTier: string;
   standby: boolean;
+  surcharges?: unknown;
 }
 
 const list = (v: unknown, n: number, max: number) =>
@@ -74,6 +80,7 @@ export const saveArtistProfileCloud = createServerFn({ method: "POST" })
     instantBook: d.instantBook !== false,
     cancelTier: s(d.cancelTier, 10),
     standby: d.standby === true,
+    surcharges: d.surcharges,
   }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
@@ -88,6 +95,7 @@ export const saveArtistProfileCloud = createServerFn({ method: "POST" })
     const planner = Array.isArray(a.packages) && a.packages.length > 0;
     if (!planner && (data.price < 10 || data.price > 2000)) return { error: "Preis zwischen 10 und 2.000 €" };
     const { tierOf } = await import("@/showly/policies");
+    const { cleanSurcharges } = await import("@/showly/surcharges");
     /* Übersetzungen bleiben, bis sie neu gepflegt werden: Deutsch ist führend */
     const { error } = await db
       .from("artists")
@@ -103,6 +111,7 @@ export const saveArtistProfileCloud = createServerFn({ method: "POST" })
         instant_book: data.instantBook,
         cancel_tier: tierOf(data.cancelTier),
         standby: data.standby,
+        surcharges: cleanSurcharges(data.surcharges),
         updated_at: new Date().toISOString(),
       })
       .eq("id", data.artistId);
@@ -164,16 +173,22 @@ export const choosePayoutSpeed = createServerFn({ method: "POST" })
     if (!(await allow("action", ctx.user.id))) return { error: TOO_MANY };
     const db = adminClient();
     const { data: p } = await db.from("payouts").select("*").eq("id", data.payoutId).maybeSingle();
-    if (!p || !(await ownsArtist(db, p.artist_id, ctx.user.id))) return { error: "Keine Berechtigung" };
+    if (!p || !(p.owner === ctx.user.id || (await ownsArtist(db, p.artist_id, ctx.user.id)))) return { error: "Keine Berechtigung" };
     if (p.status !== "scheduled" || p.stripe_transfer_id) return { error: "Diese Auszahlung läuft schon" };
     if (p.frozen) return { error: "Bei einer offenen Reklamation geht keine schnellere Auszahlung" };
-    const { data: pen } = await db.from("penalties").select("status").eq("booking_id", p.booking_id).maybeSingle();
-    if (pen && pen.status !== "waived") return { error: "Bei einer offenen Meldung geht keine schnellere Auszahlung" };
-    const { data: b } = await db.from("bookings").select("day").eq("id", p.booking_id).maybeSingle();
-    if (!b) return { error: "Buchung nicht gefunden" };
+    let day = p.event_day ?? null;
+    if (p.booking_id) {
+      const { data: pen } = await db.from("penalties").select("status").eq("booking_id", p.booking_id).maybeSingle();
+      if (pen && pen.status !== "waived") return { error: "Bei einer offenen Meldung geht keine schnellere Auszahlung" };
+      const { data: b } = await db.from("bookings").select("day").eq("id", p.booking_id).maybeSingle();
+      day = b?.day ?? null;
+    }
+    if (!day) return { error: "Termin nicht gefunden" };
+    /* Kauf im Shop: Auszahlung erst nach der Widerrufsfrist, nicht schneller */
+    if (p.kind === "deco" && p.payout_on > addDaysISO(day, 7)) return { error: "Bei Käufen wird erst nach der Widerrufsfrist ausgezahlt" };
     const { payoutFor, speedOf } = await import("@/showly/policies");
     const base = p.net_cents + (p.express_fee_cents ?? 0);
-    const next = payoutFor(b.day, base, speedOf(data.speed));
+    const next = payoutFor(day, base, speedOf(data.speed));
     const { error } = await db
       .from("payouts")
       .update({ payout_on: next.payout_on, express_fee_cents: next.express_fee_cents, net_cents: next.net_cents, speed: next.speed })
@@ -287,8 +302,19 @@ export const evidenceUrls = createServerFn({ method: "POST" })
  * ------------------------------------------------------------------------ */
 export type ComplaintInfo = ComplaintRow & { role: "customer" | "provider"; title: string; guide: string };
 
-async function payoutFreeze(db: ReturnType<typeof adminClient>, bookingId: number | null, frozen: boolean) {
-  if (bookingId) await db.from("payouts").update({ frozen }).eq("booking_id", bookingId).neq("status", "paid");
+type Target = { booking_id?: number | null; shop_order_id?: number | null; sweet_request_id?: number | null };
+async function payoutFreeze(db: ReturnType<typeof adminClient>, t: Target, frozen: boolean) {
+  if (t.booking_id) {
+    await db.from("payouts").update({ frozen }).eq("booking_id", t.booking_id).neq("status", "paid");
+    return;
+  }
+  /* Torten und Shop: Auszahlung hängt an der Teilbestellung */
+  const { data: row } = t.shop_order_id
+    ? await db.from("shop_orders").select("sub_order_id").eq("id", t.shop_order_id).maybeSingle()
+    : t.sweet_request_id
+      ? await db.from("sweet_requests").select("sub_order_id").eq("id", t.sweet_request_id).maybeSingle()
+      : { data: null };
+  if (row?.sub_order_id) await db.from("payouts").update({ frozen }).eq("sub_order_id", row.sub_order_id).neq("status", "paid");
 }
 
 /** Erstattung nach Einigung oder Entscheidung; Auszahlung anteilig kürzen */
@@ -308,6 +334,15 @@ async function settle(db: ReturnType<typeof adminClient>, c: ComplaintRow, cents
     const { refundDeposit } = await import("@/lib/money.server");
     await refundDeposit(c.shop_order_id, cents).catch(() => null);
   } else if (cents > 0) {
+    /* Auszahlung an den Anbieter anteilig kürzen */
+    const { data: row } = c.shop_order_id
+      ? await db.from("shop_orders").select("sub_order_id").eq("id", c.shop_order_id).maybeSingle()
+      : await db.from("sweet_requests").select("sub_order_id").eq("id", c.sweet_request_id ?? 0).maybeSingle();
+    if (row?.sub_order_id) {
+      const { data: po } = await db.from("payouts").select("id, net_cents, gross_cents").eq("sub_order_id", row.sub_order_id).neq("status", "paid").maybeSingle();
+      if (po && po.gross_cents > 0)
+        await db.from("payouts").update({ net_cents: Math.max(0, po.net_cents - Math.round((cents * po.net_cents) / po.gross_cents)) }).eq("id", po.id);
+    }
     /* Shop und Torten: Erstattung führt das Team in Stripe aus */
     await db.from("support_tickets").insert({
       profile: c.customer,
@@ -317,7 +352,7 @@ async function settle(db: ReturnType<typeof adminClient>, c: ComplaintRow, cents
       body: `Reklamation ${c.id}: bitte ${euro(cents)} erstatten (${c.shop_order_id ? `Bestellung ${c.shop_order_id}` : `Torte ${c.sweet_request_id}`}).`,
     });
   }
-  await payoutFreeze(db, c.booking_id, false);
+  await payoutFreeze(db, c, false);
 }
 
 export const createComplaint = createServerFn({ method: "POST" })
@@ -390,7 +425,11 @@ export const createComplaint = createServerFn({ method: "POST" })
       .select("id")
       .single();
     if (error || !ins) return { error: error?.message.includes("complaints_booking_once") ? "Zu dieser Buchung gibt es schon eine Reklamation" : "Speichern hat nicht geklappt" };
-    if (data.ref.kind === "booking") await payoutFreeze(db, data.ref.id, true);
+    await payoutFreeze(
+      db,
+      data.ref.kind === "booking" ? { booking_id: data.ref.id } : data.ref.kind === "order" ? { shop_order_id: data.ref.id } : { sweet_request_id: data.ref.id },
+      true,
+    );
     const g = guideline(cat, { lateMin: data.lateMin, bookedMin, playedMin: data.playedMin });
     const { notify } = await import("@/lib/notify.server");
     await notify(owner, "Reklamation zu deinem Auftrag", [
@@ -453,7 +492,7 @@ export const complaintAction = createServerFn({ method: "POST" })
     }
     if (role !== "customer") return { error: "Nur der Kunde kann zurückziehen" };
     await db.from("complaints").update({ status: "withdrawn", decided_at: now }).eq("id", c.id);
-    await payoutFreeze(db, c.booking_id, false);
+    await payoutFreeze(db, c, false);
     return { ok: true };
   });
 

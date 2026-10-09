@@ -886,7 +886,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       for (const b of snap.bookings) {
         const a = findArtist(b.artistId);
         if (!a) continue;
-        const p = bookingPrice(a, b.hours, b.pkg);
+        const p = bookingPrice(a, b.hours, b.pkg, b.dateISO);
         const id = counters.current.booking++;
         madeBookings.add(id);
         /* Künstler mit Anfrage-Modus (oder nach einem Verstoß eingeschränkt):
@@ -1064,7 +1064,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         const a = findArtist(b.artistId);
         /* Bei Buchungen aus der Datenbank plant der Server die Auszahlung */
         if (b.paid && a && !(cloudOn && isDbId(id))) {
-          const p = bookingPrice(a, b.hours || minHoursOf(a), b.pkg);
+          const p = bookingPrice(a, b.hours || minHoursOf(a), b.pkg, b.dateISO);
           setPayouts((x) => [makePayout(x, a, b.dateISO, b.amount, p.payout), ...x]);
         }
       } else {
@@ -1125,7 +1125,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     /* Strafen zu Buchungen aus der Datenbank legt der Server an */
     if (cloudOn && isDbId(b.id)) return;
     const a = findArtist(b.artistId);
-    const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg).payout : Math.round(b.amount * (1 - FEE_RATE));
+    const net = a ? bookingPrice(a, b.hours || minHoursOf(a), b.pkg, b.dateISO).payout : Math.round(b.amount * (1 - FEE_RATE));
     /* Privatanbieter: keine Geldstrafe, der Eintrag zählt nur für das
        Stufenmodell (AGB § 9 Abs. 6) */
     const amount = isBusiness(a) ? Math.round(net * rate) : 0;

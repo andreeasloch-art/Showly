@@ -12,6 +12,8 @@ export interface Artist {
   workHours?: import("./workHours").WorkHours | null;
   /** Stornostufe (policies.ts), Springer-Liste, Stornoquote 0..1 der letzten 12 Monate */
   cancelTier?: import("./policies").CancelTier; standby?: boolean; cancelRate?: number;
+  /** Wochenendzuschlag und Saisonpreise (surcharges.ts), Urlaubsmodus bis (ISO-Datum) */
+  surcharges?: import("./surcharges").Surcharges | null; awayUntil?: string | null;
   /** Einsatzradius in km ab dem eigenen Standort; 800 steht für deutschlandweit. */
   radiusKm?: number;
   shopIds?: number[]; name: LText; loc: LText; exp?: LText; desc: LText; tags?: LList; langs?: LList;

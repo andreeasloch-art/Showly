@@ -242,7 +242,7 @@ export function IncomingBookings({ artistId, onEditProfile }: { artistId: number
     });
 
   function row(b: Booking) {
-    const net = bookingPrice(a!, b.hours || minHoursOf(a!), b.pkg).payout;
+    const net = bookingPrice(a!, b.hours || minHoursOf(a!), b.pkg, b.dateISO).payout;
     const until = respondBy(b.requestedAt);
     const pen = penalties.find((p) => p.bookingId === b.id);
     const stage = artistCancelStage(startOf(b), Date.now());

@@ -26,6 +26,9 @@ import type { MediaRef } from "@/showly/media";
 import { TIERS, TIER_ICON, TIER_LABEL, isPlannerCat, type Tier } from "@/showly/plannerPackages";
 import { GuaranteeBadge } from "@/components/showly/Guarantee";
 import { CancelPolicyNote } from "@/components/showly/Fair";
+import { cleanSurcharges, surchargeFor, withSurcharge } from "@/showly/surcharges";
+import { freeCancelText } from "@/components/showly/Fair";
+import { countView } from "@/showly/viewCount";
 
 export const Route = createFileRoute("/kuenstler/$id")({
   /* Echte Profile schon beim Rendern auf dem Server laden, damit
@@ -100,6 +103,7 @@ function Detail() {
   const [modal, setModal] = useState(false);
 
   const a = useMemo(() => ARTISTS.find((x) => x.id === Number(id)), [id]);
+  useEffect(() => countView("artist", Number(id)), [id]);
 
   /* Markiert die Seite als Profilseite. Daran haengt unter anderem der
      Buchungsbalken, der auf dem Handy unten stehen bleibt. */
@@ -132,8 +136,11 @@ function Detail() {
   const minHours = Math.max(1, Number(a["minHours"]) || 1);
   const maxHours = 12;
   const h = Math.min(maxHours, Math.max(minHours, hours ?? Math.max(minHours, 2)));
-  const hourly = a.price;
-  const base = curPkg ? curPkg.price : hourly * h;
+  /* Wochenendzuschlag oder Saisonpreis für das gewählte Datum (surcharges.ts) */
+  const sc = cleanSurcharges(a.surcharges);
+  const scInfo = surchargeFor(sc, cal.sel.date || undefined);
+  const hourly = withSurcharge(a.price, sc, cal.sel.date || undefined);
+  const base = curPkg ? withSurcharge(curPkg.price, sc, cal.sel.date || undefined) : hourly * h;
   /* Endpreis für den Kunden, ohne Aufschlag */
   const total = base;
   const media = (a["photos"] as MediaRef[] | undefined) || [];
@@ -571,7 +578,15 @@ function Detail() {
                   t("book.baseH", { p: fmt(hourly) })
                 )}
               </div>
-              <div className="price-note">✓ {t("book.freeCancel")}</div>
+              {scInfo.pct !== 0 && <div className="price-note sc-note">{scInfo.reasons.join(" · ")}</div>}
+              {!cal.sel.date && sc && (
+                <div className="price-note sc-note">
+                  {[sc.weekend ? `Wochenende +${sc.weekend} %` : "", ...sc.seasons.map((x) => `${x.label || "Saison"} ${x.from.split("-").reverse().join(".")}.–${x.to.split("-").reverse().join(".")}. ${x.pct > 0 ? "+" : "−"}${Math.abs(x.pct)} %`)]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </div>
+              )}
+              <div className="price-note">✓ {freeCancelText(a.cancelTier, lang)}</div>
             </div>
             <BookingModeNote artist={a} />
 

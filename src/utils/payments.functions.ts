@@ -233,6 +233,18 @@ export const createCartCheckout = createServerFn({ method: "POST" })
       }
     }
 
+    /* Deko-/Kostümanbieter im Urlaubsmodus */
+    if (data.shop?.length) {
+      try {
+        const { adminClient } = await import("@/lib/supabase.server");
+        const { checkAwayShop } = await import("@/lib/away.server");
+        const err = await checkAwayShop(adminClient(), data.shop);
+        if (err) return { error: err };
+      } catch {
+        /* ohne Datenbank (Vorschau) keine echten Anbieter */
+      }
+    }
+
     /* Termine echter Künstler während des Bezahlens reservieren. Die
        Datenbank sperrt dabei die Zeile des Künstlers und lässt keine
        Überschneidung zu (inkl. einer Stunde Fahrtzeit, auch mit Terminen aus

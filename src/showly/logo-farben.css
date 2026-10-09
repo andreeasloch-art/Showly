@@ -840,3 +840,44 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .rev-sub-row span{min-width:160px}
 .rev-star.small{font-size:20px;min-width:32px;min-height:32px}
 @media (max-width:520px){.fair-row{flex-wrap:wrap}.fair-row input{flex:1 1 100%}.rev-sub-row span{min-width:100%}}
+
+/* ---------- Anbieter-Übersicht (ProviderOverview.tsx) und Saisonpreise (PriceRules.tsx) ---------- */
+.ov{display:grid;gap:14px}
+.ov-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.ov-card{border:1px solid #ECE7F6;background:#fff;border-radius:16px;padding:12px 14px;display:grid;gap:4px;min-width:0}
+.ov-card.main{grid-column:1/-1;background:linear-gradient(135deg,#6B4FD8,#8E6CF0);border:0;color:#fff}
+.ov-card.main small,.ov-card.main .ov-k{color:rgba(255,255,255,.88)}
+.ov-k{font-size:12.5px;font-weight:700;color:var(--sh-muted,#554B6B)}
+.ov-v{font:800 24px/1.15 "Outfit",system-ui,sans-serif;overflow-wrap:anywhere}
+.ov-card.main .ov-v{font-size:32px}
+.ov-card small{font-size:12px;line-height:1.4;color:var(--sh-muted,#554B6B)}
+.ov-warn{margin:0;display:flex;gap:8px;align-items:center;border:1px solid #F3D9A4;background:#FFF8E8;border-radius:12px;padding:10px 12px;font-size:13.5px}
+.ov-warn span{display:inline-flex;color:#A86B00}
+.ov-panel{border:1px solid #ECE7F6;background:#fff;border-radius:16px;padding:14px;display:grid;gap:10px;min-width:0}
+.ov-panel h3{margin:0;font-size:16px}
+.ov-panel p{margin:0}
+.ov-panel .dash26-mini{justify-self:start}
+.ov-bars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;height:120px;align-items:end}
+.ov-bar{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.ov-bar span{display:block;width:100%;max-width:34px;background:#6B4FD8;border-radius:6px 6px 2px 2px;opacity:.85}
+.ov-bar:last-child span{opacity:1;background:#F2A33A}
+.ov-bar small{font-size:10.5px;color:var(--sh-muted,#554B6B);white-space:nowrap}
+.ov-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;font-size:13.5px}
+.ov-list li{display:flex;justify-content:space-between;gap:10px;align-items:baseline;border-bottom:1px dashed #ECE7F6;padding-bottom:6px}
+.ov-list li:last-child{border-bottom:0;padding-bottom:0}
+.ov-list li>b{white-space:nowrap}
+.ov-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.ov-stats div{background:#FBF9FF;border-radius:12px;padding:10px;display:grid;gap:2px}
+.ov-stats b{font:800 20px/1.1 "Outfit",system-ui,sans-serif}
+.ov-stats span{font-size:12px;color:var(--sh-muted,#554B6B)}
+.ov-away{display:grid;gap:4px;font-size:13px;font-weight:700;flex:1 1 160px}
+.ov-panel input[type=date],.ov-panel input[type=month]{border:1px solid #DDD5EE;border-radius:10px;padding:9px 11px;font:inherit;background:#fff;min-height:42px;box-sizing:border-box}
+.ov-empty{border:1px dashed #DDD5EE;border-radius:16px;padding:16px;font-size:14px}
+.sc-note{margin:4px 0 0;font-size:12.5px;color:#4A32B5;font-weight:700}
+.pr-rules{display:grid;gap:10px}
+.pr-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pr-row input[type=number]{width:90px}
+.pr-row input[type=date]{flex:1 1 130px;min-width:0}
+.pr-season{display:grid;gap:8px;border:1px solid #ECE7F6;background:#FBF9FF;border-radius:12px;padding:10px}
+.pr-season input,.pr-row input{border:1px solid #DDD5EE;border-radius:10px;padding:8px 10px;font:inherit;background:#fff;min-height:40px;box-sizing:border-box}
+.pr-presets{display:flex;flex-wrap:wrap;gap:6px}

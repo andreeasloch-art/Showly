@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { Icon, mediaBg } from "@/showly/ui";
 import { deleteMedia, isCloudMedia, refreshMediaStatus, type MediaRef } from "@/showly/media";
-import { ImagePick, useImageStore } from "@/components/showly/ImagePick";
+import { PhotosPick, useImageStore } from "@/components/showly/ImagePick";
 import { MediaStatusBadge, MediaThumb } from "@/components/showly/MediaView";
 import { KindBadge, SweetCard, catName } from "@/components/showly/Sweets";
 import {
@@ -551,6 +551,10 @@ export interface OfferDraft {
   unit: Unit;
   minQty: number;
   photo?: MediaRef | undefined;
+  /** alle Fotos des Angebots, das erste ist das Titelbild */
+  photos?: MediaRef[] | undefined;
+  /** Geschmacksrichtungen, durch Komma getrennt */
+  flavors?: string | undefined;
   img?: number | undefined;
   /** direkt buchbar zum Festpreis; ohne Angabe gilt die Regel je Kategorie */
   direct?: boolean | undefined;
@@ -558,6 +562,19 @@ export interface OfferDraft {
   food: FoodInfo;
   leadDays?: number | undefined;
 }
+
+/* Geschmacksrichtungen eines Angebots */
+const FLAVOR = {
+  de: { l: "Geschmacksrichtungen (mit Komma getrennt)", ph: "z. B. Vanille, Schokolade, Himbeere" },
+  en: { l: "Flavours (separated by commas)", ph: "e.g. vanilla, chocolate, raspberry" },
+  es: { l: "Sabores (separados por comas)", ph: "p. ej. vainilla, chocolate, frambuesa" },
+} as const;
+export const flavorList = (v: string | undefined) =>
+  String(v || "")
+    .split(/[,;\n]/)
+    .map((x) => x.trim().slice(0, 40))
+    .filter(Boolean)
+    .slice(0, 12);
 
 export const emptyOffer = (cat: SweetCat = "birthday"): OfferDraft => ({
   name: "",
@@ -614,7 +631,11 @@ export function OfferFields({
     <>
       <div className="pe-field">
         <span className="pe-label">{X.photo}</span>
-        <ImagePick value={d.photo} onChange={(m) => up("photo", m)} fallback={d.img ? { backgroundImage: `url('/sweets/${d.img}.webp')`, backgroundSize: "cover", backgroundPosition: "center" } : undefined} />
+        <PhotosPick
+          value={d.photos ?? (d.photo ? [d.photo] : [])}
+          onChange={(list) => onChange({ ...d, photos: list, photo: list[0] })}
+          fallback={d.img ? { backgroundImage: `url('/sweets/${d.img}.webp')`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        />
       </div>
       <label className="pe-field">
         <span className="pe-label">{X.offerName}</span>
@@ -674,6 +695,16 @@ export function OfferFields({
         <textarea value={d.desc} maxLength={600} onChange={(e) => up("desc", e.target.value)} />
         <ContactHint text={d.name + "\n" + d.desc} />
       </label>
+      <label className="pe-field">
+        <span className="pe-label">{FLAVOR[lang as "de" | "en" | "es"]?.l ?? FLAVOR.de.l}</span>
+        <input
+          value={d.flavors ?? ""}
+          maxLength={300}
+          placeholder={FLAVOR[lang as "de" | "en" | "es"]?.ph ?? FLAVOR.de.ph}
+          onChange={(e) => up("flavors", e.target.value)}
+        />
+        <ContactHint text={d.flavors ?? ""} />
+      </label>
       <FoodFields f={d.food} onChange={(f) => up("food", f)} leadDays={d.leadDays} onLead={(n) => up("leadDays", n)} />
       <fieldset className="pe-mode">
         <legend className="pe-label">
@@ -727,6 +758,8 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       unit: s.unit,
       minQty: s.minQty,
       photo: s.photo,
+      photos: s.photos ?? (s.photo ? [s.photo] : []),
+      flavors: (s.flavors ?? []).join(", "),
       img: s.img,
       direct: isDirectSweet(s),
       food: s.food ?? emptyFood(),
@@ -739,10 +772,16 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
     const price = parsePrice(open.price);
     if (!open.name.trim() || !price) return toast(X.offerNeed);
     if (!foodInfoComplete(cleanFoodInfo(open.food))) return toast(foodNeed);
-    if (!okText(open.name, open.desc)) return;
+    if (!okText(open.name, open.desc, open.flavors ?? "")) return;
+    const photos = open.photos ?? (open.photo ? [open.photo] : []);
+    const flavors = flavorList(open.flavors);
     const food = cleanFoodInfo(open.food)!;
     const prev = open.id ? list.find((s) => s.id === open.id) : undefined;
-    if (prev?.photo && prev.photo.id !== open.photo?.id) void deleteMedia(prev.photo.id);
+    /* entfernte Fotos löschen */
+    {
+      const keep = new Set(photos.map((m) => m.id));
+      for (const m of prev?.photos ?? (prev?.photo ? [prev.photo] : [])) if (!keep.has(m.id)) void deleteMedia(m.id);
+    }
     if (cloud) {
       void saveSweetCloud({
         id: open.id,
@@ -753,6 +792,8 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
         unit: open.unit,
         minQty: open.unit === "set" ? 1 : open.minQty,
         img: open.img,
+        photos,
+        flavors,
         direct: open.direct ?? isDirectSweet({ cat: open.cat }),
         food,
         leadDays: open.leadDays,
@@ -774,8 +815,10 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
       price,
       unit: open.unit,
       minQty: open.unit === "set" ? 1 : open.minQty,
-      photo: open.photo,
-      img: open.photo ? undefined : open.img,
+      photo: photos[0],
+      photos,
+      flavors,
+      img: photos.length ? undefined : open.img,
       direct: open.direct ?? isDirectSweet({ cat: open.cat }),
       food,
       leadDays: open.leadDays,
@@ -786,7 +829,7 @@ function OffersEditor({ b, X }: { b: Baker; X: T }) {
   }
 
   function del(s: Sweet) {
-    if (s.photo) void deleteMedia(s.photo.id);
+    for (const m of s.photos ?? (s.photo ? [s.photo] : [])) void deleteMedia(m.id);
     if (cloud) {
       void removeSweetCloud(s.id).then(() => bump((n) => n + 1));
       return;

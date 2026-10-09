@@ -6593,3 +6593,53 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 
 /* Profil: statt „Über …“ nur der Fahrradius als eigener Balken */
 .travel-line.travel-solo{margin:0;background:#fff;box-shadow:var(--sh-1)}
+
+/* Detailansicht für Kostüme, Deko und Torten (ProductSheet.tsx) */
+.pd-sheet{position:relative;width:min(880px,100%);max-height:92vh;display:flex;flex-direction:column;overflow:hidden;padding:0}
+.pd-body{overflow-y:auto;display:grid;grid-template-columns:1.05fr 1fr;gap:0;flex:1;min-height:0}
+.pd-media{position:relative;background:#f5f2fb}
+.pd-gallery{position:relative;height:100%;min-height:420px}
+.pd-track{display:flex;height:100%;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain}
+.pd-track::-webkit-scrollbar{display:none}
+.pd-slide{position:relative;flex:0 0 100%;scroll-snap-align:center;background-color:#f5f2fb;background-size:cover;background-position:center;background-repeat:no-repeat;display:grid;place-items:center}
+.pd-slide img{width:100%;height:100%;object-fit:cover}
+.pd-slide-tag{position:absolute;left:12px;bottom:34px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.88);color:var(--ink,#1a0e3d)}
+.pd-count{position:absolute;right:12px;top:12px;font-size:12px;font-weight:700;padding:4px 9px;border-radius:999px;background:rgba(20,10,40,.6);color:#fff}
+.pd-dots{position:absolute;left:0;right:0;bottom:12px;display:flex;justify-content:center;gap:6px}
+.pd-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.6);box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.pd-dots i.on{background:#fff;width:18px;border-radius:4px}
+.pd-nav{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;border:none;background:rgba(255,255,255,.92);display:none;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(20,10,40,.18)}
+.pd-nav.prev{left:10px}.pd-nav.prev svg{transform:rotate(180deg)}
+.pd-nav.next{right:10px}
+.pd-nav svg{width:18px;height:18px}
+@media (hover:hover){.pd-nav{display:grid}}
+.pd-badges{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap}
+.pd-close{position:absolute;right:12px;top:12px;z-index:3;width:40px;height:40px;border-radius:50%;border:none;background:rgba(255,255,255,.95);display:grid;place-items:center;cursor:pointer;box-shadow:0 4px 14px rgba(20,10,40,.18)}
+.pd-close svg{width:18px;height:18px}
+.pd-info{padding:24px 24px 18px;display:flex;flex-direction:column;gap:14px}
+.pd-info h2{font-family:var(--font-head);font-size:24px;line-height:1.15;margin:0}
+.pd-sub{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--sh-muted,#6b6584)}
+.pd-sub a,.pd-sub button{color:inherit;font:inherit;background:none;border:none;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.pd-price{font-size:15px;color:var(--sh-muted,#6b6584)}
+.pd-price b{font-size:24px;color:var(--ink,#1a0e3d);font-weight:800}
+.pd-desc{font-size:15px;line-height:1.6;margin:0;color:var(--ink2,#3b3456)}
+.pd-h{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--sh-muted,#6b6584);margin:4px 0 -4px}
+.pd-chips{display:flex;flex-wrap:wrap;gap:6px}
+.pd-chips span{font-size:13px;font-weight:600;padding:6px 12px;border-radius:999px;background:#f3effd;color:#4a2fd0}
+.pd-facts{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pd-facts li{display:flex;gap:10px;font-size:14px;line-height:1.45;color:var(--ink2,#3b3456)}
+.pd-facts li svg{flex:none;width:17px;height:17px;margin-top:2px;color:#6B3BE8}
+.pd-foot{border-top:1px solid var(--h-line,#ece8f4);padding:12px 18px calc(12px + env(safe-area-inset-bottom));background:#fff;display:flex;flex-direction:column;gap:10px}
+.pd-foot .prod-btn{width:100%}
+.prod-media.clickable,.prod-name.clickable{cursor:pointer}
+.prod-more{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:#4a2fd0;cursor:pointer;text-align:left;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:760px){
+  .pd-sheet{width:100%;max-height:94vh}
+  .pd-body{display:block}
+  .pd-gallery{min-height:0;height:auto;aspect-ratio:1/1}
+  .pd-info{padding:18px 18px 14px}
+  .pd-info h2{font-size:21px}
+}
+.prod-pics{position:absolute;right:10px;bottom:10px;display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:4px 8px;border-radius:999px;background:rgba(20,10,40,.62);color:#fff}
+.prod-pics svg{width:13px;height:13px}
+.pd-badges .act-card-badge,.pd-badges .sweet-direct,.pd-badges .demo-badge{position:static;inset:auto;transform:none;margin:0}

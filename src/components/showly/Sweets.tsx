@@ -24,9 +24,11 @@ import {
   type SweetRequest,
   type Unit,
   foodOf,
+  flavorsOf,
   isDirectSweet,
   leadOf,
 } from "@/showly/sweets";
+import { ProductSheet, slidesFor } from "./ProductSheet";
 import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 import { FoodFacts, useFoodCopy } from "@/components/showly/FoodInfo";
 import { ALLERGEN_LABEL, foodInfoComplete } from "@/showly/cakeRules";
@@ -350,24 +352,139 @@ export function BakerCard({ b }: { b: Baker }) {
 }
 
 /** Karte eines Angebots mit Anfrageknopf */
+/* Texte der Detailansicht einer Torte */
+const SWEET_SHEET = {
+  de: { desc: "Beschreibung", flavors: "Geschmacksrichtungen", inside: "Was drin ist", details: "Gut zu wissen", more: "Details ansehen", detail: "Nahaufnahme", lead: (n: number) => `Mindestens ${n} Tage vorher bestellen`, profile: "Zum Profil", flavorNote: "Deinen Wunschgeschmack gibst du beim Bestellen an." },
+  en: { desc: "Description", flavors: "Flavours", inside: "What's inside", details: "Good to know", more: "View details", detail: "Close-up", lead: (n: number) => `Order at least ${n} days ahead`, profile: "View profile", flavorNote: "You choose your flavour when ordering." },
+  es: { desc: "Descripción", flavors: "Sabores", inside: "Qué lleva", details: "Bueno saber", more: "Ver detalles", detail: "Detalle", lead: (n: number) => `Pide con al menos ${n} días de antelación`, profile: "Ver perfil", flavorNote: "Eliges el sabor al hacer el pedido." },
+} as const;
+
+/** Detailansicht einer Torte oder Süßigkeit: Bilder, Beschreibung,
+ *  Geschmack, Zutaten und Allergene, dann bestellen bzw. anfragen */
+export function SweetSheet({ s, onClose, onAsk, showBaker = true }: { s: Sweet; onClose: () => void; onAsk?: ((s: Sweet) => void) | undefined; showBaker?: boolean }) {
+  const { L, fmt, lang } = useShowly();
+  const C = useSweetsCopy();
+  const X = SWEET_SHEET[(lang as "de" | "en" | "es") ?? "de"] ?? SWEET_SHEET.de;
+  const b = bakerOf(s.bakerId);
+  const direct = isDirectSweet(s);
+  const flavors = flavorsOf(s);
+  const min = C.min(s.minQty, s.unit);
+  const slides = slidesFor(s.photos ?? (s.photo ? [s.photo] : undefined), sweetBg(s), !!b?.demo, X.detail);
+  return (
+    <ProductSheet
+      title={String(L(s.name))}
+      slides={slides}
+      onClose={onClose}
+      badges={
+        <>
+          <span className="act-card-badge prod-badge">{catName(s.cat, lang)}</span>
+          {direct && <span className="sweet-direct">{C.badgeDirect}</span>}
+          {b?.demo && <DemoBadge className="on-card" />}
+        </>
+      }
+      footer={
+        onAsk ? (
+          <button
+            className="prod-btn solid"
+            onClick={() => {
+              onClose();
+              onAsk(s);
+            }}
+          >
+            <Icon name={direct ? "cart" : "mail"} />
+            {direct ? C.book : C.ask}
+          </button>
+        ) : undefined
+      }
+    >
+      <h2>{L(s.name)}</h2>
+      {b && (
+        <div className="pd-sub">
+          <span>
+            {L(b.name)} · {b.city}
+          </span>
+          {showBaker && (
+            <Link to="/torten/$id" params={{ id: String(b.id) }} onClick={onClose}>
+              {X.profile}
+            </Link>
+          )}
+        </div>
+      )}
+      <div className="pd-price">
+        <b>{fmt(s.price)}</b> {C.unit[s.unit]}
+        {min ? ` · ${min}` : ""}
+      </div>
+      {L(s.desc) && (
+        <>
+          <p className="pd-h">{X.desc}</p>
+          <p className="pd-desc">{L(s.desc)}</p>
+        </>
+      )}
+      {flavors.length > 0 && (
+        <>
+          <p className="pd-h">{X.flavors}</p>
+          <div className="pd-chips">
+            {flavors.map((f) => (
+              <span key={f}>{f}</span>
+            ))}
+          </div>
+          {!direct && <p className="fair-muted">{X.flavorNote}</p>}
+        </>
+      )}
+      <p className="pd-h">{X.inside}</p>
+      <FoodFacts f={foodOf(s)} demo={b?.demo} />
+      <p className="pd-h">{X.details}</p>
+      <ul className="pd-facts">
+        <li>
+          <Icon name="clock" />
+          <span>{X.lead(leadOf(s))}</span>
+        </li>
+        {b && b.radiusKm > 0 && (
+          <li>
+            <Icon name="radius" />
+            <span>{C.delivery(b.radiusKm)}</span>
+          </li>
+        )}
+      </ul>
+      <CancelPolicyNote policy={policySnapshot("cake", "moderat", leadOf(s))} compact />
+    </ProductSheet>
+  );
+}
+
 export function SweetCard({
   s,
   onAsk,
   showBaker = true,
   actions,
+  autoOpen = false,
 }: {
   s: Sweet;
   onAsk?: (s: Sweet) => void;
   showBaker?: boolean;
   actions?: React.ReactNode;
+  /** Detailansicht gleich öffnen (Link mit ?angebot=…) */
+  autoOpen?: boolean;
 }) {
   const { L, fmt, lang } = useShowly();
   const C = useSweetsCopy();
+  const X = SWEET_SHEET[(lang as "de" | "en" | "es") ?? "de"] ?? SWEET_SHEET.de;
   const b = bakerOf(s.bakerId);
   const min = C.min(s.minQty, s.unit);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (autoOpen) setOpen(true);
+  }, [autoOpen]);
+  const pics = (s.photos?.length ?? 0) || (s.photo ? 1 : 0);
   return (
     <article className="act-card prod-card sweet-card" id={"sweet-" + s.id}>
-      <div className="act-card-media prod-media">
+      <div
+        className="act-card-media prod-media clickable"
+        role="button"
+        tabIndex={0}
+        aria-label={`${L(s.name)}: ${X.more}`}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen(true))}
+      >
         <div className="act-card-img" style={sweetBg(s)} />
         <span className="act-card-badge prod-badge">
           {catName(s.cat, lang)}
@@ -375,26 +492,17 @@ export function SweetCard({
         {isDirectSweet(s) && (
           <span className="sweet-direct">{C.badgeDirect}</span>
         )}
+        {pics > 1 && (
+          <span className="prod-pics" aria-hidden="true">
+            <Icon name="image" /> {pics}
+          </span>
+        )}
       </div>
       <div className="act-card-body">
-        <h3 className="act-card-name prod-name">
-          {/* Die ganze Karte führt zum Profil des Anbieters, auch bei Angeboten
-              zum Direktbuchen: dort sieht man, wer es anbietet, alle Infos und
-              die übrigen Angebote. Das Angebot selbst wird dort angesteuert.
-              Der Verweis spannt sich per ::after über die Karte; Anbieterzeile
-              und Knopf liegen darüber. Im Profil selbst bleibt es Text. */}
-          {showBaker && b ? (
-            <Link
-              className="act-card-link sweet-card-link"
-              to="/torten/$id"
-              params={{ id: String(b.id) }}
-              search={{ angebot: s.id }}
-            >
-              {L(s.name)}
-            </Link>
-          ) : (
-            L(s.name)
-          )}
+        {/* Bild und Name öffnen die Detailansicht mit Bildern, Geschmack und
+            Zutaten; die Anbieterzeile führt zum Profil */}
+        <h3 className="act-card-name prod-name clickable" onClick={() => setOpen(true)}>
+          {L(s.name)}
         </h3>
         {showBaker && b && (
           <Link className="prod-for sweet-baker" to="/torten/$id" params={{ id: String(b.id) }}>
@@ -406,6 +514,7 @@ export function SweetCard({
           </Link>
         )}
         <p className="sweet-desc">{L(s.desc)}</p>
+        {flavorsOf(s).length > 0 && <p className="sweet-allergens">{flavorsOf(s).slice(0, 4).join(" · ")}</p>}
         <AllergenLine s={s} />
         <div className="prod-price">
           <span>
@@ -413,6 +522,9 @@ export function SweetCard({
           </span>
           {min && <span className="sweet-min">{min}</span>}
         </div>
+        <button type="button" className="prod-more" onClick={() => setOpen(true)}>
+          {X.more}
+        </button>
         {actions ?? (
           <div className="prod-btns one">
             <button className="prod-btn solid" onClick={() => onAsk?.(s)}>
@@ -422,6 +534,7 @@ export function SweetCard({
           </div>
         )}
       </div>
+      {open && <SweetSheet s={s} onClose={() => setOpen(false)} onAsk={onAsk} showBaker={showBaker} />}
     </article>
   );
 }

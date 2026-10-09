@@ -81,3 +81,87 @@ export function ImagePick({
     </div>
   );
 }
+
+const MULTI = {
+  de: { add: "Fotos hinzufügen", cover: "Titelbild", makeCover: "Als Titelbild", remove: "Entfernen", hint: (n: number) => `Bis zu ${n} Fotos, das erste ist das Titelbild. Zeig das Angebot von allen Seiten und im Detail.` },
+  en: { add: "Add photos", cover: "Cover", makeCover: "Make cover", remove: "Remove", hint: (n: number) => `Up to ${n} photos, the first one is the cover. Show the item from all sides and in detail.` },
+  es: { add: "Añadir fotos", cover: "Portada", makeCover: "Usar de portada", remove: "Quitar", hint: (n: number) => `Hasta ${n} fotos; la primera es la portada. Muestra el artículo desde todos los lados y en detalle.` },
+} as const;
+
+/** Mehrere Fotos eines Angebots (Kostüm, Deko, Torte). Das erste ist das
+ *  Titelbild der Karte, alle zusammen bilden die Galerie der Detailansicht. */
+export function PhotosPick({
+  value,
+  onChange,
+  max = 6,
+  fallback,
+}: {
+  value: MediaRef[];
+  onChange: (list: MediaRef[]) => void;
+  max?: number;
+  fallback?: React.CSSProperties | undefined;
+}) {
+  const { lang } = useShowly();
+  const T = MULTI[(lang as "de" | "en" | "es") ?? "de"] ?? MULTI.de;
+  const store = useImageStore();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function add(files: FileList | null) {
+    const room = max - value.length;
+    if (!files?.length || room <= 0) return;
+    setBusy(true);
+    const refs = await store(files, room);
+    setBusy(false);
+    onChange([...value, ...refs].slice(0, max));
+  }
+
+  return (
+    <div className="photos-pick">
+      <div className="pe-photos">
+        {value.length === 0 && fallback && (
+          <figure className="pe-photo cover">
+            <span className="pe-photo-img" style={fallback} />
+          </figure>
+        )}
+        {value.map((m, i) => (
+          <figure className={"pe-photo" + (i === 0 ? " cover" : "")} key={m.id}>
+            <span className="pe-photo-img" style={mediaBg(m.id) ?? undefined} />
+            {i === 0 && <span className="pe-photo-tag">{T.cover}</span>}
+            <figcaption>
+              {i > 0 && (
+                <button type="button" onClick={() => onChange([m, ...value.filter((_, k) => k !== i)])}>
+                  <Icon name="star" /> {T.makeCover}
+                </button>
+              )}
+              <button type="button" className="danger" onClick={() => onChange(value.filter((_, k) => k !== i))}>
+                <Icon name="trash" /> {T.remove}
+              </button>
+            </figcaption>
+          </figure>
+        ))}
+        {value.length < max && (
+          <button type="button" className="pe-photo-add" onClick={() => input.current?.click()} disabled={busy}>
+            <Icon name={store.label ? "shield" : "plus"} />
+            <span>{store.label ?? T.add}</span>
+            <small>
+              {value.length}/{max}
+            </small>
+          </button>
+        )}
+      </div>
+      <p className="pe-hint">{T.hint(max)}</p>
+      <input
+        ref={input}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={(e) => {
+          void add(e.target.files);
+          e.target.value = "";
+        }}
+      />
+    </div>
+  );
+}

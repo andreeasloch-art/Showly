@@ -345,7 +345,7 @@ function BakerProfile() {
                   {offers.length ? (
                     <div className="act-grid prod-grid bk-offers">
                       {offers.map((s) => (
-                        <SweetCard s={s} key={s.id} onAsk={setAsking} showBaker={false} />
+                        <SweetCard s={s} key={s.id} onAsk={setAsking} showBaker={false} autoOpen={s.id === angebot} />
                       ))}
                     </div>
                   ) : (

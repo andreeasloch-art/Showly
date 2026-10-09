@@ -12,8 +12,9 @@ import { CatIcon, Icon, shopBg } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { ShopSearch } from "@/components/showly/ShopSearch";
 import { ImageWall } from "@/components/showly/ImageWall";
-import { ImagePick } from "@/components/showly/ImagePick";
+import { PhotosPick } from "@/components/showly/ImagePick";
 import { ShopAreas } from "@/components/showly/ShopAreas";
+import { ProductSheet, slidesFor } from "@/components/showly/ProductSheet";
 import { saveDecoItem } from "@/showly/sweets";
 import { saveDecoCloud } from "@/showly/cloudProviders";
 import type { MediaRef } from "@/showly/media";
@@ -562,7 +563,7 @@ function DecoOffer({
   const [buy, setBuy] = useState("");
   const [rent, setRent] = useState("");
   const [terms, setTerms] = useState<RentDraft>(emptyRentDraft());
-  const [photo, setPhoto] = useState<MediaRef | undefined>();
+  const [photos, setPhotos] = useState<MediaRef[]>([]);
   const [business, setBusiness] = useState<boolean | null>(null);
   const [taxOk, setTaxOk] = useState(false);
   const [privOk, setPrivOk] = useState(false);
@@ -601,7 +602,8 @@ function DecoOffer({
       occ,
       buy: b || r * 5,
       rent: r,
-      photo,
+      photo: photos[0],
+      photos,
       area: offerArea,
       ...(sizeList().length ? { sizes: sizeList() } : {}),
       ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
@@ -625,6 +627,7 @@ function DecoOffer({
         rent: r,
         area: offerArea,
         sizes: sizeList(),
+        photos,
         ...(r ? { terms: cleanRentTerms(rentTermsFromDraft(terms) as Record<string, unknown>) } : {}),
       }).then(async (res) => {
         if ("error" in res) return toast(res.error);
@@ -650,7 +653,7 @@ function DecoOffer({
         <div className="feed26-sheet-body">
           <div className="pe-field">
             <span className="pe-label">{F.photo}</span>
-            <ImagePick value={photo} onChange={setPhoto} />
+            <PhotosPick value={photos} onChange={setPhotos} />
           </div>
           <label className="pe-field">
             <span className="pe-label">{F.vendor}</span>
@@ -760,21 +763,17 @@ function DecoOffer({
   );
 }
 
-/* Produktkarte, im selben Schnitt wie die Künstlerkarte der Startseite:
-   Bild, Name mit Bewertung, eine Zeile Preis, zwei Knöpfe. Nach dem Klick
-   auf Mieten oder Kaufen bestätigt der Knopf selbst kurz, dass das Kostüm
-   im Warenkorb liegt, zusätzlich zur Meldung unten. So sieht man die
-   Rückmeldung genau dort, wo man hingeschaut hat. */
-function ProductCard({
-  item: i,
-  C,
-  onArtists,
-}: {
-  item: ShopItem;
-  C: Copy;
-  onArtists?: (() => void) | undefined;
-}) {
-  const { t, L, fmt, num, addToCart, catLabel } = useShowly();
+/* Texte der Detailansicht */
+const SHEET = {
+  de: { details: "Details", desc: "Beschreibung", sizes: "Größen", deposit: "Kaution je Stück, kommt nach der Rückgabe zurück", hygiene: "Hygiene", pickup: "Abholung beim Anbieter", delivery: (p: string) => `Lieferung und Abholung ${p}`, shipping: (p: string) => `Versand inkl. Rückversand ${p}`, rentHow: "Den Mietzeitraum wählst du im Warenkorb (bis 30 Tage).", buyOnly: "Nur zum Kaufen", more: "Details ansehen", detail: "Nahaufnahme", free: "kostenlos", stock: (n: number) => `${n} Stück verfügbar`, by: "Anbieter", for: "Passt zu" },
+  en: { details: "Details", desc: "Description", sizes: "Sizes", deposit: "Deposit per piece, refunded after return", hygiene: "Hygiene", pickup: "Pick-up from the provider", delivery: (p: string) => `Delivery and collection ${p}`, shipping: (p: string) => `Shipping incl. return ${p}`, rentHow: "You choose the rental period in your cart (up to 30 days).", buyOnly: "Purchase only", more: "View details", detail: "Close-up", free: "free", stock: (n: number) => `${n} available`, by: "Provider", for: "Goes with" },
+  es: { details: "Detalles", desc: "Descripción", sizes: "Tallas", deposit: "Fianza por unidad, se devuelve tras la devolución", hygiene: "Higiene", pickup: "Recogida en el proveedor", delivery: (p: string) => `Entrega y recogida ${p}`, shipping: (p: string) => `Envío con devolución ${p}`, rentHow: "El periodo de alquiler lo eliges en el carrito (hasta 30 días).", buyOnly: "Solo compra", more: "Ver detalles", detail: "Detalle", free: "gratis", stock: (n: number) => `${n} disponibles`, by: "Proveedor", for: "Combina con" },
+} as const;
+
+/* Mieten oder Kaufen, Größe, in den Warenkorb: auf der Karte und in der
+   Detailansicht gleich */
+function BuyBox({ item: i, C }: { item: ShopItem; C: Copy }) {
+  const { t, addToCart } = useShowly();
   const both = i.rent > 0;
   const [done, setDone] = useState<"" | "rent" | "buy">("");
   const [mode, setMode] = useState<"rent" | "buy">("rent");
@@ -797,19 +796,231 @@ function ProductCard({
   }
 
   return (
+    <>
+      {/* Ein Knopf statt zwei: Bei Kostümen, die man mieten und kaufen
+          kann, wählt man vorher die Art. */}
+      {both && (
+        <div className="prod-mode" role="radiogroup" aria-label={t("shop.rentBuy")}>
+          {(["rent", "buy"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              role="radio"
+              aria-checked={mode === m}
+              className={"prod-mode-opt" + (mode === m ? " on" : "")}
+              onClick={() => setMode(m)}
+            >
+              {m === "rent" ? C.rentOpt : C.buyOpt}
+            </button>
+          ))}
+        </div>
+      )}
+      {sizes.length > 0 && (
+        <label className={"prod-size" + (sizeErr ? " err" : "")}>
+          <span>{C.size}</span>
+          <select
+            value={size}
+            aria-invalid={sizeErr}
+            onChange={(e) => {
+              setSize(e.target.value);
+              setSizeErr(false);
+            }}
+          >
+            <option value="">{C.sizePick}</option>
+            {sizes.map((x) => (
+              <option key={x} value={x}>
+                {x}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {sizeErr && (
+        <p className="prod-size-msg" role="alert">
+          {C.sizeNeed}
+        </p>
+      )}
+      <button className={"prod-btn solid" + (done ? " done" : "")} onClick={() => add(both ? mode : "buy")}>
+        {done ? <Icon name="check" /> : <Icon name="cart" />}
+        {done ? C.added : C.toCart}
+      </button>
+    </>
+  );
+}
+
+/* Detailansicht eines Kostüms oder Deko-Artikels: mehrere Bilder,
+   Beschreibung, Größen, Kaution, Übergabe, dann in den Warenkorb */
+function ShopItemSheet({ item: i, C, onClose, onArtists }: { item: ShopItem; C: Copy; onClose: () => void; onArtists?: (() => void) | undefined }) {
+  const { t, L, fmt, num, catLabel, lang } = useShowly();
+  const X = SHEET[(lang as "de" | "en" | "es") ?? "de"] ?? SHEET.de;
+  const both = i.rent > 0;
+  const slides = slidesFor(i.photos ?? (i.photo ? [i.photo] : undefined), shopBg(i), !!i.demo, X.detail);
+  const fee = (v: number | null | undefined) => (v === 0 ? X.free : fmt(Number(v)));
+  return (
+    <ProductSheet
+      title={String(L(i.name))}
+      slides={slides}
+      onClose={onClose}
+      badges={
+        <>
+          <span className={"act-card-badge prod-badge" + (both ? " both" : "")}>{t(both ? "shop.rentBuy" : "shop.buyOnly")}</span>
+          {i.demo && <DemoBadge className="on-card" />}
+        </>
+      }
+      footer={<BuyBox item={i} C={C} />}
+    >
+      <h2>{L(i.name)}</h2>
+      <div className="pd-sub">
+        {i.reviews > 0 && (
+          <span>
+            ★ {num(i.rating, 1)} ({i.reviews})
+          </span>
+        )}
+        {i.vendor && (
+          <span>
+            {X.by}: {i.vendor}
+          </span>
+        )}
+        {i.artistCat && onArtists && (
+          <button type="button" onClick={onArtists}>
+            {X.for} {catLabel(i.artistCat)}
+          </button>
+        )}
+      </div>
+      <div className="pd-price">
+        {both && (
+          <span>
+            <b>{fmt(i.rent)}</b> {C.perDay} ·{" "}
+          </span>
+        )}
+        <span>
+          {both ? C.buy + " " : ""}
+          <b>{fmt(i.buy)}</b>
+        </span>
+      </div>
+      {L(i.desc) && (
+        <>
+          <p className="pd-h">{X.desc}</p>
+          <p className="pd-desc">{L(i.desc)}</p>
+        </>
+      )}
+      {i.sizes?.length ? (
+        <>
+          <p className="pd-h">{X.sizes}</p>
+          <div className="pd-chips">
+            {i.sizes.map((z) => (
+              <span key={z}>{z}</span>
+            ))}
+          </div>
+        </>
+      ) : null}
+      <p className="pd-h">{X.details}</p>
+      <ul className="pd-facts">
+        {both ? (
+          <li>
+            <Icon name="calendar" />
+            <span>{X.rentHow}</span>
+          </li>
+        ) : (
+          <li>
+            <Icon name="cart" />
+            <span>{X.buyOnly}</span>
+          </li>
+        )}
+        {both && depositOf(i) > 0 && (
+          <li>
+            <Icon name="shield" />
+            <span>
+              {fmt(depositOf(i))} {X.deposit}
+            </span>
+          </li>
+        )}
+        {both && i.hygiene && (
+          <li>
+            <Icon name="check" />
+            <span>
+              {X.hygiene}: {i.hygiene}
+            </span>
+          </li>
+        )}
+        {both && i.pickup !== false && (
+          <li>
+            <Icon name="pin" />
+            <span>{X.pickup}</span>
+          </li>
+        )}
+        {both && i.deliveryFee != null && (
+          <li>
+            <Icon name="radius" />
+            <span>{X.delivery(fee(i.deliveryFee))}</span>
+          </li>
+        )}
+        {both && i.shippingFee != null && (
+          <li>
+            <Icon name="send" />
+            <span>{X.shipping(fee(i.shippingFee))}</span>
+          </li>
+        )}
+        {both && (i.stock ?? 1) > 1 && (
+          <li>
+            <Icon name="check" />
+            <span>{X.stock(i.stock ?? 1)}</span>
+          </li>
+        )}
+      </ul>
+    </ProductSheet>
+  );
+}
+
+/* Produktkarte, im selben Schnitt wie die Künstlerkarte der Startseite:
+   Bild, Name mit Bewertung, eine Zeile Preis, zwei Knöpfe. Nach dem Klick
+   auf Mieten oder Kaufen bestätigt der Knopf selbst kurz, dass das Kostüm
+   im Warenkorb liegt, zusätzlich zur Meldung unten. So sieht man die
+   Rückmeldung genau dort, wo man hingeschaut hat. */
+function ProductCard({
+  item: i,
+  C,
+  onArtists,
+}: {
+  item: ShopItem;
+  C: Copy;
+  onArtists?: (() => void) | undefined;
+}) {
+  const { t, L, fmt, num, catLabel, lang } = useShowly();
+  const X = SHEET[(lang as "de" | "en" | "es") ?? "de"] ?? SHEET.de;
+  const both = i.rent > 0;
+  /* Detailansicht mit mehreren Bildern und Beschreibung */
+  const [open, setOpen] = useState(false);
+  const pics = (i.photos?.length ?? 0) || (i.photo ? 1 : 0);
+
+  return (
     <article className="act-card prod-card" id={"costume-" + i.id}>
-      <div className="act-card-media prod-media">
+      <div
+        className="act-card-media prod-media clickable"
+        role="button"
+        tabIndex={0}
+        aria-label={`${L(i.name)}: ${X.more}`}
+        onClick={() => setOpen(true)}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen(true))}
+      >
         <div className="act-card-img" style={shopBg(i)} />
         {i.own && <span className="prod-new">{C.newTag}</span>}
         {i.demo && <DemoBadge className="on-card" />}
         <span className={"act-card-badge prod-badge" + (both ? " both" : "")}>
           {t(both ? "shop.rentBuy" : "shop.buyOnly")}
         </span>
+        {pics > 1 && (
+          <span className="prod-pics" aria-hidden="true">
+            <Icon name="image" /> {pics}
+          </span>
+        )}
       </div>
 
       <div className="act-card-body">
         <div className="act-card-row">
-          <h3 className="act-card-name prod-name">{L(i.name)}</h3>
+          <h3 className="act-card-name prod-name clickable" onClick={() => setOpen(true)}>
+            {L(i.name)}
+          </h3>
           {i.reviews > 0 && (
             <span className="act-card-rating">
               <span className="star" aria-hidden="true">
@@ -855,55 +1066,12 @@ function ProductCard({
               .join(" · ")}
           </p>
         ) : null}
-        {/* Ein Knopf statt zwei: Bei Kostümen, die man mieten und kaufen
-            kann, wählt man vorher die Art. Vorher standen auf jeder Karte
-            zwei gleich laute Knöpfe, bei 15 Karten also 30. */}
-        {both && (
-          <div className="prod-mode" role="radiogroup" aria-label={t("shop.rentBuy")}>
-            {(["rent", "buy"] as const).map((m) => (
-              <button
-                key={m}
-                type="button"
-                role="radio"
-                aria-checked={mode === m}
-                className={"prod-mode-opt" + (mode === m ? " on" : "")}
-                onClick={() => setMode(m)}
-              >
-                {m === "rent" ? C.rentOpt : C.buyOpt}
-              </button>
-            ))}
-          </div>
-        )}
-        {sizes.length > 0 && (
-          <label className={"prod-size" + (sizeErr ? " err" : "")}>
-            <span>{C.size}</span>
-            <select
-              value={size}
-              aria-invalid={sizeErr}
-              onChange={(e) => {
-                setSize(e.target.value);
-                setSizeErr(false);
-              }}
-            >
-              <option value="">{C.sizePick}</option>
-              {sizes.map((x) => (
-                <option key={x} value={x}>
-                  {x}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
-        {sizeErr && (
-          <p className="prod-size-msg" role="alert">
-            {C.sizeNeed}
-          </p>
-        )}
-        <button className={"prod-btn solid" + (done ? " done" : "")} onClick={() => add(both ? mode : "buy")}>
-          {done ? <Icon name="check" /> : <Icon name="cart" />}
-          {done ? C.added : C.toCart}
+        <button type="button" className="prod-more" onClick={() => setOpen(true)}>
+          {X.more}
         </button>
+        <BuyBox item={i} C={C} />
       </div>
+      {open && <ShopItemSheet item={i} C={C} onClose={() => setOpen(false)} onArtists={onArtists} />}
     </article>
   );
 }

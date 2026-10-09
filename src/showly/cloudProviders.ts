@@ -12,7 +12,7 @@
 import { SHOP_ITEMS, type ShopItem } from "./data";
 import { BAKERS, SWEETS, setCloudOwnBakers, type Baker, type Sweet } from "./sweets";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
-import { preloadMedia } from "./media";
+import { preloadMedia, type MediaRef } from "./media";
 import { removeOffer, saveOffer, saveProvider } from "@/utils/provider.functions";
 import { cleanFoodInfo } from "./cakeRules";
 import { cleanRentTerms } from "./rental";
@@ -78,6 +78,8 @@ function sweetFromOffer(o: OfferRow): Sweet {
     unit: (["person", "piece", "set"].includes(String(d["unit"])) ? d["unit"] : "piece") as Sweet["unit"],
     minQty: Number(d["minQty"]) || 1,
     img: Number(d["img"]) || 1,
+    ...photosOf(d),
+    ...(Array.isArray(d["flavors"]) ? { flavors: (d["flavors"] as unknown[]).map(String).filter(Boolean).slice(0, 12) } : {}),
     direct: o.direct,
     food: cleanFoodInfo(d["food"]) ?? undefined,
     ...(Number.isFinite(Number(d["leadDays"])) && d["leadDays"] != null ? { leadDays: Number(d["leadDays"]) } : {}),
@@ -98,8 +100,25 @@ function itemFromOffer(o: OfferRow, vendor: string): ShopItem {
     reviews: 0,
     name: L(d["name"]),
     desc: L(d["desc"]),
+    ...photosOf(d),
     ...cleanRentTerms(d),
   };
+}
+
+/* Fotos eines Angebots aus der Datenbank: Kennungen mit "c:" davor
+   (Server-Dateien); das erste ist das Titelbild der Karte */
+function photosOf(d: Record<string, unknown>): { photo?: MediaRef; photos?: MediaRef[] } {
+  const list = (Array.isArray(d["photos"]) ? (d["photos"] as { id: string; ratio?: number }[]) : []).map((m) => ({
+    id: "c:" + m.id,
+    kind: "image" as const,
+    ratio: Number(m.ratio) || 1,
+  }));
+  return list.length ? { photo: list[0]!, photos: list } : {};
+}
+
+/** Nur Dateien auf dem Server ("c:") gehen in die Datenbank */
+function cloudPhotos(list: MediaRef[] | undefined) {
+  return (list || []).filter((m) => m.id.startsWith("c:") && m.kind !== "video").slice(0, 6).map((m) => ({ id: m.id.slice(2), ratio: m.ratio }));
 }
 
 /** Öffentliches Konditorei-Profil (vom Server geladen, z. B. für Suchmaschinen) in den Katalog übernehmen */
@@ -212,6 +231,8 @@ export async function saveSweetCloud(s: Omit<Sweet, "id" | "own" | "bakerId"> & 
         unit: s.unit,
         minQty: s.minQty,
         img: s.img ?? 1,
+        photos: cloudPhotos(s.photos),
+        flavors: s.flavors ?? [],
         food: s.food,
         ...(s.leadDays !== undefined ? { leadDays: s.leadDays } : {}),
       },
@@ -243,6 +264,7 @@ export async function saveDecoCloud(d: {
   /** Bereich im Shop; Kostüme mit Größen */
   area?: "deko" | "kostuem" | undefined;
   sizes?: string[] | undefined;
+  photos?: MediaRef[] | undefined;
 }): Promise<Result<{ id: number }>> {
   const p = await saveProvider({
     data: { kind: "deco", data: { vendor: d.vendor, business: d.business, taxAckAt: new Date().toISOString() } },
@@ -257,6 +279,7 @@ export async function saveDecoCloud(d: {
         cat: d.cat,
         occ: d.occ,
         area: d.area ?? "deko",
+        photos: cloudPhotos(d.photos),
         ...(d.rent > 0 && d.terms ? d.terms : {}),
         ...(d.sizes?.length ? { sizes: d.sizes } : {}),
       },

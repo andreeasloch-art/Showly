@@ -32,6 +32,8 @@ export interface ShopItem extends RentTerms {
   vendor?: string;
   /** Eigenes Foto eines Anbieters (IndexedDB) */
   photo?: { id: string; kind: "image" | "video"; name?: string; ratio?: number } | undefined;
+  /** Weitere Fotos (Galerie in der Detailansicht), bis 6 */
+  photos?: { id: string; kind: "image" | "video"; name?: string; ratio?: number }[] | undefined;
   /** Von einem Anbieter in diesem Browser angelegt */
   own?: boolean;
   /** Beispielartikel aus dem Katalog: nicht echt, nicht kaufbar */

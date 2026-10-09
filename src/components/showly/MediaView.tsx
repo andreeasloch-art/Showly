@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import { isCloudMedia, mediaStatusSync, mediaUrl, mediaUrlSync, subscribeMedia, type MediaRef } from "@/showly/media";
 import { Icon } from "@/showly/ui";
 
-function useMediaUrl(id: string) {
+export function useMediaUrl(id: string) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
     let alive = true;
+    if (!id) return;
     void mediaUrl(id).then((u) => {
       if (alive) setUrl(u);
     });

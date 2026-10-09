@@ -115,6 +115,16 @@ export const saveProvider = createServerFn({ method: "POST" })
     return { id: ins.id };
   });
 
+/* Fotos eines Angebots: Kennungen aus public.media, höchstens 6 Bilder */
+function offerPhotos(v: unknown): { id: string; ratio: number }[] {
+  return Array.isArray(v)
+    ? (v as { id?: unknown; ratio?: unknown }[])
+        .filter((m) => m && /^[0-9a-f-]{36}$/.test(String(m.id)))
+        .slice(0, 6)
+        .map((m) => ({ id: String(m.id), ratio: n(Number(m.ratio) * 1000, 100, 10000, 1000) / 1000 }))
+    : [];
+}
+
 /* ------------------------------------------------------------------ */
 export interface OfferInput {
   offerId?: number;
@@ -138,6 +148,9 @@ export const saveOffer = createServerFn({ method: "POST" })
             unit: ["person", "piece", "set"].includes(String(x["unit"])) ? String(x["unit"]) : "piece",
             minQty: n(x["minQty"], 1, 5000, 1),
             img: n(x["img"], 1, 14, 1),
+            photos: offerPhotos(x["photos"]),
+            /* Geschmacksrichtungen, je höchstens 40 Zeichen */
+            flavors: Array.isArray(x["flavors"]) ? (x["flavors"] as unknown[]).map((f) => s(f, 40)).filter(Boolean).slice(0, 12) : [],
             /* Pflichtangaben nach Lebensmittelrecht (LMIV) */
             food: cleanFoodInfo(x["food"]),
             ...(x["leadDays"] != null && x["leadDays"] !== "" ? { leadDays: n(x["leadDays"], 0, 120, 0) } : {}),
@@ -149,6 +162,7 @@ export const saveOffer = createServerFn({ method: "POST" })
             occ: Array.isArray(x["occ"]) ? (x["occ"] as unknown[]).map((o) => s(o, 20)).filter(Boolean).slice(0, 6) : [],
             /* Bereich im Shop: Deko oder Kostüm (Kauf und/oder Miete) */
             area: x["area"] === "kostuem" ? "kostuem" : "deko",
+            photos: offerPhotos(x["photos"]),
             /* Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
             ...cleanRentTerms(x),
           };
@@ -168,8 +182,14 @@ export const saveOffer = createServerFn({ method: "POST" })
     const ctx = await ctxOrError();
     if (!ctx) return { error: "Bitte melde dich an" };
     if (!(await allow("offer", ctx.user.id))) return { error: TOO_MANY };
-    if (!(await noContact(String(data.data.name), String(data.data.desc))))
+    if (!(await noContact(String(data.data.name), String(data.data.desc), ...(((data.data as { flavors?: string[] }).flavors) ?? []))))
       return { error: "Bitte keine Kontaktdaten im Angebot" };
+    /* Fotos: nur eigene Dateien aus public.media */
+    {
+      const photos = ((data.data as { photos?: { id: string }[] }).photos ?? []).map((m) => m.id);
+      const { ownsAll } = await import("@/lib/media.server");
+      if (photos.length && !(await ownsAll(ctx.user.id, photos))) return { error: "Unbekannte Datei bei den Fotos" };
+    }
     if (data.priceCents <= 0 && data.rentCents <= 0) return { error: "Preis fehlt" };
     const admin = adminClient();
     const { data: prov } = await admin

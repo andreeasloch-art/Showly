@@ -103,6 +103,10 @@ export interface Sweet {
   minQty: number;
   img?: number | undefined;
   photo?: MediaRef | undefined;
+  /** weitere Fotos des Angebots (Galerie in der Detailansicht), bis 6 */
+  photos?: MediaRef[] | undefined;
+  /** Geschmacksrichtungen, z. B. Vanille, Schoko, Himbeere */
+  flavors?: string[] | undefined;
   own?: boolean;
   /** Festpreis-Paket, direkt buchbar (z. B. 20 Macarons). Ohne Angabe gilt
    *  die Regel in isDirectSweet: Spezial- und Motivtorten nur auf Anfrage. */
@@ -150,6 +154,25 @@ export function foodOf(s: Sweet): FoodInfo | undefined {
   if (s.food) return s.food;
   if (!bakerOf(s.bakerId)?.demo) return undefined;
   return { ...(DEMO_FOOD[s.cat] ?? DEMO_FOOD_DEFAULT), noAllergens: false, traces: ["peanuts"] };
+}
+
+/* Geschmacksrichtungen der Beispielangebote (echte Anbieter tragen ihre
+   eigenen ein) */
+const DEMO_FLAVORS: Record<SweetCat, string[]> = {
+  wedding: ["Vanille-Himbeere", "Zitrone-Holunder", "Schokolade-Kirsch"],
+  birthday: ["Schokolade", "Vanille", "Erdbeer-Sahne"],
+  motif: ["Vanille", "Schokolade", "Nuss-Nougat"],
+  cupcakes: ["Vanille", "Schoko", "Red Velvet", "Zitrone"],
+  candybar: ["Fruchtgummi", "Schoko-Pralinen", "Popcorn", "Marshmallows"],
+  cakes: ["Käsekuchen", "Apfelkuchen", "Schoko-Brownie"],
+  patisserie: ["Himbeere", "Pistazie", "Salzkaramell", "Zitrone"],
+};
+
+/** Geschmacksrichtungen: eigene des Angebots, bei Beispielen typische */
+export function flavorsOf(s: Sweet): string[] {
+  if (s.flavors?.length) return s.flavors;
+  if (!bakerOf(s.bakerId)?.demo) return [];
+  return DEMO_FLAVORS[s.cat] ?? [];
 }
 
 /** Vorlauf in Tagen: eigener Wert des Angebots, sonst der des Anbieters */
@@ -456,8 +479,8 @@ export function hydrateSweets() {
   }
   void preloadMedia([
     ...BAKERS.flatMap((b) => (b.photos || []).map((m) => m.id)),
-    ...SWEETS.flatMap((s) => (s.photo ? [s.photo.id] : [])),
-    ...SHOP_ITEMS.flatMap((i) => (i.photo ? [i.photo.id] : [])),
+    ...SWEETS.flatMap((s) => [...(s.photo ? [s.photo.id] : []), ...(s.photos || []).map((m) => m.id)]),
+    ...SHOP_ITEMS.flatMap((i) => [...(i.photo ? [i.photo.id] : []), ...(i.photos || []).map((m) => m.id)]),
   ]);
 }
 
@@ -580,6 +603,7 @@ export interface DecoInput {
   buy: number;
   rent: number;
   photo?: MediaRef | undefined;
+  photos?: MediaRef[] | undefined;
   /** Verleih: Stückzahl, Puffer, Kaution, Größen, Hygiene, Übergabe */
   terms?: RentTerms | undefined;
   /** Bereich im Shop (Standard Deko) und Größen, auch beim Kauf */
@@ -601,6 +625,7 @@ function decoToItem(d: DecoInput & { id: number }): ShopItem {
     name: d.name,
     desc: d.desc,
     photo: d.photo,
+    ...(d.photos?.length ? { photos: d.photos } : {}),
     ...(d.terms ?? {}),
     ...(d.sizes?.length ? { sizes: d.sizes } : {}),
     own: true,

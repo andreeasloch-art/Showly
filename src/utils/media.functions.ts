@@ -94,6 +94,9 @@ export const registerMedia = createServerFn({ method: "POST" })
       if (!blob) return { error: "Datei nicht gefunden" };
       const bytes = new Uint8Array(await blob.arrayBuffer());
       if (!isImageKind(sniffType(bytes))) return reject("Das ist kein Foto. Erlaubt sind JPEG, PNG, WebP, GIF und HEIC.");
+      const { scanUpload } = await import("@/lib/scan.server");
+      const scan = await scanUpload(bytes, "image", file);
+      if (!scan.ok) return reject(scan.reason);
       const clean = stripImageMetadata(bytes);
       if (clean.changed)
         await a.storage.from(BUCKET).upload(data.path, clean.bytes, { upsert: true, contentType: blob.type || data.mime });
@@ -106,6 +109,15 @@ export const registerMedia = createServerFn({ method: "POST" })
         : null;
       if (!head || !isVideoKind(sniffType(new Uint8Array(head))))
         return reject("Das ist kein Video. Erlaubt sind MP4, MOV und WebM.");
+      /* Mit eingerichtetem Virenscanner auch Videos ganz prüfen */
+      if (process.env["VIRUS_SCAN_URL"]) {
+        const { data: vid } = await a.storage.from(BUCKET).download(data.path);
+        if (vid) {
+          const { scanUpload } = await import("@/lib/scan.server");
+          const scan = await scanUpload(new Uint8Array(await vid.arrayBuffer()), "video", file);
+          if (!scan.ok) return reject(scan.reason);
+        }
+      }
     }
 
     const { data: row, error } = await a

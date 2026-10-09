@@ -364,6 +364,13 @@ Rückbuchungen halten die Auszahlungen an und erscheinen als Fall unter Verwaltu
 
 **Zwei-Faktor:** Im Konto unter „Zwei-Faktor-Anmeldung“ einrichten. Für die Verwaltung Pflicht, sobald `ADMIN_REQUIRE_2FA=1` gesetzt ist (erst setzen, wenn alle Admins 2FA eingerichtet haben). In Supabase → Authentication → MFA muss TOTP eingeschaltet sein.
 
+**Virenschutz für Uploads:** Jede hochgeladene Datei (Chat-Anhänge, Fotos und Videos, Nachweise bei Reklamation und Übergabe) wird auf dem Server geprüft. Immer aktiv ist die eigene Prüfung (`src/showly/fileScan.ts`): echte Dateiart, Virensignatur-Testmuster, versteckter Code in Bildern, und bei PDFs Skripte, Programmstart, eingebettete Dateien und Verschlüsselung, auch in komprimierten Teilen. Was durchfällt, wird sofort gelöscht.
+Zusätzlich lässt sich ein echter Virenscanner (ClamAV) anbinden:
+1. Einen ClamAV-REST-Dienst betreiben, z. B. das Docker-Image `ajilach/clamav-rest` bei einem EU-Hoster (Hetzner o. ä.), erreichbar nur per HTTPS.
+2. In Lovable die Secrets `VIRUS_SCAN_URL` (z. B. `https://scan.deine-domain.de/v2/scan`) und optional `VIRUS_SCAN_TOKEN` (wird als `Authorization: Bearer …` gesendet; im Dienst bzw. davorgeschalteten Proxy prüfen) setzen.
+3. Ab dann wird jede Datei zusätzlich mit ClamAV geprüft. Ist der Scanner gerade nicht erreichbar, werden PDFs abgelehnt; Fotos und Videos gehen nach der eigenen Prüfung durch.
+Betreibst du den Scanner selbst, ist kein weiterer Auftragsverarbeitungsvertrag nötig; bei einem fremden Scan-Dienst schon (`docs/datenschutz/dienstleister-avv.md`).
+
 **Überwachung:** Bei UptimeRobot oder Better Stack einen Monitor auf `https://<deine-domain>/api/status` anlegen (200 = alles gut, 503 = Datenbank weg). Fehler aus der App landen unter Verwaltung → Fehler.
 
 **Automatische Prüfung (CI):** `.github/workflows/ci.yml` prüft bei jedem Push Typen, Tests und Build; Dependabot schlägt wöchentlich Updates vor.

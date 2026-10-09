@@ -237,20 +237,33 @@ export const evidenceUploadUrl = createServerFn({ method: "POST" })
     return { path, token: up.token };
   });
 
-/** Nur Pfade, die zu dieser Buchung/Bestellung gehören; Fotos ohne Metadaten */
+/** Nur Pfade, die zu dieser Buchung/Bestellung gehören. Jede Datei wird
+ *  geprüft (echte Art, Viren); was nicht passt, wird gelöscht. Fotos ohne Metadaten. */
 async function checkEvidence(db: ReturnType<typeof adminClient>, ref: Ref, paths: unknown): Promise<string[]> {
   const prefix = refKey(ref) + "/";
-  const ok = (Array.isArray(paths) ? paths : [])
+  const candidates = (Array.isArray(paths) ? paths : [])
     .map((p) => String(p))
     .filter((p) => p.startsWith(prefix) && !p.includes("..") && /^[\w-]+\/[0-9a-f-]{36}\.(jpg|png|webp|mp4|mov|webm)$/.test(p))
     .slice(0, 12);
-  const { stripImageMetadata } = await import("@/showly/imageSafety");
-  for (const p of ok) {
-    if (!/\.(jpg|png|webp)$/.test(p)) continue;
+  const { isImageKind, isVideoKind, sniffType, stripImageMetadata } = await import("@/showly/imageSafety");
+  const { scanUpload } = await import("@/lib/scan.server");
+  const ok: string[] = [];
+  for (const p of candidates) {
     const { data: blob } = await db.storage.from("evidence").download(p);
     if (!blob) continue;
-    const clean = stripImageMetadata(new Uint8Array(await blob.arrayBuffer()));
-    if (clean.changed) await db.storage.from("evidence").upload(p, clean.bytes, { upsert: true });
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    const image = /\.(jpg|png|webp)$/.test(p);
+    const kind = sniffType(bytes);
+    const scan = await scanUpload(bytes, image ? "image" : "video", p.split("/").pop());
+    if (!(image ? isImageKind(kind) : isVideoKind(kind)) || !scan.ok) {
+      await db.storage.from("evidence").remove([p]);
+      continue;
+    }
+    if (image) {
+      const clean = stripImageMetadata(bytes);
+      if (clean.changed) await db.storage.from("evidence").upload(p, clean.bytes, { upsert: true });
+    }
+    ok.push(p);
   }
   return ok;
 }

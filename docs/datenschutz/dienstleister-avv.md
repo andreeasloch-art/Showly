@@ -8,6 +8,7 @@ anklickbar) und hier abhaken.
 | Lovable (Hosting) | App ausliefern | Schweden (EU) | [ ] | – |
 | Supabase | Datenbank, Anmeldung, Speicher | Region im Projekt prüfen (EU wählen) | [ ] | DPF/SCC, falls US-Bezug |
 | Stripe | Zahlung, Auszahlung, Ausweisprüfung | Irland (EU) / USA | [ ] (Teil der Stripe-Bedingungen) | DPF |
+| Virenscanner ClamAV (optional, `VIRUS_SCAN_URL`) | Uploads auf Schadsoftware prüfen | eigener Server in der EU | nur nötig, wenn ein fremder Dienst scannt | – |
 | Resend | E-Mails | USA | [ ] | DPF / SCC |
 | Twilio | SMS-Codes | Irland / USA | [ ] | DPF |
 | Cloudflare Turnstile | Captcha (optional) | USA | [ ] | DPF |

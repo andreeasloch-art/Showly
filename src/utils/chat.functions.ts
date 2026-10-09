@@ -104,7 +104,7 @@ export const chatUploadUrl = createServerFn({ method: "POST" })
     return { path, token: up.token };
   });
 
-/** Hochgeladene Datei prüfen (echte Art, Größe) und Fotos säubern */
+/** Hochgeladene Datei prüfen (echte Art, Größe, Viren) und Fotos säubern */
 async function checkAttachment(ref: ThreadRef, a: { path: string; name: string }) {
   const admin = adminClient();
   if (!a.path.startsWith(threadKey(ref) + "/") || a.path.includes("..")) return { error: "Ungültiger Anhang" } as const;
@@ -121,6 +121,13 @@ async function checkAttachment(ref: ThreadRef, a: { path: string; name: string }
     return { error: "Die Datei passt nicht zu ihrer Art und wurde nicht gesendet." } as const;
   }
   const mime = want === "pdf" ? "application/pdf" : `image/${want === "jpg" ? "jpeg" : want}`;
+  /* Virenschutz: eigene Prüfung (Skripte in PDFs, versteckter Code) und, wenn eingerichtet, ClamAV */
+  const { scanUpload } = await import("@/lib/scan.server");
+  const scan = await scanUpload(bytes, isPdf ? "pdf" : "image", a.name);
+  if (!scan.ok) {
+    await admin.storage.from(CHAT_BUCKET).remove([a.path]);
+    return { error: scan.reason } as const;
+  }
   if (!isPdf) {
     const clean = stripImageMetadata(bytes);
     if (clean.changed) await admin.storage.from(CHAT_BUCKET).upload(a.path, clean.bytes, { upsert: true, contentType: mime });

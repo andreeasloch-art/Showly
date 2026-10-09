@@ -72,7 +72,7 @@
     "input-otp": "^1.4.2",
     "jsqr": "^1.4.0",
     "libphonenumber-js": "^1.13.14",
-    "lucide-react": "^0.575.0",
+    "lucide-react": "^1.52.0",
     "pdf-lib": "^1.17.1",
     "react": "^19.2.0",
     "react-day-picker": "^9.14.0",

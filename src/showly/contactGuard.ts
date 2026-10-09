@@ -11,14 +11,19 @@
  *  - E-Mail-Adressen, auch verschleiert ("name (at) gmx punkt de"),
  *  - Webseiten und Shop-Adressen ("www", "meinshop.de", "meinshop punkt de"),
  *  - Social Media und Messenger (Instagram, WhatsApp, @name …),
- *  - Aufforderungen, sich außerhalb von Showly zu melden oder zu zahlen.
+ *  - Aufforderungen, sich außerhalb von Showly zu melden oder zu zahlen,
+ *  - Adressen (Straße mit Hausnummer, Postleitzahl mit Ort): Wohin geliefert
+ *    wird, steht im Adressfeld der Kasse und geht erst nach der Zahlung an
+ *    den Anbieter,
+ *  - Namen: Vorstellungen ("ich heiße …", "unsere Konditorei heißt …") und,
+ *    wo der Server sie kennt, die echten Namen der Beteiligten.
  *
  * Kein Filter erkennt alles, und ein paar harmlose Sätze werden auffallen.
  * Die Prüfung läuft im Browser für den sofortigen Hinweis; sobald die
  * Datenbank angebunden ist, gehört dieselbe Prüfung zusätzlich auf den
  * Server, weil sich eine Browser-Prüfung umgehen lässt. */
 
-export type ContactKind = "phone" | "email" | "web" | "social" | "offplatform";
+export type ContactKind = "phone" | "email" | "web" | "social" | "offplatform" | "address" | "name";
 
 /* Zahlwörter auf Deutsch, Englisch und Spanisch. "zwo" und "ein" für
    Nummern wie "null eins sieben ein". Längere Wörter zuerst, damit
@@ -156,8 +161,58 @@ function hasOffplatform(t: string): boolean {
   return OFFPLATFORM.some((p) => s.includes(p.startsWith("tel") || p.endsWith(":") ? p : ` ${p}`));
 }
 
-/** Welche Arten von Kontaktdaten stecken im Text? Leer, wenn keine. */
-export function findContact(text: string): ContactKind[] {
+/* Straßenarten am Wortende, danach eine Hausnummer. Bewusst ohne "ring",
+   "berg", "hof" oder "ufer": "bring 2 Torten" oder "Nürnberg 3" sind keine
+   Adressen. */
+const STREET = "(?:strasse|str\\.?|weg|platz|allee|gasse|damm|chaussee|pfad|steig|stieg|graben)";
+
+function hasAddress(t: string): boolean {
+  const s = " " + base(t).replace(/\s+/g, " ") + " ";
+  // "Hauptstraße 5", "Lindenweg 12-14", "Hauptstr. 3a"
+  if (new RegExp(`[a-z]${STREET}\\s?\\d{1,4}\\s?[a-z]?\\b`).test(s)) return true;
+  // "Calle Mayor 4", "Main Street 5"
+  if (/\b(?:calle|avenida|plaza)\s+[a-z]{3,}(?:\s+[a-z]{2,})?\s+\d{1,4}\b/.test(s)) return true;
+  if (/\b[a-z]{3,}\s+(?:street|road|lane|avenue)\s+\d{1,4}\b/.test(s)) return true;
+  // Postleitzahl mit Ort: "71522 Backnang", "D-10115 Berlin" (5 Ziffern, keine Jahreszahl)
+  const plz = s.replace(/\d{5}\s+(?:gaeste|personen|kinder|leute|stueck|euro|eur|teile|portionen|gramm|kg|likes|follower)\b/g, " ");
+  if (/(?:^|[^\d])(?:d\s?-\s?)?\d{5}\s+[a-z]{3,}/.test(plz)) return true;
+  return /\b(?:meine adresse|unsere adresse|meine anschrift|unsere anschrift|hausnummer|postleitzahl|plz:|wohne in der|wohnen in der|abholung bei mir|abholen bei mir|bei mir zu hause|bei mir zuhause|my address|mi direccion)\b/.test(s);
+}
+
+/* Vorstellungen mit Namen. Nicht "ich heiße dich willkommen". */
+function hasNameIntro(t: string): boolean {
+  const s = " " + base(t).replace(/\s+/g, " ") + " ";
+  if (/\bich hei(?:ss|s)e (?!dich|sie|euch)[a-z]/.test(s)) return true;
+  return /\b(?:mein name ist|mein vorname ist|mein nachname ist|mein nachname|wir heissen|unsere konditorei heisst|meine konditorei heisst|die konditorei heisst|unser laden heisst|unsere baeckerei heisst|meine baeckerei heisst|my name is|my surname|me llamo|mi nombre es|mi apellido)\b/.test(s);
+}
+
+/** Kommt einer der Namen im Text vor? Nur Namen ab 3 Buchstaben, ganze
+ *  Wörter, unabhängig von Groß- und Kleinschreibung und Umlauten. */
+export function mentionsName(text: string, names: string[]): boolean {
+  const s = " " + base(text).replace(/[^a-z0-9]+/g, " ") + " ";
+  for (const n of names) {
+    const full = base(n).replace(/[^a-z0-9]+/g, " ").trim();
+    if (!full) continue;
+    if (full.length >= 3 && s.includes(` ${full} `)) return true;
+    /* Teile eines Namens, aber keine Allerweltswörter wie "Konditorei" */
+    for (const part of full.split(" ")) {
+      if (part.length >= 4 && !COMMON_NAME_PARTS.has(part) && s.includes(` ${part} `)) return true;
+    }
+  }
+  return false;
+}
+
+/* Wörter, die in Firmennamen stehen, aber für sich nichts verraten */
+const COMMON_NAME_PARTS = new Set([
+  "konditorei", "baeckerei", "patisserie", "cafe", "torten", "torte", "tortenatelier", "atelier", "cake", "cakes", "studio",
+  "kuchen", "suesses", "suess", "sweet", "sweets", "candy", "company", "gmbh", "ug", "haftungsbeschraenkt", "und", "the",
+  "backstube", "zuckerbaecker", "bakery", "kitchen", "kueche", "manufaktur", "home", "haus", "laden", "shop", "event", "events",
+  "deko", "dekoration", "verleih", "kostuem", "kostueme", "berlin", "hamburg", "muenchen", "koeln", "frankfurt", "stuttgart",
+]);
+
+/** Welche Arten von Kontaktdaten stecken im Text? Leer, wenn keine.
+ *  names: echte Namen der Beteiligten (nur der Server kennt sie). */
+export function findContact(text: string, opts: { names?: string[] } = {}): ContactKind[] {
   if (!text || !text.trim()) return [];
   const out: ContactKind[] = [];
   if (hasPhone(text)) out.push("phone");
@@ -165,13 +220,15 @@ export function findContact(text: string): ContactKind[] {
   if (hasWeb(text)) out.push("web");
   if (hasSocial(text)) out.push("social");
   if (hasOffplatform(text)) out.push("offplatform");
+  if (hasAddress(text)) out.push("address");
+  if (hasNameIntro(text) || (opts.names?.length && mentionsName(text, opts.names))) out.push("name");
   return out;
 }
 
 const LABEL: Record<string, Record<ContactKind, string>> = {
-  de: { phone: "Telefonnummer", email: "E-Mail-Adresse", web: "Webseite oder Shop-Adresse", social: "Social Media oder Messenger", offplatform: "Aufforderung zum direkten Kontakt" },
-  en: { phone: "phone number", email: "email address", web: "website or shop address", social: "social media or messenger", offplatform: "request for direct contact" },
-  es: { phone: "número de teléfono", email: "correo electrónico", web: "web o tienda", social: "redes sociales o mensajería", offplatform: "petición de contacto directo" },
+  de: { phone: "Telefonnummer", email: "E-Mail-Adresse", web: "Webseite oder Shop-Adresse", social: "Social Media oder Messenger", offplatform: "Aufforderung zum direkten Kontakt", address: "Adresse", name: "Name" },
+  en: { phone: "phone number", email: "email address", web: "website or shop address", social: "social media or messenger", offplatform: "request for direct contact", address: "address", name: "name" },
+  es: { phone: "número de teléfono", email: "correo electrónico", web: "web o tienda", social: "redes sociales o mensajería", offplatform: "petición de contacto directo", address: "dirección", name: "nombre" },
 };
 
 const TEXT: Record<string, (found: string) => string> = {

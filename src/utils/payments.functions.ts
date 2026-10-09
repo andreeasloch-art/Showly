@@ -132,7 +132,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         slot: string;
       }[];
       /** direkt gebuchte Süßwaren-Pakete; der Preis kommt aus dem Katalog */
-      sweets?: { sweetId: number; qty: number; dateISO: string }[];
+      sweets?: { sweetId: number; qty: number; dateISO: string; offerId?: number }[];
       customerEmail?: string;
       returnUrl: string;
       environment: StripeEnv;
@@ -151,7 +151,8 @@ export const createCartCheckout = createServerFn({ method: "POST" })
           !Number.isInteger(x.sweetId) ||
           !Number.isInteger(x.qty) ||
           x.qty < 1 ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(x.dateISO)
+          !/^\d{4}-\d{2}-\d{2}$/.test(x.dateISO) ||
+          (x.offerId !== undefined && !(Number.isInteger(x.offerId) && x.offerId > 0))
         )
           throw new Error("Invalid sweet");
       }
@@ -202,12 +203,31 @@ export const createCartCheckout = createServerFn({ method: "POST" })
     } catch {
       extra = undefined; // ohne Datenbank nur der mitgelieferte Katalog
     }
+    /* Angebote der Konditorei: Preis aus der Datenbank, nur für den Kunden selbst */
+    let offers = new Map<number, { cents: number; qty: number }>();
+    if ((data.sweets ?? []).some((x) => x.offerId)) {
+      let uid: string | null = null;
+      try {
+        const { requireUser } = await import("@/lib/supabase.server");
+        uid = (await requireUser()).user.id;
+      } catch {
+        uid = null;
+      }
+      const { adminClient } = await import("@/lib/supabase.server");
+      const { offerPrices } = await import("@/lib/wishcake.server");
+      const r = await offerPrices(adminClient(), uid, data.sweets ?? []);
+      if ("error" in r) return { error: r.error };
+      offers = r.ok;
+    }
     const { lines, unknown } = priceLines(
       data.shop,
       data.bookings,
       name,
       labels,
-      data.sweets ?? [],
+      (data.sweets ?? []).map((x) => {
+        const o = x.offerId ? offers.get(x.offerId) : undefined;
+        return { sweetId: x.sweetId, qty: o ? o.qty : x.qty, dateISO: x.dateISO, ...(o ? { price: o.cents / 100 } : {}) };
+      }),
       extra,
       { allowDemo: false },
     );
@@ -226,7 +246,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
       try {
         const { adminClient } = await import("@/lib/supabase.server");
         const { checkCakeOrders } = await import("@/lib/cakes.server");
-        const err = await checkCakeOrders(adminClient(), data.sweets);
+        const err = await checkCakeOrders(adminClient(), data.sweets.filter((x) => !x.offerId));
         if (err) return { error: err };
       } catch {
         /* ohne Datenbank (Vorschau) keine echten Anbieter */

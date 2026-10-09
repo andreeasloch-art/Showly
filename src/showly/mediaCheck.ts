@@ -21,7 +21,7 @@
  * den Server hochgeladen werden, gehört sie zusätzlich dorthin. */
 import { findContact, type ContactKind } from "./contactGuard";
 
-export type MediaFinding = Exclude<ContactKind, "offplatform"> | "qr";
+export type MediaFinding = Exclude<ContactKind, "offplatform" | "name"> | "qr";
 
 export interface MediaCheckResult {
   ok: boolean;
@@ -160,7 +160,7 @@ function contrast(src: HTMLCanvasElement, invert: boolean): HTMLCanvasElement {
 }
 
 function addFound(found: Set<MediaFinding>, text: { sure: string; raw: string }) {
-  for (const k of findContact(text.sure)) if (k !== "offplatform") found.add(k);
+  for (const k of findContact(text.sure)) if (k !== "offplatform" && k !== "name") found.add(k);
   if (RAW_PHONE.test(text.raw)) found.add("phone");
   if (RAW_WEB.test(text.raw)) found.add("web");
   if (RAW_EMAIL.test(text.raw)) found.add("email");
@@ -272,9 +272,9 @@ export async function checkMedia(
 /* ---------- Texte für die Oberfläche ---------- */
 
 const LABEL: Record<string, Record<MediaFinding, string>> = {
-  de: { phone: "eine Telefonnummer", email: "eine E-Mail-Adresse", web: "eine Webseite", social: "ein Social-Media-Name", qr: "ein QR-Code" },
-  en: { phone: "a phone number", email: "an email address", web: "a website", social: "a social media handle", qr: "a QR code" },
-  es: { phone: "un número de teléfono", email: "un correo electrónico", web: "una web", social: "un perfil de redes sociales", qr: "un código QR" },
+  de: { phone: "eine Telefonnummer", email: "eine E-Mail-Adresse", web: "eine Webseite", social: "ein Social-Media-Name", qr: "ein QR-Code", address: "eine Adresse" },
+  en: { phone: "a phone number", email: "an email address", web: "a website", social: "a social media handle", qr: "a QR code", address: "an address" },
+  es: { phone: "un número de teléfono", email: "un correo electrónico", web: "una web", social: "un perfil de redes sociales", qr: "un código QR", address: "una dirección" },
 };
 
 export function mediaCheckMessage(r: MediaCheckResult, name: string, lang: string): string {

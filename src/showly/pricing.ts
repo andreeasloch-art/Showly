@@ -68,6 +68,9 @@ export interface CartRequestLine {
   estimate: number;
   /** Festpreis-Paket, wird sofort bezahlt statt angefragt */
   direct?: boolean;
+  /** Angebot der Konditorei zu einer Anfrage (sweet_requests.id): bezahlt
+   *  wird der angebotene Preis (estimate), den der Server nachprüft */
+  offerId?: number;
 }
 
 export function minHoursOf(a: Artist) {
@@ -159,6 +162,7 @@ export function cartTotals(
     qty: number;
     direct?: boolean;
     estimate: number;
+    offerId?: number | undefined;
   }[] = [],
 ) {
   let items = 0;
@@ -176,7 +180,7 @@ export function cartTotals(
      dem Browser haben noch keinen Katalogpreis; dann gilt der angezeigte. */
   let sweets = 0;
   for (const r of requests)
-    sweets += (r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate;
+    sweets += r.offerId ? r.estimate : ((r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate);
   return {
     items,
     artists,
@@ -198,7 +202,8 @@ export function priceLines(
   bookings: { artistId: number; hours: number; pkg?: string | undefined; dateISO: string; slot: string }[],
   name: (v: unknown) => string,
   labels: { rent: string; buy: string },
-  sweets: { sweetId: number; qty: number; dateISO: string }[] = [],
+  /* price: vom Server geprüfter Angebotspreis (Euro) einer Anfrage */
+  sweets: { sweetId: number; qty: number; dateISO: string; price?: number | undefined }[] = [],
   extra?: Extra,
   /* Der Server lässt Beispielprofile und -artikel aus dem Katalog nicht
      bezahlen: Hinter ihnen steht kein echter Anbieter. */
@@ -262,9 +267,10 @@ export function priceLines(
   }
   for (const x of sweets) {
     const s = extra?.sweet?.(x.sweetId) ?? SWEETS.find((y) => y.id === x.sweetId);
-    const price = cakePrice(x.sweetId, x.qty, extra);
+    const offer = x.price !== undefined && x.price > 0 ? x.price : null;
+    const price = offer ?? cakePrice(x.sweetId, x.qty, extra);
     const demoBaker = !allowDemo && s && (extra?.sweet?.(x.sweetId) ? false : bakerIsDemo(s.bakerId));
-    if (!s || price === null || demoBaker) {
+    if (!s || price === null || (demoBaker && offer === null)) {
       unknown.push(`sweet:${x.sweetId}`);
       continue;
     }

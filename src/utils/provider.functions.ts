@@ -297,25 +297,45 @@ export const respondSweet = createServerFn({ method: "POST" })
     const { data: r } = await admin.from("sweet_requests").select("*").eq("id", data.requestId).maybeSingle();
     if (!r || r.baker_owner !== ctx.user.id) return { error: "Keine Berechtigung" };
     if (r.status !== "sent") return { error: "Anfrage ist nicht mehr offen" };
-    /* Schon bezahlt (Regelfall): Zusage, niedrigerer oder höherer Preis, Absage */
+    /* Begründung bzw. Angebotstext: keine Kontaktdaten, Adressen oder Namen */
+    if (data.note) {
+      const { findContact } = await import("@/showly/contactGuard");
+      const { namesInSweetThread } = await import("@/lib/wishcake.server");
+      if (findContact(data.note, { names: await namesInSweetThread(admin, r) }).length)
+        return { error: "Bitte keine Kontaktdaten, Adressen oder Namen im Angebot" };
+    }
+    /* Schon bezahlt: Zusage, niedrigerer oder höherer Preis, Absage */
     if ((r.paid_cents ?? 0) > 0) {
       const { answerPaidWish } = await import("@/lib/wishcake.server");
       return answerPaidWish(r, data.accept, data.priceCents, data.note);
     }
+    /* Anfrage ohne Zahlung: Angebot mit Preis (Status "quoted") oder Absage.
+       Der Kunde legt das Angebot in den Warenkorb und bezahlt an der Kasse. */
+    if (data.accept && !data.priceCents) return { error: "Bitte trag den Preis für dein Angebot ein." };
     await admin
       .from("sweet_requests")
-      .update(data.accept ? { status: "confirmed", ...(data.priceCents ? { price_cents: data.priceCents } : {}) } : { status: "declined" })
-      .eq("id", r.id);
+      .update(
+        data.accept
+          ? { status: "quoted", quote_cents: data.priceCents, quote_note: data.note || null }
+          : { status: "declined" },
+      )
+      .eq("id", r.id)
+      .eq("status", "sent");
     const { notify } = await import("@/lib/notify.server");
+    const { SITE } = await import("@/showly/seo");
     const when = String(r.day).split("-").reverse().join(".");
+    const eur = (c: number) => (c / 100).toFixed(2).replace(".", ",") + " €";
     await notify(
       r.customer,
-      data.accept ? "Deine Torten-Anfrage wurde angenommen" : "Deine Torten-Anfrage wurde abgelehnt",
-      [
-        data.accept
-          ? `Für den ${when} gibt es ein Angebot. Preis und Details findest du in der App.`
-          : `Für den ${when} hat es leider nicht geklappt. Schau gern nach einem anderen Anbieter.`,
-      ],
+      data.accept ? "Angebot für deine Wunschtorte" : "Deine Torten-Anfrage wurde abgelehnt",
+      data.accept
+        ? [
+            `Für den ${when} hat dir die Konditorei ein Angebot geschickt: ${eur(data.priceCents)}.`,
+            data.note ? `Dazu schreibt sie: „${data.note.slice(0, 300)}“` : "",
+            `Angebot ansehen und bezahlen: ${SITE}/checkout?angebot=${r.id}`,
+            "Mit dem Link landet das Angebot in deinem Warenkorb. Erst mit der Zahlung ist die Torte fest bestellt.",
+          ].filter(Boolean)
+        : [`Für den ${when} hat es leider nicht geklappt. Schau gern nach einer anderen Konditorei.`],
     ).catch(() => false);
-    return { ok: true };
+    return { ok: true, status: data.accept ? "quoted" : "declined" };
   });

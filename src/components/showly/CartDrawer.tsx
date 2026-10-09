@@ -20,6 +20,7 @@ const TEXT = {
     hours: (n: number) => `${n} Std.`,
     fee: "Endpreis",
     approx: "ca.",
+    offer: "Angebot",
     remove: "Entfernen",
     toCheckout: "Zur Kasse",
     sendOnly: "Anfragen abschicken",
@@ -38,6 +39,7 @@ const TEXT = {
     hours: (n: number) => `${n} hrs`,
     fee: "final price",
     approx: "approx.",
+    offer: "Offer",
     remove: "Remove",
     toCheckout: "Checkout",
     sendOnly: "Send requests",
@@ -56,6 +58,7 @@ const TEXT = {
     hours: (n: number) => `${n} h`,
     fee: "precio final",
     approx: "aprox.",
+    offer: "Oferta",
     remove: "Quitar",
     toCheckout: "Ir a pagar",
     sendOnly: "Enviar solicitudes",
@@ -92,7 +95,7 @@ export function CartDrawer() {
   const X = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
   const navigate = useNavigate();
   const empty = !cart.length && !cartBookings.length && !cartRequests.length;
-  const requestSum = cartRequests.reduce((s, r) => s + r.estimate, 0);
+  const requestSum = cartRequests.filter((r) => !r.offerId).reduce((s, r) => s + r.estimate, 0);
 
   function go(to: "/checkout" | "/" | "/shop") {
     setCartOpen(false);
@@ -211,7 +214,7 @@ export function CartDrawer() {
                         {b ? String(L(b.name)) : ""} · {fmtDate(r.dateISO)} · {r.qty}×
                       </div>
                       <div className="cart-price">
-                        <small>{X.approx}</small> {fmt(r.estimate)}
+                        {r.offerId ? <small>{X.offer}</small> : <small>{X.approx}</small>} {fmt(r.estimate)}
                       </div>
                       <div className="qty-row">
                         <button className="cart-remove" onClick={() => removeCartRequest(r.key)}>
@@ -232,7 +235,7 @@ export function CartDrawer() {
               <span>{X.now}</span>
               <strong>{fmt(cartTotal)}</strong>
             </div>
-            {cartRequests.length > 0 && (
+            {requestSum > 0 && (
               <div className="cart-total later">
                 <span>{X.later}</span>
                 <span>

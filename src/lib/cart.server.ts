@@ -111,6 +111,12 @@ export async function recordCartCore(
   const { newCheckinCode } = await import("@/showly/booking");
   const { cakePrice, findItem, shopLineParts, sweetPrice } = await import("@/showly/pricing");
   const { plannedPayout } = await import("@/showly/cloudRules");
+  /* Angebote der Konditorei (Anfrage vor dem Bezahlen): Preis aus der Datenbank */
+  const { offerPrices, bookPaidOffer } = await import("@/lib/wishcake.server");
+  const off = await offerPrices(admin, uid, snap.requests);
+  if ("error" in off) return off;
+  const offers = off.ok;
+  const offerOf = (r: { offerId?: number | undefined }) => (r.offerId ? offers.get(r.offerId) : undefined);
 
   /* Bezahlt? Nur Stripe selbst gibt darüber Auskunft. Dieselbe Zahlung
      wird nur einmal eingetragen. */
@@ -156,7 +162,10 @@ export async function recordCartCore(
       () => "",
       { rent: "", buy: "" },
       /* Alle Torten werden sofort bezahlt: Pakete zum Festpreis, Wunschtorten zum Richtpreis */
-      snap.requests.map((r) => ({ sweetId: r.sweetId, qty: r.qty, dateISO: r.dateISO })),
+      snap.requests.map((r) => {
+        const o = offerOf(r);
+        return { sweetId: r.sweetId, qty: o ? o.qty : r.qty, dateISO: r.dateISO, ...(o ? { price: o.cents / 100 } : {}) };
+      }),
       cat.extra,
       { allowDemo: false },
     );
@@ -168,7 +177,7 @@ export async function recordCartCore(
      Zahlung hat das schon die Kasse getan, createCartCheckout) */
   if (!data.sessionId && snap.requests.length) {
     const { checkCakeOrders } = await import("@/lib/cakes.server");
-    const err = await checkCakeOrders(admin, snap.requests);
+    const err = await checkCakeOrders(admin, snap.requests.filter((r) => !offerOf(r)));
     if (err) return { error: err };
   }
 
@@ -201,11 +210,14 @@ export async function recordCartCore(
     for (const p of provs || []) bakerOwner.set(p.id, p.owner);
   }
   const sw = snap.requests.map((r) => {
+    /* Angebot: der vereinbarte Preis gilt als Festpreis */
+    const o = offerOf(r);
+    if (o) return { r: { ...r, qty: o.qty }, fixed: o.cents / 100, charged: paid ? o.cents / 100 : null, direct: paid, offer: o.row };
     const fixed = r.direct ? sweetPrice(r.sweetId, r.qty, cat.extra) : null;
     /* Was für diese Torte bezahlt wurde (Festpreis bzw. Richtpreis) */
     const charged = paid ? cakePrice(r.sweetId, r.qty, cat.extra) : null;
     /* Direkt buchen geht nur mit Katalogpreis und nur bezahlt */
-    return { r, fixed, charged, direct: fixed !== null && paid };
+    return { r, fixed, charged, direct: fixed !== null && paid, offer: null };
   });
 
   const sh = snap.shop
@@ -415,7 +427,18 @@ export async function recordCartCore(
 
   /* ---- Torten & Süßes ---- */
   const sweetIds: number[] = [];
-  for (const [j, { r, fixed, charged, direct }] of sw.entries()) {
+  for (const [j, { r, fixed, charged, direct, offer }] of sw.entries()) {
+    /* Bezahltes Angebot: die bestehende Anfrage wird zur Bestellung */
+    if (offer) {
+      if (paid && (await bookPaidOffer(admin, offer, {
+        sessionId: data.sessionId ?? null,
+        cents: Math.round((fixed ?? 0) * 100),
+        subOrderId: partSub.get(`sweet:${j}`) ?? null,
+        customerName: snap.contact.name || null,
+      })))
+        sweetIds.push(offer.id);
+      continue;
+    }
     const { data: ins } = await admin
       .from("sweet_requests")
       .insert({

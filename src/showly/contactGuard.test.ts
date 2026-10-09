@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findContact } from "./contactGuard";
+import { findContact, mentionsName } from "./contactGuard";
 
 const has = (t: string, k: string) => findContact(t).includes(k as never);
 const clean = (t: string) => findContact(t);
@@ -76,8 +76,6 @@ describe("harmlose Texte bleiben erlaubt", () => {
   it.each([
     "Kindergeburtstag am 24.12.2026 um 15:00 Uhr, 12 Kinder zwischen 5 und 8 Jahren.",
     "Hochzeit am 24. 12. 2026 von 18 bis 23 Uhr mit 120 Gästen, Budget 1.500 €.",
-    "Adresse: Hauptstraße 12, 70173 Stuttgart, Eingang hinten.",
-    "Treffpunkt Hauptstr. 12a, 80331 München, bitte 15 Minuten vorher da sein.",
     "Wir sind acht Erwachsene und drei Kinder.",
     "Die Torte sollte drei Etagen haben, für ca. 60 Personen, Kosten bis 450 Euro.",
     "Bitte ein Programm von 45 Minuten, Start 16.30 Uhr, Ende 17.15 Uhr.",
@@ -87,4 +85,45 @@ describe("harmlose Texte bleiben erlaubt", () => {
     "Ich spiele Gitarre und singe auf Deutsch und Englisch.",
     "Ein, zwei Lieder zum Einzug wären schön.",
   ])("%s", (t) => expect(clean(t)).toEqual([]));
+});
+
+/* Adressen gehören ins Adressfeld der Kasse, nicht in Nachrichten */
+describe("Adressen", () => {
+  it.each([
+    "Adresse: Hauptstraße 12, 70173 Stuttgart, Eingang hinten.",
+    "Treffpunkt Hauptstr. 12a, 80331 München, bitte 15 Minuten vorher da sein.",
+    "Abholung im Lindenweg 4",
+    "Wir sind in D-10115 Berlin",
+    "Kommt einfach zur Bahnhofstrasse 3",
+    "Calle Mayor 14, Madrid",
+    "Bei mir zu Hause abholen",
+    "Meine Adresse schicke ich dir noch",
+  ])("%s", (t) => expect(has(t, "address")).toBe(true));
+  it.each([
+    "Bring 2 Torten mit",
+    "Hochzeit im Juni 2026 feiern",
+    "3 Etagen, 60 Personen, in Nürnberg 3 Tage vorher",
+    "Am Samstag 14 Uhr abholen",
+    "10000 Gäste sind es nicht, eher 40",
+  ])("kein Treffer: %s", (t) => expect(has(t, "address")).toBe(false));
+});
+
+describe("Namen", () => {
+  it.each([
+    "Ich heiße Maria Schulz",
+    "Mein Name ist Jonas",
+    "Unsere Konditorei heißt Tortenliebe",
+    "My name is Anna",
+    "Me llamo Lucía",
+  ])("%s", (t) => expect(has(t, "name")).toBe(true));
+  it("Ich heiße dich willkommen ist kein Name", () => expect(has("Ich heiße dich herzlich willkommen", "name")).toBe(false));
+  it("echte Namen der Beteiligten", () => {
+    expect(findContact("Frag nach Frau Brenner", { names: ["Sabine Brenner"] })).toContain("name");
+    expect(findContact("Schreib an Zuckerblüte direkt", { names: ["Konditorei Zuckerblüte"] })).toContain("name");
+    expect(findContact("Die Konditorei macht das gern", { names: ["Konditorei Zuckerblüte"] })).toEqual([]);
+  });
+  it("mentionsName ignoriert Allerweltswörter", () => {
+    expect(mentionsName("Eine Torte aus Berlin", ["Torten Atelier Berlin"])).toBe(false);
+    expect(mentionsName("Bei SAHNEHÄUBCHEN bestellt", ["Tortenatelier Sahnehäubchen"])).toBe(true);
+  });
 });

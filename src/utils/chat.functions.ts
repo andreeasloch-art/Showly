@@ -40,6 +40,36 @@ async function roleIn(ref: ThreadRef, uid: string, isAdmin: boolean): Promise<Ro
   return isAdmin ? "admin" : null;
 }
 
+/** Echte Namen der Beteiligten: dürfen im Chat nicht fallen, sonst findet
+ *  man sich außerhalb von Showly (Konto-, Firmen- und Anzeigename). */
+async function namesInThread(ref: ThreadRef): Promise<string[]> {
+  const admin = adminClient();
+  try {
+    if ("sweetId" in ref) {
+      const { data: s } = await admin.from("sweet_requests").select("baker_ref, baker_owner, customer").eq("id", ref.sweetId).maybeSingle();
+      if (!s) return [];
+      const { namesInSweetThread } = await import("@/lib/wishcake.server");
+      return await namesInSweetThread(admin, s);
+    }
+    const { data: b } = await admin.from("bookings").select("customer, artist_id").eq("id", ref.bookingId).maybeSingle();
+    if (!b) return [];
+    const ids = [b.customer].filter((x): x is string => !!x);
+    if (b.artist_id) {
+      const { data: a } = await admin.from("artists").select("owner").eq("id", b.artist_id).maybeSingle();
+      if (a?.owner) ids.push(a.owner);
+    }
+    if (!ids.length) return [];
+    const out: string[] = [];
+    const { data: profs } = await admin.from("profiles").select("display_name").in("id", ids);
+    for (const x of profs || []) if (x.display_name) out.push(x.display_name);
+    const { data: anb } = await admin.from("anbieter").select("name, firma").in("id", ids);
+    for (const x of anb || []) for (const v of [x.name, x.firma]) if (v) out.push(v);
+    return out;
+  } catch {
+    return [];
+  }
+}
+
 const col = (ref: ThreadRef) => ("bookingId" in ref ? "booking_id" : "sweet_request_id");
 const idOf = (ref: ThreadRef) => ("bookingId" in ref ? ref.bookingId : ref.sweetId);
 
@@ -206,8 +236,8 @@ export const sendMessage = createServerFn({ method: "POST" })
     /* Die Verwaltung darf Kontaktdaten nennen (etwa die Support-Adresse) */
     if (role !== "admin") {
       const { findContact } = await import("@/showly/contactGuard");
-      const found = findContact(data.body);
-      if (found.length) return { error: "Bitte keine Kontaktdaten", contact: found };
+      const found = findContact(data.body, { names: await namesInThread(data.ref) });
+      if (found.length) return { error: "Bitte keine Kontaktdaten, Adressen oder Namen", contact: found };
     }
     let attachment: { path: string; name: string; mime: string; bytes: number } | null = null;
     if (data.attachment) {

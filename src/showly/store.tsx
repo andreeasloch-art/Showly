@@ -943,6 +943,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         ]);
       }
       for (const r of snap.requests) {
+        /* Angebote gibt es schon als Anfrage; der Server macht daraus die Bestellung */
+        if (r.offerId) continue;
         const made = addRequest({
           sweetId: r.sweetId,
           bakerId: r.bakerId,

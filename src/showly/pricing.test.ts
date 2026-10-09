@@ -63,3 +63,25 @@ describe("Künstlerbuchung: Endpreis und Provision", () => {
     expect(lines[0]!.amountInCents * lines[0]!.quantity).toBe(Math.round(ARTISTS[0]!.price * 100) * Math.max(2, Number(ARTISTS[0]!["minHours"]) || 1));
   });
 });
+
+describe("Angebot der Konditorei auf eine Anfrage", () => {
+  const wedding = SWEETS.find((s) => s.cat === "wedding")!;
+
+  it("bezahlt wird der geprüfte Angebotspreis, nicht der Richtpreis", () => {
+    const { lines, unknown } = priceLines([], [], name, labels, [{ sweetId: wedding.id, qty: 50, dateISO: "2026-11-01", price: 612.5 }], undefined, {
+      allowDemo: false,
+    });
+    expect(unknown).toEqual([]);
+    expect(lines[0]!.amountInCents).toBe(61250);
+  });
+
+  it("ohne Angebotspreis bleibt ein Beispiel-Angebot unbezahlbar", () => {
+    const { unknown } = priceLines([], [], name, labels, [{ sweetId: wedding.id, qty: 50, dateISO: "2026-11-01" }], undefined, { allowDemo: false });
+    expect(unknown.length).toBe(1);
+  });
+
+  it("Summe im Warenkorb nimmt den Angebotspreis", () => {
+    const t = cartTotals([], [], [{ sweetId: wedding.id, qty: 50, estimate: 612.5, offerId: 7 }]);
+    expect(t.sweets).toBe(612.5);
+  });
+});

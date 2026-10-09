@@ -9,6 +9,11 @@ import { useShowly } from "@/showly/store";
 import { CartCheckout } from "@/components/showly/CartCheckout";
 
 export const Route = createFileRoute("/checkout")({
+  /* angebot: Link aus der Mail der Konditorei; das Angebot kommt in den Warenkorb */
+  validateSearch: (search: Record<string, unknown>): { angebot?: number } => {
+    const n = Number(search["angebot"]);
+    return Number.isInteger(n) && n > 0 ? { angebot: n } : {};
+  },
   head: () => ({
     meta: [
       { title: "Sichere Zahlung – Showly" },
@@ -86,10 +91,31 @@ type Copy = (typeof COPY)[keyof typeof COPY];
    über den gemeinsamen Warenkorb. */
 function CheckoutRoute() {
   const [legacy, setLegacy] = useState<boolean | null>(null);
+  const { angebot } = Route.useSearch();
+  const { addCartRequest, cartRequests, toast } = useShowly();
+  const navigate = useNavigate();
   useEffect(() => {
     const p = getPending();
     setLegacy(!!p && p.kind !== "cart");
   }, []);
+  /* Angebot aus dem Link in den Warenkorb legen (der Server prüft, dass es
+     dem angemeldeten Kunden gehört und noch offen ist) */
+  useEffect(() => {
+    if (!angebot) return;
+    let stop = false;
+    void (async () => {
+      const { offerForCart } = await import("@/utils/wishcake.functions");
+      const res = await offerForCart({ data: { requestId: angebot } }).catch(() => ({ error: "Angebot konnte nicht geladen werden" }));
+      if (stop) return;
+      if ("error" in res) toast(res.error);
+      else if (!cartRequests.some((x) => x.offerId === res.line.offerId)) addCartRequest(res.line);
+      void navigate({ to: "/checkout", search: {}, replace: true });
+    })();
+    return () => {
+      stop = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [angebot]);
   if (legacy === null) return <div className="page active" />;
   return legacy ? <CheckoutPage /> : <CartCheckout />;
 }

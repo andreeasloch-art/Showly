@@ -202,3 +202,91 @@ export async function settleQuotePayment(sessionId: string, env: "sandbox" | "li
   }
   return { ok: true };
 }
+
+/* ---------------------------------------------------------------------------
+ * Anfrage vor dem Bezahlen: Der Kunde beschreibt seine Wunschtorte, die
+ * Konditorei schickt ein Angebot (Status "quoted", noch nichts bezahlt).
+ * Das Angebot legt der Kunde in den Warenkorb und bezahlt es an der Kasse.
+ * ------------------------------------------------------------------------ */
+
+export type OfferLine = { offerId?: number | undefined; sweetId: number; dateISO: string };
+
+/** Angebotspreise für die Angebote im Warenkorb, nur eigene, offene und
+ *  noch unbezahlte. Fehler, wenn eines nicht (mehr) gilt. */
+export async function offerPrices(
+  db: Db,
+  uid: string | null,
+  lines: OfferLine[],
+): Promise<{ ok: Map<number, { cents: number; qty: number; row: SweetRequestRow }> } | { error: string }> {
+  const ids = [...new Set(lines.map((l) => l.offerId).filter((x): x is number => !!x))];
+  const out = new Map<number, { cents: number; qty: number; row: SweetRequestRow }>();
+  if (!ids.length) return { ok: out };
+  if (!uid) return { error: "Bitte melde dich an, um ein Angebot zu bezahlen." };
+  const { data: rows } = await db.from("sweet_requests").select("*").in("id", ids);
+  for (const id of ids) {
+    const r = (rows || []).find((x) => x.id === id) as SweetRequestRow | undefined;
+    const line = lines.find((l) => l.offerId === id)!;
+    if (!r || r.customer !== uid || r.status !== "quoted" || !r.quote_cents || (r.paid_cents ?? 0) > 0)
+      return { error: "Dieses Angebot gilt nicht mehr. Bitte schau unter „Meine Anfragen“ nach." };
+    if (r.sweet_ref !== line.sweetId || r.day !== line.dateISO) return { error: "Das Angebot passt nicht zum Warenkorb." };
+    out.set(id, { cents: r.quote_cents, qty: r.qty, row: r });
+  }
+  return { ok: out };
+}
+
+/** Bezahltes Angebot verbuchen: aus der Anfrage wird eine feste Bestellung */
+export async function bookPaidOffer(
+  db: Db,
+  r: SweetRequestRow,
+  p: { sessionId: string | null; cents: number; subOrderId: number | null; customerName: string | null },
+): Promise<boolean> {
+  const { data: next } = await db
+    .from("sweet_requests")
+    .update({
+      status: "booked",
+      direct: true,
+      price_cents: p.cents,
+      paid_cents: p.cents,
+      stripe_session_id: p.sessionId,
+      sub_order_id: p.subOrderId,
+      customer_name: p.customerName,
+      quote_cents: null,
+    })
+    .eq("id", r.id)
+    .eq("status", "quoted")
+    .select("*")
+    .maybeSingle();
+  if (!next) return false;
+  await notify(r.baker_owner, "Dein Angebot wurde bezahlt", [
+    `Die Torte für den ${day(r.day)} ist fest gebucht (${euro(p.cents)}). Alle Angaben findest du in deinem Eingang.`,
+  ]).catch(() => false);
+  return true;
+}
+
+/** Echte Namen in einem Torten-Verlauf: Anzeigename und Firma der
+ *  Konditorei, Name und Firma aus den Steuerdaten, Kontoname beider Seiten.
+ *  Damit blockt der Chat-Filter Namen, über die man sich außerhalb von
+ *  Showly finden könnte (AGB § 20 Abs. 4). */
+export async function namesInSweetThread(db: Db, r: Pick<SweetRequestRow, "baker_ref" | "baker_owner" | "customer">): Promise<string[]> {
+  const out: string[] = [];
+  const add = (v: unknown) => {
+    if (typeof v === "string" && v.trim()) out.push(v.trim());
+    else if (v && typeof v === "object") for (const x of Object.values(v as Record<string, unknown>)) if (typeof x === "string" && x.trim()) out.push(x.trim());
+  };
+  const { data: p } = await db.from("providers").select("data").eq("id", r.baker_ref).maybeSingle();
+  const d = (p?.data || {}) as Record<string, unknown>;
+  add(d["name"]);
+  add(d["company"]);
+  add(d["owner_name"]);
+  const ids = [r.baker_owner, r.customer].filter((x): x is string => !!x);
+  if (ids.length) {
+    const { data: profs } = await db.from("profiles").select("display_name").in("id", ids);
+    for (const x of profs || []) add(x.display_name);
+    const { data: anb } = await db.from("anbieter").select("name, firma").in("id", ids);
+    for (const x of anb || []) {
+      add(x.name);
+      add(x.firma);
+    }
+  }
+  return [...new Set(out)];
+}

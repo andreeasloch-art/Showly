@@ -63,7 +63,7 @@ export function StripeCartCheckout({
     dateISO: string;
     slot: string;
   }[];
-  sweets?: { sweetId: number; qty: number; dateISO: string }[];
+  sweets?: { sweetId: number; qty: number; dateISO: string; offerId?: number }[];
   customerEmail?: string | undefined;
   locale?: "de" | "en" | "es";
 }) {

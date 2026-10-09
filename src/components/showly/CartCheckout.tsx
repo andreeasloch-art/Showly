@@ -70,6 +70,7 @@ const TEXT = {
     sumItems: "Artikel",
     sumSweets: "Torten & Süßes",
     fixed: "Festpreis",
+    offer: "Angebot",
     sumTotal: "Jetzt zu zahlen",
     sumLater: "davon Wunschtorten (Richtpreis)",
     splitH: "Aufgeteilt auf Anbieter",
@@ -136,6 +137,7 @@ const TEXT = {
     sumItems: "Items",
     sumSweets: "Cakes & sweets",
     fixed: "Fixed price",
+    offer: "Offer",
     sumTotal: "To pay now",
     sumLater: "of which custom cakes (estimate)",
     splitH: "Split by provider",
@@ -202,6 +204,7 @@ const TEXT = {
     sumItems: "Artículos",
     sumSweets: "Tartas y dulces",
     fixed: "Precio fijo",
+    offer: "Oferta",
     sumTotal: "A pagar ahora",
     sumLater: "de ello, tartas a medida (precio orientativo)",
     splitH: "Dividido por proveedor",
@@ -367,7 +370,7 @@ export function CartCheckout() {
     return [...m.values()];
   })();
   /* Wunschtorten zum Richtpreis (in totals enthalten, hier nur zur Info) */
-  const askReqs = cartRequests.filter((r) => !r.direct);
+  const askReqs = cartRequests.filter((r) => !r.direct && !r.offerId);
   const reqSum = askReqs.reduce((s, r) => s + r.estimate, 0);
   const empty = !cart.length && !cartBookings.length && !cartRequests.length;
   const hasOwnItems = cart.some((c) => SHOP_ITEMS.find((i) => i.id === c.shopId)?.own);
@@ -611,7 +614,9 @@ export function CartCheckout() {
                           </div>
                           <div className="co-line-end">
                             <b>
-                              {r.direct ? (
+                              {r.offerId ? (
+                                <small>{X.offer}</small>
+                              ) : r.direct ? (
                                 <small>{X.fixed}</small>
                               ) : (
                                 <small>{X.approx}</small>
@@ -741,6 +746,7 @@ export function CartCheckout() {
                           sweetId: r.sweetId,
                           qty: r.qty,
                           dateISO: r.dateISO,
+                          ...(r.offerId ? { offerId: r.offerId } : {}),
                         }))}
                       bookings={cartBookings.map((b) => ({
                         artistId: b.artistId,

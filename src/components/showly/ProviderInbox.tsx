@@ -14,6 +14,7 @@ import { providerInbox, respondSweet, shopOrderAction } from "@/utils/provider.f
 import { useRentCopy } from "./Rental";
 import { Chat } from "./Chat";
 import { parsePrice } from "./BakerEditor";
+import { ContactHint } from "./ContactHint";
 
 const COPY = {
   de: {
@@ -33,6 +34,13 @@ const COPY = {
     sentQuote: "Neuer Preis geschickt. Der Kunde bestätigt und zahlt nach.",
     accept: "Annehmen",
     decline: "Ablehnen",
+    ask: "Anfrage, noch nicht bezahlt",
+    askHow: "Der Kunde möchte erst ein Angebot. Trag deinen Preis ein und schreib kurz, was enthalten ist. Der Kunde bekommt einen Bezahl-Link und legt das Angebot in den Warenkorb; erst mit der Zahlung ist die Torte bestellt. Keine Namen, Adressen, Telefonnummern oder E-Mail-Adressen.",
+    offerPrice: "Dein Preis in €",
+    offerText: "Was ist enthalten? (z. B. 3 Etagen, Fondant, Lieferung)",
+    sendOffer: "Angebot senden",
+    offerSent: "Angebot gesendet. Der Kunde bekommt einen Bezahl-Link.",
+    offerOpen: (n: string) => `Angebot ${n} – wartet auf Zahlung des Kunden`,
     msgs: "Nachrichten",
     st: { sent: "offen", quoted: "neuer Preis, wartet auf Kunde", confirmed: "angenommen", declined: "abgelehnt", booked: "gebucht", cancelled: "storniert" },
     ost: { pending: "offen", paid: "bezahlt", shipped: "versendet", returned: "zurück", cancelled: "storniert" },
@@ -58,6 +66,13 @@ const COPY = {
     sentQuote: "New price sent. The customer confirms and pays the rest.",
     accept: "Accept",
     decline: "Decline",
+    ask: "Request, not paid yet",
+    askHow: "The customer wants an offer first. Enter your price and briefly say what is included. The customer gets a payment link and adds the offer to the cart; the cake is only ordered once paid. No names, addresses, phone numbers or emails.",
+    offerPrice: "Your price in €",
+    offerText: "What is included? (e.g. 3 tiers, fondant, delivery)",
+    sendOffer: "Send offer",
+    offerSent: "Offer sent. The customer gets a payment link.",
+    offerOpen: (n: string) => `Offer ${n} – waiting for the customer to pay`,
     msgs: "Messages",
     st: { sent: "open", quoted: "new price, awaiting customer", confirmed: "accepted", declined: "declined", booked: "booked", cancelled: "cancelled" },
     ost: { pending: "open", paid: "paid", shipped: "shipped", returned: "returned", cancelled: "cancelled" },
@@ -83,6 +98,13 @@ const COPY = {
     sentQuote: "Nuevo precio enviado. El cliente confirma y paga el resto.",
     accept: "Aceptar",
     decline: "Rechazar",
+    ask: "Solicitud, aún sin pagar",
+    askHow: "El cliente quiere primero una oferta. Indica tu precio y qué incluye. El cliente recibe un enlace de pago y añade la oferta al carrito; la tarta solo queda pedida al pagar. Sin nombres, direcciones, teléfonos ni correos.",
+    offerPrice: "Tu precio en €",
+    offerText: "¿Qué incluye? (p. ej. 3 pisos, fondant, entrega)",
+    sendOffer: "Enviar oferta",
+    offerSent: "Oferta enviada. El cliente recibe un enlace de pago.",
+    offerOpen: (n: string) => `Oferta ${n}: esperando el pago del cliente`,
     msgs: "Mensajes",
     st: { sent: "abierta", quoted: "nuevo precio, espera al cliente", confirmed: "aceptada", declined: "rechazada", booked: "reservada", cancelled: "cancelada" },
     ost: { pending: "abierto", paid: "pagado", shipped: "enviado", returned: "devuelto", cancelled: "cancelado" },
@@ -183,7 +205,7 @@ export function ProviderInbox() {
       },
     });
     if ("error" in res) return toast(res.error);
-    toast(res.status === "quoted" ? C.sentQuote : C.done);
+    toast(res.status === "quoted" ? ((r.paid_cents ?? 0) > 0 ? C.sentQuote : C.offerSent) : C.done);
     load();
   }
 
@@ -209,22 +231,58 @@ export function ProviderInbox() {
               <div>
                 <b>{s ? String(L(s.name)) : "—"}</b>
                 <small>
-                  {fmtDate(r.day)} · {C.qty(r.qty)} · {r.city || ""} · {r.customer_name || ""}
+                  {fmtDate(r.day)} · {C.qty(r.qty)} · {r.city || ""}
+                  {/* Name erst nach der Zahlung (Übergabe) */}
+                  {(r.paid_cents ?? 0) > 0 && r.customer_name ? ` · ${r.customer_name}` : ""}
                 </small>
                 {r.wishes && (
                   <small>
                     {C.wishes}: {r.wishes}
                   </small>
                 )}
-                <small>
-                  {r.direct ? C.fixed : C.est}: {fmt(r.price_cents / 100)}
-                </small>
-                {r.status === "quoted" && r.quote_cents ? <small className="inb-quote">{C.quoted(fmt(r.quote_cents / 100))}</small> : null}
+                {(r.paid_cents ?? 0) > 0 || r.direct ? (
+                  <small>
+                    {r.direct ? C.fixed : C.est}: {fmt(r.price_cents / 100)}
+                  </small>
+                ) : (
+                  <small className="inb-quote">{C.ask}</small>
+                )}
+                {r.status === "quoted" && r.quote_cents ? (
+                  <small className="inb-quote">
+                    {(r.paid_cents ?? 0) > 0 ? C.quoted(fmt(r.quote_cents / 100)) : C.offerOpen(fmt(r.quote_cents / 100))}
+                  </small>
+                ) : null}
+                {r.status === "sent" && !r.direct && !(r.paid_cents ?? 0) && <small className="fair-muted">{C.askHow}</small>}
                 {r.status === "sent" && !r.direct && (r.paid_cents ?? 0) > 0 && <small className="fair-muted">{C.howto}</small>}
               </div>
               <div className="prov-side">
                 <span className={"my-req-st " + r.status}>{C.st[r.status]}</span>
-                {r.status === "sent" && (
+                {r.status === "sent" && !(r.paid_cents ?? 0) && !r.direct && (
+                  <>
+                    <input
+                      className="prov-price"
+                      inputMode="decimal"
+                      placeholder={C.offerPrice}
+                      value={price[r.id] ?? ""}
+                      onChange={(e) => setPrice((p) => ({ ...p, [r.id]: e.target.value }))}
+                    />
+                    <input
+                      className="prov-price prov-note"
+                      maxLength={300}
+                      placeholder={C.offerText}
+                      value={note[r.id] ?? ""}
+                      onChange={(e) => setNote((p) => ({ ...p, [r.id]: e.target.value }))}
+                    />
+                    <ContactHint text={note[r.id] ?? ""} />
+                    <button type="button" className="dash26-mini inb-accept" onClick={() => void answer(r, true)}>
+                      {C.sendOffer}
+                    </button>
+                    <button type="button" className="dash26-mini outline inb-decline-ghost" onClick={() => void answer(r, false)}>
+                      {C.decline}
+                    </button>
+                  </>
+                )}
+                {r.status === "sent" && ((r.paid_cents ?? 0) > 0 || r.direct) && (
                   <>
                     <input
                       className="prov-price"

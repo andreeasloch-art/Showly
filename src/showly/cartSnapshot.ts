@@ -23,6 +23,8 @@ export type Snapshot = {
     wishes: string;
     estimate: number;
     direct?: boolean | undefined;
+    /** Angebot der Konditorei (sweet_requests.id) */
+    offerId?: number | undefined;
   }[];
   shop: {
     shopId: number;
@@ -74,6 +76,7 @@ export function cleanSnapshot(s: Snapshot): Snapshot {
         wishes: text(r.wishes, 2000) ?? "",
         estimate: Math.max(0, Number(r.estimate) || 0),
         direct: !!r.direct,
+        ...(Number.isInteger(r.offerId) && Number(r.offerId) > 0 ? { offerId: Number(r.offerId) } : {}),
       };
     }),
     shop: s.shop.map((l) => {

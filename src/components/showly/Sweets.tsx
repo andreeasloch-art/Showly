@@ -78,6 +78,8 @@ export const SWEETS_COPY = {
     moreForEvent: "Dazu für dein Event",
     moreForEventP: "Künstler und Deko, die zu dieser Feier passen",
     mine: "Deine Anfragen",
+    offerWait: "Wartet auf Angebot",
+    offerReady: "Angebot da – bitte bezahlen",
     status: {
       sent: "Wartet auf Zusage",
       quoted: "Neuer Preis – bitte bestätigen",
@@ -89,8 +91,8 @@ export const SWEETS_COPY = {
       h: "Wunschtorte bestellen",
       needDate: "Bitte ein Datum wählen.",
       toCart: "In den Warenkorb",
-      direct: "Nur anfragen, ohne Warenkorb",
-      directP: "Die Anfrage geht sofort an den Anbieter. Deine Kontaktdaten:",
+      direct: "Erst anfragen, später bezahlen",
+      directP: "Die Konditorei bekommt deine Wünsche und schickt dir ein Angebot mit Preis. Das legst du in den Warenkorb und bezahlst es; erst dann ist die Torte bestellt. Bitte keine Namen, Adressen, Telefonnummern oder E-Mail-Adressen: Alles läuft über Showly.",
       inCart: "Liegt im Warenkorb. Du bezahlst den Richtpreis an der Kasse.",
       date: "Datum",
       qty: (u: Unit) => (u === "person" ? "Personen" : u === "piece" ? "Stück" : "Anzahl"),
@@ -102,10 +104,10 @@ export const SWEETS_COPY = {
       estimate: "Richtpreis",
       estimateP: "Du bezahlst den Richtpreis sofort. Die Konditorei bestätigt den Endpreis: günstiger = Differenz zurück, teurer = du bestätigst und zahlst nach, Absage = alles zurück.",
       send: "Anfrage senden",
-      need: "Bitte Datum, Name und E-Mail angeben.",
+      need: "Bitte ein Datum wählen und kurz beschreiben, was du dir wünschst.",
       tooSoon: (d: number) => `Dieser Anbieter braucht mindestens ${d} Tage Vorlauf.`,
       mail: "Bitte eine gültige E-Mail-Adresse angeben.",
-      done: "Anfrage gesendet. Du findest sie in deinem Konto unter Torten-Anfragen.",
+      done: "Anfrage gesendet. Das Angebot bekommst du per E-Mail und unter „Deine Anfragen“.",
     },
   },
   en: {
@@ -153,6 +155,8 @@ export const SWEETS_COPY = {
     moreForEvent: "More for your event",
     moreForEventP: "Artists and decor that suit this celebration",
     mine: "Your requests",
+    offerWait: "Waiting for an offer",
+    offerReady: "Offer ready – please pay",
     status: {
       sent: "Awaiting confirmation",
       quoted: "New price – please confirm",
@@ -164,8 +168,8 @@ export const SWEETS_COPY = {
       h: "Order a custom cake",
       needDate: "Please pick a date.",
       toCart: "Add to cart",
-      direct: "Just send a request",
-      directP: "The request goes straight to the baker. Your contact details:",
+      direct: "Ask first, pay later",
+      directP: "The baker gets your wishes and sends you an offer with a price. Add it to your cart and pay; only then is the cake ordered. Please no names, addresses, phone numbers or emails: everything runs through Showly.",
       inCart: "Added to your cart. You pay the estimate at checkout.",
       date: "Date",
       qty: (u: Unit) => (u === "person" ? "Guests" : u === "piece" ? "Pieces" : "Quantity"),
@@ -177,10 +181,10 @@ export const SWEETS_COPY = {
       estimate: "Estimate",
       estimateP: "You pay the estimate now. The baker confirms the final price: lower = difference refunded, higher = you confirm and pay the rest, declined = full refund.",
       send: "Send request",
-      need: "Please add a date, your name and email.",
+      need: "Please pick a date and briefly describe what you would like.",
       tooSoon: (d: number) => `This baker needs at least ${d} days notice.`,
       mail: "Please enter a valid email address.",
-      done: "Request sent. You'll find it in your account under cake requests.",
+      done: "Request sent. You'll get the offer by email and under “Your requests”.",
     },
   },
   es: {
@@ -228,6 +232,8 @@ export const SWEETS_COPY = {
     moreForEvent: "Más para tu evento",
     moreForEventP: "Artistas y decoración para esta celebración",
     mine: "Tus solicitudes",
+    offerWait: "Esperando oferta",
+    offerReady: "Oferta lista – paga para confirmar",
     status: {
       sent: "Espera confirmación",
       quoted: "Nuevo precio: confírmalo",
@@ -239,8 +245,8 @@ export const SWEETS_COPY = {
       h: "Pedir tarta a medida",
       needDate: "Elige una fecha.",
       toCart: "Añadir al carrito",
-      direct: "Solo solicitar",
-      directP: "La solicitud va directamente al repostero. Tus datos:",
+      direct: "Pedir presupuesto primero",
+      directP: "El repostero recibe tus deseos y te envía una oferta con precio. La añades al carrito y la pagas; solo entonces la tarta queda pedida. Sin nombres, direcciones, teléfonos ni correos: todo va por Showly.",
       inCart: "Añadido al carrito. Pagas el precio orientativo al finalizar.",
       date: "Fecha",
       qty: (u: Unit) => (u === "person" ? "Personas" : u === "piece" ? "Unidades" : "Cantidad"),
@@ -252,10 +258,10 @@ export const SWEETS_COPY = {
       estimate: "Precio orientativo",
       estimateP: "Pagas ahora el precio orientativo. El repostero confirma el precio final: menor = te devolvemos la diferencia, mayor = lo confirmas y pagas el resto, rechazo = te devolvemos todo.",
       send: "Enviar solicitud",
-      need: "Indica fecha, nombre y correo.",
+      need: "Elige una fecha y describe brevemente lo que quieres.",
       tooSoon: (d: number) => `Este repostero necesita al menos ${d} días de antelación.`,
       mail: "Introduce un correo válido.",
-      done: "Solicitud enviada. La encontrarás en tu cuenta, en solicitudes de tartas.",
+      done: "Solicitud enviada. Recibirás la oferta por correo y en «Tus solicitudes».",
     },
   },
 };
@@ -518,7 +524,7 @@ function AllergenLine({ s }: { s: Sweet }) {
 export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) {
   const okText = useContactCheck();
   const F = useFoodCopy();
-  const { L, fmt, toast, session, addCartRequest, setCartOpen, lang } = useShowly();
+  const { L, fmt, toast, addCartRequest, setCartOpen, lang, refreshCloud } = useShowly();
   const C = useSweetsCopy();
   const R = C.req;
   const b = bakerOf(s.bakerId);
@@ -526,8 +532,6 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
   const [qty, setQty] = useState(s.unit === "set" ? 1 : s.minQty);
   const [city, setCity] = useState(b?.city ?? "");
   const [wishes, setWishes] = useState("");
-  const [name, setName] = useState(session?.name ?? "");
-  const [email, setEmail] = useState(session?.email ?? "");
   const [direct, setDirect] = useState(false);
   /* Torten-Konfigurator (nur Torten nach Wunsch) */
   const custom = CUSTOM_CATS.includes(s.cat);
@@ -587,23 +591,37 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
     setCartOpen(true);
   }
 
-  function send() {
+  /* Erst anfragen: echte Konditoreien über den Server (mit Konto), Beispiele
+     nur in diesem Browser. Name und E-Mail bleiben bei Showly. */
+  const [sending, setSending] = useState(false);
+  async function send() {
     if (!foodOk && !b?.demo) return toast(F.missing);
-    if (!date || !name.trim() || !email.trim()) return toast(R.need);
-    if (!okText(wishes, cfg.flavor, cfg.filling, cfg.text)) return;
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) return toast(R.mail);
+    if (!date || !(wishes.trim() || (custom && (cfg.flavor || cfg.filling || cfg.text)))) return toast(R.need);
+    if (!okText(wishes, cfg.flavor, cfg.filling, cfg.text, city)) return;
     if (date < addDays(lead)) return toast(R.tooSoon(lead));
-    addRequest({
-      sweetId: s.id,
-      bakerId: s.bakerId,
-      dateISO: date,
-      qty: Math.max(minQty, qty),
-      city: city.trim().slice(0, 80),
-      wishes: allWishes().slice(0, 800),
-      name: name.trim().slice(0, 80),
-      email: email.trim().slice(0, 120),
-      estimate: est,
-    });
+    const q = Math.max(minQty, qty);
+    if (s.id >= 100000) {
+      setSending(true);
+      const { sendSweetRequest } = await import("@/utils/wishcake.functions");
+      const res = await sendSweetRequest({
+        data: { sweetId: s.id, dateISO: date, qty: q, city: city.trim().slice(0, 80), wishes: allWishes().slice(0, 1500) },
+      }).catch(() => ({ error: "Hat nicht geklappt" }));
+      setSending(false);
+      if ("error" in res) return toast(res.error);
+      void refreshCloud();
+    } else {
+      addRequest({
+        sweetId: s.id,
+        bakerId: s.bakerId,
+        dateISO: date,
+        qty: q,
+        city: city.trim().slice(0, 80),
+        wishes: allWishes().slice(0, 800),
+        name: "",
+        email: "",
+        estimate: est,
+      });
+    }
     toast(R.done);
     onClose();
   }
@@ -726,7 +744,26 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
               <Icon name="cart" />
               {R.toCart}
             </button>
+            {!fixed && (
+              <button
+                className={"home-btn soft" + (direct ? " on" : "")}
+                onClick={() => setDirect((d) => !d)}
+                aria-expanded={direct}
+              >
+                <Icon name="send" />
+                {R.direct}
+              </button>
+            )}
           </div>
+          {direct && !fixed && (
+            <>
+              <p className="pe-hint">{R.directP}</p>
+              <button className="home-btn primary req-send" disabled={sending} onClick={() => void send()}>
+                {R.send}
+                <Icon name="send" />
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -770,7 +807,14 @@ export function MyRequests({ bakerId }: { bakerId?: number }) {
                   {fmt(r.estimate)}
                 </em>
               </span>
-              <span className={"my-req-st " + r.status}>{C.status[r.status]}</span>
+              <span className={"my-req-st " + r.status}>
+                {/* ohne Vorauszahlung: Anfrage wartet auf ein Angebot bzw. Angebot wartet auf Zahlung */}
+                {!r.paid && !r.direct && r.status === "sent"
+                  ? C.offerWait
+                  : !r.paid && r.status === "quoted"
+                    ? C.offerReady
+                    : C.status[r.status]}
+              </span>
               {r.status === "quoted" && <QuoteDecision r={r} />}
               {r.status !== "declined" && (
                 <button type="button" className="dash26-mini outline chat26-open" onClick={() => setChatFor(r)}>

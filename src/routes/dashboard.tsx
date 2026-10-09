@@ -1,4 +1,5 @@
 import { headLang, seoHead } from "@/showly/seo";
+import { BelegeListe } from "@/components/showly/Belege";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { ARTISTS, SHOP_ITEMS, type Artist } from "@/showly/data";
@@ -834,6 +835,7 @@ function Dashboard() {
         )}
 
         {active === "payments" && !myProfile && (myProviders.baker || myProviders.deco) && <PayoutPanel />}
+        {active === "payments" && <BelegeListe />}
         {active === "payments" && !myProfile && (
           <>
             <div className="dash26-panel">

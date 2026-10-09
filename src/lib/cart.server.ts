@@ -259,6 +259,11 @@ export async function recordCartCore(
         event_day: days[0] ?? null,
         total_cents: drafts.reduce((n, d) => n + d.amountCents, 0),
         discount_cents: discount,
+        /* Rechnungsempfänger (Belege); Firma und USt-IdNr. nur bei Firmenkunden */
+        kunde_name: snap.contact.name || null,
+        kunde_firma: snap.contact.company || null,
+        kunde_ust_id: snap.contact.vatId || null,
+        kunde_anschrift: snap.contact.address || null,
         status: paid ? "paid" : "pending",
       })
       .select("id")
@@ -293,7 +298,7 @@ export async function recordCartCore(
          Sicherheitseinbehalt bei den ersten 5 Aufträgen (policies.ts,
          cloudRules.ts) */
       const { orderPayoutDay } = await import("@/showly/policies");
-      const { reserveFor } = await import("@/showly/cloudRules");
+      const { reserveFor, provisionFelder } = await import("@/showly/cloudRules");
       const earlier = new Map<string, number>();
       const orderDay = new Date().toISOString().slice(0, 10);
       const due = drafts.filter((d) => (d.kind === "baker" || d.kind === "deco") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"));
@@ -317,7 +322,7 @@ export async function recordCartCore(
             artist_id: null,
             gross_cents: d.amountCents,
             fee_cents: d.feeCents,
-            net_cents: d.payoutCents,
+            ...provisionFelder(d.amountCents, d.feeCents),
             event_day: when.event_day,
             payout_on: when.payout_on,
             ...reserveFor(when.event_day, d.payoutCents, n),
@@ -398,6 +403,7 @@ export async function recordCartCore(
       await admin.from("payouts").insert({
         artist_id: terms.artist_id,
         booking_id: ins.id,
+        owner: artistOwner.get(terms.artist_id) ?? null,
         ...plannedPayout({ day: b.dateISO, amount_cents: terms.amount_cents, payout_cents: terms.payout_cents }, count || 0),
       });
     }
@@ -528,6 +534,12 @@ export async function recordCartCore(
   if (holdKey) {
     const { releaseHold } = await import("@/lib/slots.server");
     await releaseHold(holdKey).catch(() => undefined);
+  }
+  /* Belege: je Anbieter Rechnung bzw. Buchungsquittung, per E-Mail als PDF
+     (lib/belege.server.ts). Wiederholbar; ein Fehler hält die Buchung nicht auf. */
+  if (paid && orderId) {
+    const { belegeFuerBestellung } = await import("@/lib/belege.server");
+    await belegeFuerBestellung(orderId).catch((e) => console.error("belege", e));
   }
   return { ok: true, bookingIds, sweetIds, orderId };
 }

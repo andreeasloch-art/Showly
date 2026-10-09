@@ -34,7 +34,8 @@ export type Snapshot = {
     ship?: "pickup" | "delivery" | "shipping" | undefined;
     care?: boolean | undefined;
   }[];
-  contact: { name: string; address?: string | undefined };
+  /** Firma und USt-IdNr. nur bei Firmenkunden (Rechnung, E-Rechnung) */
+  contact: { name: string; address?: string | undefined; company?: string | undefined; vatId?: string | undefined };
 };
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -88,6 +89,14 @@ export function cleanSnapshot(s: Snapshot): Snapshot {
         ...(l.mode === "rent" && l.care === true ? { care: true } : {}),
       };
     }),
-    contact: { name: text(s.contact?.name, 120) ?? "", address: text(s.contact?.address, 300) },
+    contact: {
+      name: text(s.contact?.name, 120) ?? "",
+      address: text(s.contact?.address, 300),
+      company: text(s.contact?.company, 160),
+      vatId: (() => {
+        const v = text(s.contact?.vatId, 20)?.replace(/\s+/g, "").toUpperCase();
+        return v && /^[A-Z]{2}[0-9A-Z]{2,13}$/.test(v) ? v : undefined;
+      })(),
+    },
   };
 }

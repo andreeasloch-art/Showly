@@ -33,6 +33,7 @@ import { Route as WieFunktioniertShowlyRouteImport } from './routes/wie-funktion
 import { Route as ApiCheckinRouteImport } from './routes/api.checkin'
 import { Route as ApiStatusRouteImport } from './routes/api.status'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
+import { Route as ApiWocheRouteImport } from './routes/api.woche'
 import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
 import { Route as BuchenIndexRouteImport } from './routes/buchen.index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
@@ -169,6 +170,11 @@ const ApiTaeglichRoute = ApiTaeglichRouteImport.update({
   path: '/api/taeglich',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWocheRoute = ApiWocheRouteImport.update({
+  id: '/api/woche',
+  path: '/api/woche',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRueckkehrRoute = AuthRueckkehrRouteImport.update({
   id: '/auth/rueckkehr',
   path: '/auth/rueckkehr',
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
+  '/api/woche': typeof ApiWocheRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -312,6 +319,7 @@ export interface FileRoutesByTo {
   '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
+  '/api/woche': typeof ApiWocheRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -354,6 +362,7 @@ export interface FileRoutesById {
   '/api/checkin': typeof ApiCheckinRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
+  '/api/woche': typeof ApiWocheRoute
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
@@ -397,6 +406,7 @@ export interface FileRouteTypes {
     | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
+    | '/api/woche'
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
@@ -438,6 +448,7 @@ export interface FileRouteTypes {
     | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
+    | '/api/woche'
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
@@ -479,6 +490,7 @@ export interface FileRouteTypes {
     | '/api/checkin'
     | '/api/status'
     | '/api/taeglich'
+    | '/api/woche'
     | '/auth/rueckkehr'
     | '/checkout_/return'
     | '/kuenstler/$id'
@@ -521,6 +533,7 @@ export interface RootRouteChildren {
   ApiCheckinRoute: typeof ApiCheckinRoute
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTaeglichRoute: typeof ApiTaeglichRoute
+  ApiWocheRoute: typeof ApiWocheRoute
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   KuenstlerIdRoute: typeof KuenstlerIdRoute
@@ -708,6 +721,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiTaeglichRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/woche': {
+      id: '/api/woche'
+      path: '/api/woche'
+      fullPath: '/api/woche'
+      preLoaderRoute: typeof ApiWocheRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/rueckkehr': {
       id: '/auth/rueckkehr'
       path: '/auth/rueckkehr'
@@ -841,6 +861,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCheckinRoute: ApiCheckinRoute,
   ApiStatusRoute: ApiStatusRoute,
   ApiTaeglichRoute: ApiTaeglichRoute,
+  ApiWocheRoute: ApiWocheRoute,
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   KuenstlerIdRoute: KuenstlerIdRoute,

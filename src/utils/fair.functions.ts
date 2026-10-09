@@ -149,7 +149,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
       .eq("id", b.id);
     if (error) return { error: "Umbuchen hat nicht geklappt" };
     const { payoutDate } = await import("@/showly/booking");
-    await db.from("payouts").update({ payout_on: payoutDate(data.day), speed: "standard", express_fee_cents: 0, net_cents: b.payout_cents }).eq("booking_id", b.id).eq("status", "scheduled");
+    await db.from("payouts").update({ payout_on: payoutDate(data.day), speed: "standard", express_fee_cents: 0, net_cents: (await import("@/showly/cloudRules")).provisionFelder(b.amount_cents, b.amount_cents - b.payout_cents).net_cents }).eq("booking_id", b.id).eq("status", "scheduled");
     const { notify, ownerOfArtist } = await import("@/lib/notify.server");
     await notify(await ownerOfArtist(b.artist_id), "Eine Buchung wurde umgebucht", [
       `Die Buchung vom ${dateDe(b.day)} wurde auf den ${dateDe(data.day)}, ${data.slot} Uhr verlegt (einmalige kostenlose Umbuchung). Der neue Termin ist in deinem Kalender eingetragen.`,

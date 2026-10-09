@@ -377,6 +377,26 @@ Betreibst du den Scanner selbst, ist kein weiterer Auftragsverarbeitungsvertrag 
 
 Datenschutz-Unterlagen: `docs/datenschutz/` (Verarbeitungsverzeichnis, Löschkonzept, Dienstleister/AVV). Umgebungen: `docs/umgebungen.md`.
 
+## 17. Belege, Wochenabrechnung, DAC7, E-Rechnung
+
+**Was automatisch passiert**
+- Nach jeder bezahlten Bestellung bekommt der Kunde pro Anbieter einen Beleg per E-Mail: gewerblich eine Rechnung im Namen des Anbieters (19 %/7 %), Kleinunternehmer eine Rechnung mit §19-Hinweis, privat eine Showly-Buchungsquittung. Kautionen bekommen eine eigene Kautionsbestätigung und stehen nie auf der Rechnung.
+- Erstattungen erzeugen Storno, Korrektur oder Stornogebühr mit Bezug auf den Originalbeleg. Nummern sind lückenlos je Anbieter und Jahr (`V1001-2026-0001`), Quittungen `Q-2026-000001`, Provisionsrechnungen `PR-…`, Auszahlungsabrechnungen `AB-…`.
+- Belege sind nach dem Anlegen in der Datenbank gesperrt (Trigger). Das PDF liegt im privaten Speicher-Bucket `belege`, mit SHA-256-Prüfsumme.
+- Jeden Montag (Cron `showly-woche`, ruft `POST /api/woche`) bekommt jeder Anbieter eine Provisionsrechnung (20 % + 19 % USt) und eine Auszahlungsabrechnung über die Vorwoche. Abzüge (Vertragsstrafen, Erstattungen nach Auszahlung) werden verrechnet; was nicht gedeckt ist, wird vorgetragen.
+- Auszahlungen bleiben gesperrt, bis der Anbieter unter „Zahlungen“ seine Steuer- und Rechnungsdaten (DAC7) ausgefüllt hat.
+
+**Einstellen (Secrets in Lovable)**
+- `SHOWLY_FIRMA`, `SHOWLY_STRASSE`, `SHOWLY_PLZ`, `SHOWLY_ORT`, `SHOWLY_UST_ID`, `SHOWLY_STEUERNUMMER`, `SHOWLY_HANDELSREGISTER`, `SHOWLY_RECHNUNG_EMAIL`: Angaben der Plattform auf allen Belegen. Solange sie fehlen, stehen „Muster“-Platzhalter auf den Belegen.
+- `DATEV_BERATER`, `DATEV_MANDANT`, optional `DATEV_ERLOESKONTO` (Standard 8400) und `DATEV_DEBITOR` (Standard 10000) für den DATEV-Export unter Verwaltung → Belege & Abrechnung.
+- Migration `supabase/migrations/0021_belege.sql` einspielen (legt Tabellen, Nummernkreise, Bucket und Cron an).
+
+**Vor dem Start prüfen lassen**
+- Steuerberater: Steuersatz der Stornogebühr, 7 %-Sätze bei Torten, Kontenzuordnung im DATEV-Export, Kleinunternehmergrenze (gesetzlich 25.000 € Vorjahr / 100.000 € laufendes Jahr; Showly warnt bei 22.000 €).
+- Künstlersozialkasse: ob Showly für Künstlerhonorare KSK-Abgabe zahlen muss.
+- E-Rechnung: Das XRechnung-XML (CII) hängt im PDF. Das PDF ist kein PDF/A-3. Eine Beispielrechnung einmal mit dem KoSIT-Validator prüfen.
+- Aufbewahrung 10 Jahre: Für den Bucket `belege` ein Backup mit Schreibschutz (Object Lock/WORM, z. B. S3 oder Backblaze B2) einrichten.
+
 ## Was in der Datenbank läuft und was noch nicht
 
 **Läuft über die Datenbank**, sobald jemand über Supabase angemeldet ist:

@@ -14,7 +14,7 @@ import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { BookingRow, PenaltyRow } from "@/lib/database.types";
 import { createStripeClient, type StripeEnv } from "@/lib/stripe.server";
-import type { CloudAction } from "@/showly/cloudRules";
+import { provisionFelder, type CloudAction } from "@/showly/cloudRules";
 
 import type { RecordResult } from "@/lib/cart.server";
 import { cleanSnapshot, type Snapshot } from "@/showly/cartSnapshot";
@@ -152,14 +152,14 @@ export const bookingAction = createServerFn({ method: "POST" })
     /* Teil-Erstattung nach Stornostufe; Auszahlung auf den Anteil kürzen */
     if (d.refundCents) {
       const { refundBooking } = await import("@/lib/money.server");
-      await refundBooking(b.id, { cents: d.refundCents, reason: "Stornierung nach Stornostufe" }).catch(() => null);
+      await refundBooking(b.id, { cents: d.refundCents, reason: "Stornierung nach Stornostufe", stornogebuehr: true }).catch(() => null);
     }
     if (d.payoutShare !== undefined && d.payoutShare < 1) {
       const { data: po } = await admin.from("payouts").select("id, net_cents").eq("booking_id", b.id).neq("status", "paid").maybeSingle();
       if (po)
         await admin
           .from("payouts")
-          .update({ net_cents: Math.round(b.payout_cents * d.payoutShare), reserve_cents: 0 })
+          .update({ net_cents: Math.round(provisionFelder(b.amount_cents, b.amount_cents - b.payout_cents).net_cents * d.payoutShare), reserve_cents: 0 })
           .eq("id", po.id);
     }
     /* Ersatzgarantie: drei Ersatz-Vorschläge, Ticket, unter 48 h vorrangig per E-Mail (lib/fair.server.ts) */

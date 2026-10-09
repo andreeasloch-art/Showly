@@ -116,7 +116,7 @@ describe("Anfrage beantworten", () => {
 describe("Auszahlung (§ 21)", () => {
   it("7 Tage nach dem Termin, Einbehalt bei den ersten 5 Buchungen", () => {
     const p = plannedPayout({ day: "2026-09-25", amount_cents: 30000, payout_cents: 20000 }, 0);
-    expect(p).toMatchObject({ payout_on: "2026-10-02", reserve_cents: 4000, net_cents: 20000, fee_cents: 10000 });
+    expect(p).toMatchObject({ payout_on: "2026-10-02", reserve_cents: 4000, net_cents: 18100, provision_ust_cent: 1900, fee_cents: 10000 });
     expect(plannedPayout({ day: "2026-09-25", amount_cents: 30000, payout_cents: 20000 }, 5).reserve_cents).toBe(0);
   });
 });

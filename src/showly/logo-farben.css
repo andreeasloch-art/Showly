@@ -901,3 +901,20 @@ html body #toast.show{visibility:visible;opacity:1;transition:transform .35s cub
 .inb-quote{color:#A86B00;font-weight:700}
 .prov-note{flex-basis:100%}
 .my-req-st.quoted{background:#FFF1D6;color:#8A5600}
+
+/* ---------- Belege, Steuerdaten, Verwaltung (Belege.tsx) ---------- */
+.belege .dash26-panel-head select{border:1px solid #DDD5EE;border-radius:10px;padding:6px 10px;font:inherit;background:#fff}
+.belege-h{margin:14px 0 6px;font-size:14px}
+.belege-list{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:8px}
+.belege-list li{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;border:1px solid #ECE7F6;border-radius:12px;padding:10px 12px;background:#fff}
+.belege-list li>span:first-child{display:grid;gap:2px;min-width:0}
+.belege-list li>span:first-child b{overflow-wrap:anywhere}
+.belege-list small{color:var(--sh-muted,#554B6B);font-size:12.5px}
+.belege-list .minus{color:#B42318}
+.belege-btns{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+.steuer{display:grid;gap:10px}
+.steuer-typ{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.steuer select,.steuer input{width:100%;box-sizing:border-box}
+.belege-admin{display:grid;gap:12px}
+.belege-admin .pe-grid2 input,.belege-admin .pe-grid2 select{border:1px solid #DDD5EE;border-radius:10px;padding:9px 11px;font:inherit;background:#fff;min-height:42px;width:100%;box-sizing:border-box}
+.belege-admin h3{margin:0 0 6px}

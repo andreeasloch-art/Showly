@@ -128,7 +128,7 @@ export interface CartSnapshot {
   shop: CartLine[];
   bookings: CartBookingLine[];
   requests: CartRequestLine[];
-  contact: { name: string; email: string; phone?: string; address?: string };
+  contact: { name: string; email: string; phone?: string; address?: string; company?: string; vatId?: string };
 }
 export type CartLine = CartShopLine;
 export interface Booking {

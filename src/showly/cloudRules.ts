@@ -287,6 +287,16 @@ export function reserveFor(day: string, netCents: number, earlierPayouts: number
   return { reserve_cents: reserve, reserve_until: reserve ? new Date(berlinStart(day, "12:00") + RESERVE_DAYS * DAY).toISOString().slice(0, 10) : null };
 }
 
+/** Provisionsfelder einer Auszahlung: netto = Umsatz − Provision − 19 % USt darauf */
+export function provisionFelder(grossCents: number, feeCents: number) {
+  const ust = Math.round((Math.max(0, feeCents) * 19) / 100);
+  return {
+    net_cents: grossCents - feeCents - ust,
+    provision_ust_cent: ust,
+    provision_bp: grossCents > 0 ? Math.round((feeCents * 10000) / grossCents) : 0,
+  };
+}
+
 /** Geplante Auszahlung zu einer Buchung (AGB § 21) */
 export function plannedPayout(
   b: { day: string; amount_cents: number; payout_cents: number },
@@ -295,7 +305,8 @@ export function plannedPayout(
   return {
     gross_cents: b.amount_cents,
     fee_cents: b.amount_cents - b.payout_cents,
-    net_cents: b.payout_cents,
+    /* Provision zzgl. 19 % USt (showly/belege.ts); Provision ist in der Buchung eingefroren */
+    ...provisionFelder(b.amount_cents, b.amount_cents - b.payout_cents),
     ...reserveFor(b.day, b.payout_cents, earlierPayouts),
     payout_on: payoutDate(b.day),
   };

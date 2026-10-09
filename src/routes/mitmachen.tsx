@@ -226,8 +226,9 @@ function Become() {
   const pw = pwScore(form.pw);
   /* Was beim Künstler ankommt: Gage abzüglich 20 % Showly-Gebühr, genau wie
      bei der Auszahlung (pricing.ts, bookingPrice) */
-  const net = Math.round(fee * (1 - FEE_RATE));
-  const svc = fee - net;
+  /* Provision 20 % zzgl. 19 % USt auf die Provision (AGB § 21) */
+  const svc = Math.round(fee * FEE_RATE * 1.19 * 100) / 100;
+  const net = Math.round((fee - svc) * 100) / 100;
 
   function set(k: keyof typeof form, v: string) {
     setForm((f) => ({ ...f, [k]: v }));

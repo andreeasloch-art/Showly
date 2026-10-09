@@ -229,6 +229,15 @@ export type PayoutRow = {
   express_fee_cents?: number;
   frozen?: boolean;
   offset_cents?: number;
+  /** Provision und Abrechnung (0021) */
+  provision_bp?: number | null;
+  provision_ust_cent?: number;
+  erstattet_cent?: number;
+  ausgezahlt_am?: string | null;
+  einbehalt_frei_am?: string | null;
+  ueberwiesen_cent?: number | null;
+  auszahlung_id?: number | null;
+  einbehalt_auszahlung_id?: number | null;
   created_at: string;
 }
 
@@ -448,6 +457,139 @@ export type ReportRow = {
   created_at: string;
 }
 
+
+/* Belegsystem (0021) */
+export type AnbieterRow = {
+  id: string;
+  typ: "gewerblich" | "kleinunternehmer" | "privat";
+  name: string | null;
+  firma: string | null;
+  strasse: string | null;
+  plz: string | null;
+  ort: string | null;
+  land: string;
+  steuernummer: string | null;
+  ust_id: string | null;
+  handelsregister: string | null;
+  rechnung_praefix: string | null;
+  ust_satz_standard: number;
+  geburtsdatum: string | null;
+  steuer_id: string | null;
+  iban: string | null;
+  auszahlungen_gesperrt: boolean;
+  sperrgrund: string | null;
+  zaehler_jahr: number;
+  umsatz_jahr_cent: number;
+  buchungen_jahr: number;
+  hinweis_gewerbe: boolean;
+  hinweis_gewerbe_am: string | null;
+  warnung_umsatzgrenze: boolean;
+  created_at: string;
+  updated_at: string;
+};
+export type BelegRow = {
+  id: number;
+  art: "rechnung" | "quittung" | "storno" | "korrektur" | "provisionsrechnung" | "auszahlungsabrechnung" | "kaution";
+  nummer: string;
+  kreis: string;
+  jahr: number;
+  laufnummer: number;
+  aussteller_typ: "anbieter" | "plattform";
+  anbieter_id: string | null;
+  im_namen_von_anbieter: boolean;
+  kunde_id: string | null;
+  order_id: number | null;
+  buchung_id: number | null;
+  bezug_beleg_id: number | null;
+  quelle: string | null;
+  belegdatum: string;
+  leistung_von: string | null;
+  leistung_bis: string | null;
+  aussteller_snapshot: Record<string, unknown>;
+  empfaenger_snapshot: Record<string, unknown>;
+  netto_cent: number;
+  steuer_cent: number;
+  brutto_cent: number;
+  steuer_aufstellung: { satz: number; netto_cent: number; steuer_cent: number; brutto_cent: number }[];
+  pflichthinweise: string[];
+  kleinbetrag: boolean;
+  e_rechnung_erforderlich: boolean;
+  pdf_pfad: string | null;
+  sha256: string | null;
+  xml_pfad: string | null;
+  auszahlung_id: number | null;
+  erstellt_am: string;
+};
+export type BelegPositionRow = {
+  id: number;
+  beleg_id: number;
+  pos: number;
+  beschreibung: string;
+  menge: number;
+  einzel_brutto_cent: number;
+  brutto_cent: number;
+  steuersatz: number;
+  leistung_von: string | null;
+  leistung_bis: string | null;
+  referenz: string | null;
+};
+export type AbzugRow = {
+  id: number;
+  anbieter_id: string;
+  art: "strafgebuehr" | "schaden" | "sonstiges";
+  betrag_cent: number;
+  grund: string;
+  buchung_id: number | null;
+  verrechnet_cent: number;
+  penalty_id: number | null;
+  erstellt_von: string | null;
+  erstellt_am: string;
+};
+export type ProvisionKorrekturRow = {
+  id: number;
+  anbieter_id: string;
+  buchung_id: number | null;
+  payout_id: number | null;
+  beleg_id: number | null;
+  umsatz_cent: number;
+  provision_netto_cent: number;
+  provision_ust_cent: number;
+  rueckforderung_cent: number;
+  verrechnet_cent: number;
+  quelle: string | null;
+  auszahlung_id: number | null;
+  erstellt_am: string;
+};
+export type VerrechnungRow = {
+  id: number;
+  payout_id: number;
+  abzug_id: number | null;
+  korrektur_id: number | null;
+  betrag_cent: number;
+  auszahlung_id: number | null;
+  erstellt_am: string;
+};
+export type AuszahlungRow = {
+  id: number;
+  anbieter_id: string;
+  zeitraum_von: string;
+  zeitraum_bis: string;
+  umsatz_brutto_cent: number;
+  provision_netto_cent: number;
+  provision_steuer_cent: number;
+  provision_brutto_cent: number;
+  gebuehren_cent: number;
+  einbehalt_cent: number;
+  abzuege_cent: number;
+  korrekturen_cent: number;
+  vortrag_cent: number;
+  auszahlung_cent: number;
+  status: "bereit" | "ausgezahlt" | "erledigt" | "vortrag";
+  provisionsrechnung_id: number | null;
+  abrechnung_id: number | null;
+  erstellt_am: string;
+};
+
 export type Database = {
   public: {
     Tables: {
@@ -537,6 +679,11 @@ export type Database = {
         discount_cents?: number;
         /** Rückbuchung bei der Bank des Kunden (0013) */
         dispute_status?: "open" | "won" | "lost" | null;
+        /** Rechnungsempfänger (0021) */
+        kunde_name?: string | null;
+        kunde_firma?: string | null;
+        kunde_ust_id?: string | null;
+        kunde_anschrift?: string | null;
         created_at: string;
       }>;
       /** Warenkorb zu einer offenen Zahlung, für den Stripe-Webhook (0013) */
@@ -577,6 +724,8 @@ export type Database = {
         fee_cents: number;
         payout_cents: number;
         status: "pending" | "paid" | "requested" | "confirmed" | "declined" | "cancelled" | "refunded" | "fulfilled";
+        provision_bp?: number | null;
+        erstattet_cent?: number;
         created_at: string;
       }>;
       sms_log: Table<{
@@ -607,6 +756,14 @@ export type Database = {
       client_errors: Table<ClientErrorRow>;
       media: Table<MediaRow>;
       rate_limits: Table<{ bucket: string; window_start: string; hits: number }>;
+      anbieter: Table<AnbieterRow>;
+      nummernkreise: Table<{ schluessel: string; jahr: number; letzte_nummer: number }>;
+      belege: Table<BelegRow>;
+      beleg_positionen: Table<BelegPositionRow>;
+      anbieter_abzuege: Table<AbzugRow>;
+      provision_korrekturen: Table<ProvisionKorrekturRow>;
+      verrechnungen: Table<VerrechnungRow>;
+      auszahlungen: Table<AuszahlungRow>;
     };
     Views: {
       artists_public: Table<
@@ -654,6 +811,14 @@ export type Database = {
       purge_slot_holds: {
         Args: Record<string, never>;
         Returns: undefined;
+      };
+      beleg_anlegen: { Args: { p: unknown }; Returns: BelegRow };
+      beleg_zaehlen: { Args: { p_anbieter: string; p_cent: number; p_buchungen: number }; Returns: AnbieterRow };
+      anbieter_jahreswechsel: { Args: Record<string, never>; Returns: number };
+      anbieter_praefix: { Args: { p_id: string }; Returns: string };
+      wochenabrechnung_buchen: {
+        Args: { p: unknown };
+        Returns: { status: "neu" | "vorhanden" | "gesperrt" | "unbekannt"; id?: number; provisionsrechnung_id?: number | null; abrechnung_id?: number };
       };
     };
     CompositeTypes: Record<string, never>;

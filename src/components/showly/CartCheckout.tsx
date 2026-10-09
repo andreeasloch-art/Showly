@@ -51,6 +51,8 @@ const TEXT = {
     name: "Vor- und Nachname",
     email: "E-Mail",
     phone: "Telefon (für Rückfragen am Veranstaltungstag)",
+    company: "Firma (nur bei Bestellung für ein Unternehmen)",
+    vatId: "USt-IdNr. der Firma (freiwillig)",
     eventH: "Veranstaltungsort",
     eventP: "Hierhin kommen Künstler und Lieferungen.",
     street: "Straße und Hausnummer",
@@ -115,6 +117,8 @@ const TEXT = {
     name: "Full name",
     email: "Email",
     phone: "Phone (for questions on the day)",
+    company: "Company (only when ordering for a business)",
+    vatId: "Company VAT ID (optional)",
     eventH: "Event location",
     eventP: "Artists and deliveries come here.",
     street: "Street and number",
@@ -179,6 +183,8 @@ const TEXT = {
     name: "Nombre y apellidos",
     email: "Correo",
     phone: "Teléfono (para dudas el día del evento)",
+    company: "Empresa (solo si pides para una empresa)",
+    vatId: "NIF-IVA de la empresa (opcional)",
     eventH: "Lugar del evento",
     eventP: "Aquí llegan artistas y entregas.",
     street: "Calle y número",
@@ -225,6 +231,9 @@ interface Contact {
   name: string;
   email: string;
   phone: string;
+  /** nur bei Firmenkunden: Rechnung auf die Firma, ggf. E-Rechnung */
+  company?: string;
+  vatId?: string;
   street: string;
   zip: string;
   city: string;
@@ -374,6 +383,8 @@ export function CartCheckout() {
       contact: {
         name: contact.name.trim(),
         email: contact.email.trim(),
+        ...(contact.company?.trim() ? { company: contact.company.trim() } : {}),
+        ...(contact.vatId?.trim() ? { vatId: contact.vatId.trim() } : {}),
         ...(contact.phone.trim() ? { phone: contact.phone.trim() } : {}),
         ...(address ? { address } : {}),
       },
@@ -645,6 +656,18 @@ export function CartCheckout() {
                       <input type="tel" value={contact.phone} onChange={set("phone")} autoComplete="tel" />
                     </label>
                   </div>
+                  <div className="pe-grid2">
+                    <label className="pe-field">
+                      <span className="pe-label">{X.company}</span>
+                      <input value={contact.company ?? ""} onChange={set("company")} autoComplete="organization" maxLength={160} />
+                    </label>
+                    {contact.company?.trim() ? (
+                      <label className="pe-field">
+                        <span className="pe-label">{X.vatId}</span>
+                        <input value={contact.vatId ?? ""} onChange={set("vatId")} autoComplete="off" maxLength={20} placeholder="DE123456789" />
+                      </label>
+                    ) : null}
+                  </div>
                 </section>
                 {(cartBookings.length > 0 || cart.length > 0) && (
                   <section className="pe-card">
@@ -734,7 +757,12 @@ export function CartCheckout() {
                           bookings: snap.bookings,
                           requests: snap.requests,
                           shop: snap.shop,
-                          contact: { name: snap.contact.name, address: snap.contact.address },
+                          contact: {
+                            name: snap.contact.name,
+                            address: snap.contact.address,
+                            ...(snap.contact.company ? { company: snap.contact.company } : {}),
+                            ...(snap.contact.vatId ? { vatId: snap.contact.vatId } : {}),
+                          },
                         };
                       })()}
                     />

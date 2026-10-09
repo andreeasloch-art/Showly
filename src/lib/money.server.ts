@@ -44,7 +44,7 @@ async function paymentOf(sessionField: string | null, env: "sandbox" | "live") {
 /** Buchung (ganz oder teilweise) erstatten. Ohne Betrag: der ganze Rest. */
 export async function refundBooking(
   bookingId: number,
-  opts: { cents?: number; env?: "sandbox" | "live"; reason?: string } = {},
+  opts: { cents?: number; env?: "sandbox" | "live"; reason?: string; stornogebuehr?: boolean } = {},
 ): Promise<{ ok: true; cents: number } | { error: string }> {
   const db = adminClient();
   const { data: b } = await db.from("bookings").select("*").eq("id", bookingId).maybeSingle();
@@ -68,6 +68,20 @@ export async function refundBooking(
     .from("bookings")
     .update({ refunded_cents: b.refunded_cents + cents, refunded_at: new Date().toISOString() })
     .eq("id", b.id);
+  /* Storno-, Korrektur- bzw. Stornogebühr-Beleg und Abrechnung mit dem Künstler */
+  {
+    const { data: po } = await db.from("payouts").select("id").eq("booking_id", b.id).maybeSingle();
+    const { erstattungVerbuchen } = await import("./belege.server");
+    const behalten = b.amount_cents - b.refunded_cents - cents;
+    await erstattungVerbuchen({
+      subOrderId: b.sub_order_id ?? null,
+      cents,
+      grund: opts.reason || "Erstattung",
+      ref: `booking:${b.id}:${b.refunded_cents}`,
+      ...(opts.stornogebuehr && behalten > 0 ? { stornogebuehrCent: behalten } : {}),
+      payoutId: po?.id ?? null,
+    }).catch((e) => console.error("beleg erstattung", e));
+  }
   const to = await emailOf(b.customer);
   if (to)
     await sendMail(to, "Erstattung deiner Showly-Buchung", [
@@ -232,28 +246,53 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
       continue;
     }
 
-    /* Fällige Vertragsstrafen des Künstlers mit dieser Auszahlung verrechnen */
-    let offset = first ? (p.offset_cents ?? 0) : 0;
-    /* Schon verrechnet (Wiederholung nach Fehler): nicht noch einmal */
-    if (offset) cents -= offset;
-    else if (first && cents > 0 && p.artist_id) {
-      const { data: open } = await db
-        .from("penalties")
-        .select("id, amount_cents, offset_cents")
-        .eq("artist_id", p.artist_id)
-        .eq("status", "due")
-        .order("created_at")
-        .limit(20);
-      for (const q of open || []) {
-        const left = q.amount_cents - (q.offset_cents ?? 0);
-        const take = Math.min(left, cents - offset);
-        if (take <= 0) continue;
-        offset += take;
-        await db.from("penalties").update({ offset_cents: (q.offset_cents ?? 0) + take }).eq("id", q.id);
+    /* Steuer- und Rechnungsdaten (DAC7) fehlen oder Konto gesperrt: liegen lassen */
+    {
+      const { data: an } = await db.from("anbieter").select("auszahlungen_gesperrt, sperrgrund").eq("id", ownerId!).maybeSingle();
+      if (!an || an.auszahlungen_gesperrt) {
+        await db.from("payouts").update({ last_error: an?.sperrgrund || "Steuer- und Rechnungsdaten fehlen (Zahlungen → Steuerdaten)" }).eq("id", p.id);
+        out.skipped++;
+        continue;
+      }
+    }
+
+    /* Offene Abzüge (Vertragsstrafen, Schäden, Sonstiges) und Rückforderungen
+       nach Erstattungen mit dieser Auszahlung verrechnen (showly/belege.ts).
+       Bei einer Wiederholung nach Fehler gilt, was schon verrechnet ist. */
+    let offset = 0;
+    if (first) {
+      const { data: schon } = await db.from("verrechnungen").select("betrag_cent").eq("payout_id", p.id);
+      if (schon?.length) offset = schon.reduce((n, v) => n + v.betrag_cent, 0);
+      else if (cents > 0) {
+        const { verrechne } = await import("@/showly/belege");
+        const { data: abz } = await db.from("anbieter_abzuege").select("*").eq("anbieter_id", ownerId!).order("erstellt_am").limit(50);
+        const { data: kor } = await db.from("provision_korrekturen").select("*").eq("anbieter_id", ownerId!).order("erstellt_am").limit(50);
+        const offen = [
+          ...(abz || []).filter((x) => x.betrag_cent !== x.verrechnet_cent).map((x) => ({ id: x.id, typ: "abzug" as const, offen_cent: x.betrag_cent - x.verrechnet_cent, row: x })),
+          ...(kor || []).filter((x) => x.rueckforderung_cent > x.verrechnet_cent).map((x) => ({ id: -x.id, typ: "korrektur" as const, offen_cent: x.rueckforderung_cent - x.verrechnet_cent, row: x })),
+        ];
+        const v = verrechne(offen, cents);
+        for (const u of v.verwendet) {
+          const o = offen.find((x) => x.id === u.id)!;
+          if (o.typ === "abzug") {
+            const a = o.row as { id: number; verrechnet_cent: number; penalty_id: number | null };
+            await db.from("verrechnungen").insert({ payout_id: p.id, abzug_id: a.id, betrag_cent: u.betrag_cent });
+            await db.from("anbieter_abzuege").update({ verrechnet_cent: a.verrechnet_cent + u.betrag_cent }).eq("id", a.id);
+            if (a.penalty_id) {
+              const { data: pen } = await db.from("penalties").select("offset_cents").eq("id", a.penalty_id).maybeSingle();
+              await db.from("penalties").update({ offset_cents: (pen?.offset_cents ?? 0) + u.betrag_cent }).eq("id", a.penalty_id);
+            }
+          } else {
+            const k = o.row as { id: number; verrechnet_cent: number };
+            await db.from("verrechnungen").insert({ payout_id: p.id, korrektur_id: k.id, betrag_cent: u.betrag_cent });
+            await db.from("provision_korrekturen").update({ verrechnet_cent: k.verrechnet_cent + u.betrag_cent }).eq("id", k.id);
+          }
+          offset += u.betrag_cent;
+        }
       }
       if (offset) {
         cents -= offset;
-        await db.from("payouts").update({ offset_cents: offset }).eq("id", p.id);
+        await db.from("payouts").update({ offset_cents: Math.max(0, offset) }).eq("id", p.id);
       }
     }
 
@@ -279,14 +318,22 @@ export async function runDuePayouts(): Promise<{ paid: number; held: number; ski
           .eq("id", p.id);
       }
       const next = first && p.reserve_cents > 0 ? "held" : "paid";
-      await db.from("payouts").update({ status: next }).eq("id", p.id);
+      /* Zeitpunkt und Betrag für die Wochenabrechnung (lib/belege.server.ts) */
+      await db
+        .from("payouts")
+        .update(
+          first
+            ? { status: next, ausgezahlt_am: new Date().toISOString(), ueberwiesen_cent: Math.max(0, cents) }
+            : { status: next, einbehalt_frei_am: new Date().toISOString() },
+        )
+        .eq("id", p.id);
       if (next === "held") out.held++;
       else out.paid++;
       if (first && artist?.owner) {
         const to = await emailOf(artist.owner);
         if (to)
           await sendMail(to, p.booking_id ? "Showly hat deine Gage überwiesen" : "Showly hat deine Einnahmen überwiesen", [
-            `${p.booking_id ? "Für deinen Auftritt" : "Für deine Bestellung"} haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.${offset ? ` Verrechnet mit einer Vertragsstrafe: ${euro(offset)}.` : ""}${p.express_fee_cents ? ` Gebühr für schnellere Auszahlung: ${euro(p.express_fee_cents)}.` : ""}`,
+            `${p.booking_id ? "Für deinen Auftritt" : "Für deine Bestellung"} haben wir ${euro(cents)} an dein Auszahlungskonto überwiesen.${offset > 0 ? ` Verrechnet mit offenen Abzügen bzw. Rückforderungen: ${euro(offset)}.` : ""}${p.express_fee_cents ? ` Gebühr für schnellere Auszahlung: ${euro(p.express_fee_cents)}.` : ""}`,
             p.reserve_cents > 0
               ? `Der Sicherheitseinbehalt von ${euro(p.reserve_cents)} folgt am ${p.reserve_until?.split("-").reverse().join(".")}.`
               : "Je nach Bank ist das Geld in 1 bis 3 Werktagen auf deinem Konto.",

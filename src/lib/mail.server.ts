@@ -8,7 +8,19 @@ export function esc(v: string): string {
   return v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
-export async function sendMail(to: string, subject: string, paragraphs: string[]): Promise<boolean> {
+export interface MailAnhang {
+  filename: string;
+  /** Inhalt als Base64 */
+  content: string;
+}
+
+export function base64(bytes: Uint8Array): string {
+  let s = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+export async function sendMail(to: string, subject: string, paragraphs: string[], anhaenge: MailAnhang[] = []): Promise<boolean> {
   const key = process.env["RESEND_API_KEY"];
   const from = process.env["SHOWLY_MAIL_FROM"] || "Showly <onboarding@resend.dev>";
   if (!key || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return false;
@@ -21,7 +33,13 @@ export async function sendMail(to: string, subject: string, paragraphs: string[]
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ from, to: [to], subject: subject.slice(0, 200), html }),
+      body: JSON.stringify({
+        from,
+        to: [to],
+        subject: subject.slice(0, 200),
+        html,
+        ...(anhaenge.length ? { attachments: anhaenge.map((a) => ({ filename: a.filename, content: a.content })) } : {}),
+      }),
     });
     return res.ok;
   } catch {

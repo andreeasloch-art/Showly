@@ -62,6 +62,14 @@ export async function refundSweet(id: number, cents: number, reason: string): Pr
     return { error: getStripeErrorMessage(e) };
   }
   await db.from("sweet_requests").update({ refunded_cents: refunded + amount }).eq("id", r.id);
+  /* Storno- bzw. Korrekturbeleg und Abrechnung mit der Konditorei */
+  {
+    const { data: po } = await db.from("payouts").select("id").eq("sweet_request_id", r.id).maybeSingle();
+    const { erstattungVerbuchen } = await import("./belege.server");
+    await erstattungVerbuchen({ subOrderId: r.sub_order_id ?? null, cents: amount, grund: reason, ref: `sweet:${r.id}:${refunded}`, payoutId: po?.id ?? null }).catch((e) =>
+      console.error("beleg erstattung", e),
+    );
+  }
   await notify(r.customer, "Erstattung deiner Torten-Bestellung", [
     `Wir haben ${euro(amount)} erstattet (${reason}).`,
     "Das Geld geht auf das Zahlungsmittel zurück, mit dem du bezahlt hast. Je nach Bank dauert die Gutschrift einige Tage.",
@@ -82,7 +90,9 @@ export async function planWishPayout(db: Db, r: SweetRequestRow): Promise<void> 
   const { reserveFor } = await import("@/showly/cloudRules");
   const rate = pickRate(await loadFeeRules(db), { kind: "baker", providerId: r.baker_ref }, FEE_RATE);
   const fee = Math.round(gross * rate);
-  const net = gross - fee;
+  const { provisionFelder } = await import("@/showly/cloudRules");
+  const pf = provisionFelder(gross, fee);
+  const net = pf.net_cents;
   const when = orderPayoutDay({ cakeDays: [r.day], orderDay: r.day });
   const { count } = await db.from("payouts").select("id", { count: "exact", head: true }).eq("owner", r.baker_owner);
   await db.from("payouts").upsert(
@@ -94,7 +104,7 @@ export async function planWishPayout(db: Db, r: SweetRequestRow): Promise<void> 
       artist_id: null,
       gross_cents: gross,
       fee_cents: fee,
-      net_cents: net,
+      ...pf,
       event_day: when.event_day,
       payout_on: when.payout_on,
       ...reserveFor(when.event_day, net, count || 0),
@@ -184,6 +194,8 @@ export async function settleQuotePayment(sessionId: string, env: "sandbox" | "li
     .maybeSingle();
   if (next) {
     await planWishPayout(db, next as SweetRequestRow);
+    const { belegNachzahlung } = await import("./belege.server");
+    await belegNachzahlung(r.id, paidNow, sessionId).catch((e) => console.error("beleg nachzahlung", e));
     await notify(r.baker_owner, "Kunde hat den neuen Preis bestätigt", [
       `Die Torte für den ${day(r.day)} ist jetzt fest gebucht, Endpreis ${euro(r.quote_cents)}.`,
     ]).catch(() => false);

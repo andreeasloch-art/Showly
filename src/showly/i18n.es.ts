@@ -483,10 +483,10 @@ export const ES: Record<string, string> = {
   "earn.sub":
     "Desliza tu caché: verás al instante lo que te llega de verdad tras la comisión de Showly.",
   "earn.yourFee": "Tu caché por hora",
-  "earn.clientPays": "Comisión de Showly (20 %)",
+  "earn.clientPays": "Comisión de Showly (20 % + IVA)",
   "earn.youGet": "Tú ganas",
-  "earn.hundred": "(80 % de tu caché, pagado 7 días después del evento)",
-  "earn.note": "(20 % de {p})",
+  "earn.hundred": "(76,2 % de tu caché, pagado 7 días después del evento)",
+  "earn.note": "(20 % de {p} más 19 % de IVA)",
   "earn.howT": "Así funciona:",
   "earn.howP":
     "Showly se queda con el 20 % de tu caché por la intermediación, el pago seguro y el soporte. El resto te lo pagamos 7 días después del evento.",

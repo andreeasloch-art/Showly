@@ -71,6 +71,9 @@ export async function runDaily(): Promise<DailyResult> {
     }
   }
 
+  /* Belegsystem: Jahreszähler der Anbieter am 1.1. zurücksetzen */
+  await db.rpc("anbieter_jahreswechsel").then(undefined, () => null);
+
   const reminded = await remindOpenRequests().catch(() => 0);
   /* Erinnerung vor dem Event, Bewertungsanfrage danach, Rückgabe beim Verleih */
   const { eventMails } = await import("./notify.server");

@@ -30,7 +30,6 @@ export const Route = createFileRoute("/ueber-showly")({
 });
 
 const pct = Math.round(FEE_RATE * 100);
-const keep = 100 - pct;
 
 function cats(lang: Lang) {
   return CATS.filter((c) => c.id !== "all")
@@ -83,7 +82,7 @@ function copy(lang: Lang) {
           list: [
             "Registration is free. Before a profile goes live, the person behind it verifies their identity; one person can have one profile.",
             "Artists manage prices, packages and their availability calendar themselves.",
-            `Artists receive ${keep} % of the fee; Showly keeps a ${pct} % commission. The payout follows ${PAYOUT_DAYS} days after the event.`,
+            `Showly keeps a ${pct} % commission plus 19 % VAT on it; artists receive the rest. The payout follows ${PAYOUT_DAYS} days after the event.`,
             "Both businesses and private individuals can offer their services; the profile shows which applies.",
           ],
         },
@@ -157,7 +156,7 @@ function copy(lang: Lang) {
           list: [
             "El registro es gratuito. Antes de publicar el perfil, la persona verifica su identidad; cada persona puede tener un perfil.",
             "Los artistas gestionan sus precios, paquetes y su calendario de disponibilidad.",
-            `Los artistas reciben el ${keep} % del caché; Showly se queda una comisión del ${pct} %. El pago llega ${PAYOUT_DAYS} días después del evento.`,
+            `Showly se queda una comisión del ${pct} % más un 19 % de IVA sobre ella; los artistas reciben el resto. El pago llega ${PAYOUT_DAYS} días después del evento.`,
             "Pueden ofrecer sus servicios tanto empresas como particulares; el perfil indica cuál es el caso.",
           ],
         },
@@ -230,7 +229,7 @@ function copy(lang: Lang) {
         list: [
           "Die Registrierung ist kostenlos. Bevor ein Profil sichtbar wird, bestätigt die Person dahinter ihre Identität; eine Person hat ein Profil.",
           "Künstler pflegen Preise, Pakete und ihren Verfügbarkeitskalender selbst.",
-          `Künstler erhalten ${keep} % der Gage, Showly behält ${pct} % Provision. Ausgezahlt wird ${PAYOUT_DAYS} Tage nach dem Event.`,
+          `Showly behält ${pct} % Provision zzgl. 19 % Umsatzsteuer darauf, den Rest erhalten die Künstler. Ausgezahlt wird ${PAYOUT_DAYS} Tage nach dem Event.`,
           "Anbieten können gewerbliche und private Anbieter; im Profil steht, was zutrifft.",
         ],
       },

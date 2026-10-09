@@ -11,7 +11,6 @@ import { GradientText } from "@/components/showly/GradientText";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ArtistAutocomplete } from "@/components/showly/ArtistAutocomplete";
 import { DateField } from "@/components/showly/DateField";
-import { SpotlightBanner } from "@/components/showly/SpotlightBanner";
 import { CountUp } from "@/components/showly/ImageWall";
 import { ActOfWeek } from "@/components/showly/ActOfWeek";
 import { HeroReel } from "@/components/showly/HeroReel";
@@ -285,10 +284,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Der gebuchte Top Act der Woche. Erscheint nur, wenn für die Stadt
-          des Besuchers wirklich einer gebucht ist, und steht dann direkt
-          unter dem Kopfbereich, noch vor dem Raster. */}
-      <SpotlightBanner />
 
       <section className="home-more">
         <div className="home-how-inner">

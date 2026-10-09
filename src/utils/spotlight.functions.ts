@@ -1,12 +1,12 @@
 /* Top Act der Woche: Platz ganz oben auf der Startseite für eine Stadt und
- * Umgebung, 99 € je Woche (1 bis 4 Wochen). Je Stadt und Tag gibt es nur
- * einen Top Act; vor der Zahlung wird der Zeitraum 30 Minuten reserviert
- * (Migration 0022, lib/spotlight.server.ts). */
+ * Umgebung, 99 € je Woche (1 bis 4 Wochen). Je Stadt und Tag gibt es bis zu
+ * fünf Top Acts, die sich oben abwechseln; vor der Zahlung wird der Platz
+ * 30 Minuten reserviert (Migrationen 0022/0023, lib/spotlight.server.ts). */
 import { createServerFn } from "@tanstack/react-start";
 import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { StripeEnv } from "@/lib/stripe.server";
-import { SPOTLIGHT_PRICE, citySlug } from "@/showly/spotlight";
+import { SPOTLIGHT_PRICE, SPOTLIGHT_SLOTS, citySlug } from "@/showly/spotlight";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const todayBerlin = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
@@ -20,7 +20,7 @@ const addDays = (d: string, n: number) => {
 async function busyOf(slug: string) {
   const { data } = await adminClient()
     .from("spotlights")
-    .select("starts_on, ends_on, status, hold_until")
+    .select("owner, starts_on, ends_on, status, hold_until")
     .eq("city_slug", slug)
     .gte("ends_on", todayBerlin())
     .in("status", ["paid", "reserved"])
@@ -29,32 +29,51 @@ async function busyOf(slug: string) {
   return (data || []).filter((r) => r.status === "paid" || (r.hold_until && Date.parse(r.hold_until) > now));
 }
 
-/** Erster freier Tag ab `from`, an dem `days` Tage am Stück frei sind */
-function firstFree(busy: { starts_on: string; ends_on: string }[], from: string, days: number): string {
+/** Wie viele Top Acts laufen an diesem Tag schon? */
+const takenOn = (busy: { starts_on: string; ends_on: string }[], day: string) =>
+  busy.filter((b) => b.starts_on <= day && b.ends_on >= day).length;
+
+/** Erster Tag ab `from`, an dem `days` Tage am Stück noch ein Platz frei ist */
+function firstFree(
+  busy: { owner?: string; starts_on: string; ends_on: string }[],
+  from: string,
+  days: number,
+  owner?: string,
+): string {
   let start = from;
-  for (let guard = 0; guard < 200; guard++) {
-    const end = addDays(start, days - 1);
-    const hit = busy.find((b) => b.starts_on <= end && b.ends_on >= start);
-    if (!hit) return start;
-    start = addDays(hit.ends_on, 1);
+  for (let guard = 0; guard < 400; guard++) {
+    let full: string | null = null;
+    for (let i = 0; i < days && !full; i++) {
+      const d = addDays(start, i);
+      const own = !!owner && busy.some((b) => b.owner === owner && b.starts_on <= d && b.ends_on >= d);
+      if (own || takenOn(busy, d) >= SPOTLIGHT_SLOTS) full = d;
+    }
+    if (!full) return start;
+    start = addDays(full, 1);
   }
   return start;
 }
 
-/** Wie sieht es in einer Stadt aus? Läuft gerade ein Top Act, ab wann ist frei */
+/** Wie sieht es in einer Stadt aus? Wie viele Plätze sind heute frei, ab wann geht es */
 export const topActStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { city: string; weeks?: number }) => ({
     city: String(d.city || "").trim().slice(0, 80),
     weeks: Math.max(1, Math.min(4, Math.round(Number(d.weeks) || 1))),
   }))
-  .handler(async ({ data }): Promise<{ slug: string; nextFree: string; busyUntil: string | null } | { error: string }> => {
-    const slug = citySlug(data.city);
-    if (slug.length < 2) return { error: "Bitte eine Stadt angeben" };
-    const busy = await busyOf(slug);
-    const today = todayBerlin();
-    const cur = busy.find((b) => b.starts_on <= today && b.ends_on >= today);
-    return { slug, nextFree: firstFree(busy, today, data.weeks * 7), busyUntil: cur ? cur.ends_on : null };
-  });
+  .handler(
+    async ({ data }): Promise<{ slug: string; nextFree: string; freeToday: number; slots: number } | { error: string }> => {
+      const slug = citySlug(data.city);
+      if (slug.length < 2) return { error: "Bitte eine Stadt angeben" };
+      const busy = await busyOf(slug);
+      const today = todayBerlin();
+      return {
+        slug,
+        nextFree: firstFree(busy, today, data.weeks * 7),
+        freeToday: Math.max(0, SPOTLIGHT_SLOTS - takenOn(busy, today)),
+        slots: SPOTLIGHT_SLOTS,
+      };
+    },
+  );
 
 /** Laufende Top Acts aller Städte (für die Startseite) */
 export const activeTopActs = createServerFn({ method: "GET" }).handler(
@@ -120,7 +139,7 @@ export const topActCheckout = createServerFn({ method: "POST" })
       const today = todayBerlin();
       const days = data.weeks * 7;
       const busy = await busyOf(slug);
-      const start = data.startISO && data.startISO >= today ? data.startISO : firstFree(busy, today, days);
+      const start = data.startISO && data.startISO >= today ? data.startISO : firstFree(busy, today, days, ctx.user.id);
       const end = addDays(start, days - 1);
       const amount = SPOTLIGHT_PRICE * 100 * data.weeks;
       const { data: res, error } = await db.rpc("spotlight_reservieren", {
@@ -141,7 +160,8 @@ export const topActCheckout = createServerFn({ method: "POST" })
       });
       const r = res as { id?: number; error?: string } | null;
       if (error || !r) return { error: "Reservierung hat nicht geklappt" };
-      if (r.error || !r.id) return { error: "Dieser Zeitraum ist in deiner Stadt schon vergeben. Bitte einen späteren Start wählen." };
+      if (r.error === "doppelt") return { error: "Du hast in diesem Zeitraum in deiner Stadt schon einen Top-Platz." };
+      if (r.error || !r.id) return { error: "Alle fünf Plätze sind in diesem Zeitraum vergeben. Bitte einen späteren Start wählen." };
       try {
         const { createStripeClient } = await import("@/lib/stripe.server");
         const d = (x: string) => x.split("-").reverse().join(".");

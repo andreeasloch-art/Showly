@@ -9,7 +9,7 @@ import { Icon } from "@/showly/ui";
 import { Footer } from "@/components/showly/Footer";
 import { OG_IMAGE, SITE } from "@/showly/seo";
 import { setPending } from "@/showly/pending";
-import { SPOTLIGHT_PRICE, SPOTLIGHT_PRICE_ID, getSpotlightFor, daysLeft } from "@/showly/spotlight";
+import { SPOTLIGHT_PRICE, SPOTLIGHT_PRICE_ID, getSpotlightsFor, SPOTLIGHT_SLOTS, daysLeft } from "@/showly/spotlight";
 import { useViewerCity } from "@/showly/useViewerCity";
 import stageImg from "@/assets/spotlight-stage.jpg";
 
@@ -54,7 +54,7 @@ const COPY = {
     eyebrow: "Premium-Platzierung",
     h1a: "Top Act",
     h1b: "der Woche",
-    lead: `7 Tage ganz oben auf der Startseite – über allen Suchergebnissen. ${SPOTLIGHT_PRICE} € pro Woche, einmalig bezahlt.`,
+    lead: `7 Tage ganz oben auf der Startseite. Je Stadt gibt es 5 Plätze, die sich alle paar Sekunden abwechseln. ${SPOTLIGHT_PRICE} € pro Woche, einmalig bezahlt.`,
     p1: "Ganz oben auf der Startseite",
     p2: "Eigenes Bild, Name, Ort und Slogan",
     p3: "Direkter Link zu deinem Profil",
@@ -70,15 +70,15 @@ const COPY = {
     err: "Bitte Künstlername, Ort und Slogan ausfüllen.",
     title: "Top Act der Woche (7 Tage)",
     scope: (c: string) => `Du buchst den Top-Platz nur für ${c} und Umgebung – ${SPOTLIGHT_PRICE} € pro Woche.`,
-    scopeAny: "Jede Stadt der Welt hat ihren eigenen Top Act der Woche. Du bezahlst nur für deine Stadt und Umgebung.",
+    scopeAny: "Jede Stadt hat 5 Plätze für Top Acts der Woche. Du bezahlst nur für deine Stadt und Umgebung.",
     taken: (c: string, n: number) =>
-      `In ${c} läuft aktuell schon ein Top Act (noch ${n} Tage). Danach ist der Platz wieder frei.`,
+      `In ${c} sind gerade alle 5 Plätze belegt (der nächste wird in ${n} Tagen frei).`,
   },
   en: {
     eyebrow: "Premium placement",
     h1a: "Top act",
     h1b: "of the week",
-    lead: `7 days at the very top of the homepage – above all search results. €${SPOTLIGHT_PRICE} per week, one payment.`,
+    lead: `7 days at the very top of the homepage. Each city has 5 spots that take turns every few seconds. €${SPOTLIGHT_PRICE} per week, one payment.`,
     p1: "Top of the homepage",
     p2: "Your image, name, city and slogan",
     p3: "Direct link to your profile",
@@ -94,15 +94,15 @@ const COPY = {
     err: "Please fill in artist name, city and slogan.",
     title: "Top act of the week (7 days)",
     scope: (c: string) => `You are booking the top spot for ${c} and nearby only – €${SPOTLIGHT_PRICE} per week.`,
-    scopeAny: "Every city in the world has its own top act of the week. You only pay for your city and its area.",
+    scopeAny: "Every city has 5 top act spots per week. You only pay for your city and its area.",
     taken: (c: string, n: number) =>
-      `${c} already has a running top act (${n} days left). The spot frees up afterwards.`,
+      `All 5 spots in ${c} are taken right now (the next one frees up in ${n} days).`,
   },
   es: {
     eyebrow: "Colocación premium",
     h1a: "Top act",
     h1b: "de la semana",
-    lead: `7 días en lo más alto de la portada, por encima de los resultados. ${SPOTLIGHT_PRICE} € por semana, un solo pago.`,
+    lead: `7 días en lo más alto de la portada. Cada ciudad tiene 5 lugares que se turnan cada pocos segundos. ${SPOTLIGHT_PRICE} € por semana, un solo pago.`,
     p1: "Arriba del todo en la portada",
     p2: "Tu imagen, nombre, ciudad y eslogan",
     p3: "Enlace directo a tu perfil",
@@ -118,9 +118,9 @@ const COPY = {
     err: "Rellena nombre, ciudad y eslogan.",
     title: "Top act de la semana (7 días)",
     scope: (c: string) => `Reservas el top act solo para ${c} y alrededores: ${SPOTLIGHT_PRICE} € por semana.`,
-    scopeAny: "Cada ciudad del mundo tiene su propio top act de la semana. Solo pagas por tu ciudad y su zona.",
+    scopeAny: "Cada ciudad tiene 5 lugares de top act por semana. Solo pagas por tu ciudad y su zona.",
     taken: (c: string, n: number) =>
-      `${c} ya tiene un top act activo (quedan ${n} días). Después el lugar queda libre.`,
+      `En ${c} están ocupados los 5 lugares (el próximo queda libre en ${n} días).`,
   },
 } as const;
 
@@ -132,7 +132,8 @@ const W = {
     total: (eur: number) => `Gesamt ${eur} €`,
     pay: (eur: number) => `Jetzt buchen und bezahlen · ${eur} €`,
     free: (d: string) => `Frei ab ${d}`,
-    busy: (d: string) => `Gerade belegt bis ${d}. Du kommst direkt danach dran.`,
+    left: (n: number) => (n === 1 ? "Heute noch 1 von 5 Plätzen frei." : `Heute noch ${n} von 5 Plätzen frei.`),
+    full: "Heute sind alle 5 Plätze belegt.",
     fromProfile: "Name, Sparte, Bild und Link kommen aus deinem Künstlerprofil.",
     login: "Den Top-Platz buchen Künstler mit ihrem Konto. Bitte melde dich an.",
     loginBtn: "Anmelden",
@@ -146,7 +147,8 @@ const W = {
     total: (eur: number) => `Total €${eur}`,
     pay: (eur: number) => `Book and pay now · €${eur}`,
     free: (d: string) => `Free from ${d}`,
-    busy: (d: string) => `Taken until ${d}. You are next right after.`,
+    left: (n: number) => (n === 1 ? "1 of 5 spots still free today." : `${n} of 5 spots still free today.`),
+    full: "All 5 spots are taken today.",
     fromProfile: "Name, category, image and link come from your artist profile.",
     login: "Artists book the top spot with their account. Please sign in.",
     loginBtn: "Sign in",
@@ -160,7 +162,8 @@ const W = {
     total: (eur: number) => `Total ${eur} €`,
     pay: (eur: number) => `Reservar y pagar · ${eur} €`,
     free: (d: string) => `Libre desde ${d}`,
-    busy: (d: string) => `Ocupado hasta ${d}. Vas justo después.`,
+    left: (n: number) => (n === 1 ? "Hoy queda 1 de 5 lugares libre." : `Hoy quedan ${n} de 5 lugares libres.`),
+    full: "Hoy están ocupados los 5 lugares.",
     fromProfile: "Nombre, categoría, imagen y enlace salen de tu perfil de artista.",
     login: "Los artistas reservan el top act con su cuenta. Inicia sesión.",
     loginBtn: "Iniciar sesión",
@@ -182,7 +185,7 @@ function TopActPage() {
   const cloud = isBackendConfigured();
   const loggedIn = !!session?.backend;
   const [weeks, setWeeks] = useState(1);
-  const [status, setStatus] = useState<{ nextFree: string; busyUntil: string | null } | null>(null);
+  const [status, setStatus] = useState<{ nextFree: string; freeToday: number } | null>(null);
   const [pay, setPay] = useState<{ clientSecret: string; startsOn: string; endsOn: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<string | null>(null);
@@ -208,7 +211,10 @@ function TopActPage() {
     setF((x) => ({ ...x, city: myCity }));
   }
 
-  const running = f.city.trim() ? getSpotlightFor(f.city.trim()) : null;
+  /* Ohne Datenbank: belegte Plätze aus diesem Browser */
+  const inCity = f.city.trim() ? getSpotlightsFor(f.city.trim()) : [];
+  const running =
+    inCity.length >= SPOTLIGHT_SLOTS ? inCity.reduce((a, b) => (a.until <= b.until ? a : b)) : null;
 
   /* Freier Zeitraum in der gewählten Stadt */
   useEffect(() => {
@@ -382,8 +388,8 @@ function TopActPage() {
               {f.city.trim() ? T.scope(f.city.trim()) : T.scopeAny}
             </p>
             {cloud && status ? (
-              <p className={status.busyUntil ? "topact-taken" : "topact-free"}>
-                {status.busyUntil ? X.busy(dmy(status.busyUntil)) + " " : ""}
+              <p className={status.freeToday ? "topact-free" : "topact-taken"}>
+                {(status.freeToday ? X.left(status.freeToday) : X.full) + " "}
                 {X.free(dmy(status.nextFree))}
               </p>
             ) : (

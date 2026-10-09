@@ -41,7 +41,7 @@ const COPY = {
     badIban: "Die IBAN stimmt nicht. Bitte prüf sie noch einmal.",
     needHolder: "Bitte gib den Kontoinhaber an.",
     listH: "Deine Auszahlungen",
-    startFree: (d: string) => `Startphase: Bis ${d} zahlst du keine Provision. Für alle Buchungen bis dahin bekommst du deine volle Gage.`,
+    startFree: (d: string) => `Startphase: Bis ${d} zahlst du keine Provision. Für alle Aufträge bis dahin bekommst du den vollen Betrag.`,
     none: "Noch keine Auszahlungen. Sie erscheinen hier nach deiner ersten Buchung.",
     on: (d: string) => `Auszahlung am ${d}`,
     waitBank: "wartet auf Kontodaten",
@@ -74,7 +74,7 @@ const COPY = {
     badIban: "The IBAN isn't valid. Please check it again.",
     needHolder: "Please enter the account holder.",
     listH: "Your payouts",
-    startFree: (d: string) => `Start phase: no commission until ${d}. For every booking until then you get your full fee.`,
+    startFree: (d: string) => `Start phase: no commission until ${d}. For every order until then you get the full amount.`,
     none: "No payouts yet. They show up here after your first booking.",
     on: (d: string) => `Payout on ${d}`,
     waitBank: "waiting for account details",
@@ -107,7 +107,7 @@ const COPY = {
     badIban: "El IBAN no es válido. Revísalo de nuevo.",
     needHolder: "Indica el titular de la cuenta.",
     listH: "Tus pagos",
-    startFree: (d: string) => `Fase inicial: sin comisión hasta el ${d}. Por cada reserva hasta entonces cobras tu caché completo.`,
+    startFree: (d: string) => `Fase inicial: sin comisión hasta el ${d}. Por cada pedido hasta entonces cobras el importe completo.`,
     none: "Aún no hay pagos. Aparecerán aquí tras tu primera reserva.",
     on: (d: string) => `Pago el ${d}`,
     waitBank: "esperando datos bancarios",
@@ -306,7 +306,7 @@ export function PayoutPanel({ artistId }: { artistId?: number | undefined }) {
   /* Startphase: die ersten 3 Monate nach der Anmeldung ohne Provision */
   const [freeUntil, setFreeUntil] = useState<string | null>(null);
   useEffect(() => {
-    if (!cloud || artistId === undefined) return;
+    if (!cloud) return;
     void import("@/utils/startphase.functions")
       .then(({ myStartPhase }) => myStartPhase())
       .then((r) => setFreeUntil(r.until))

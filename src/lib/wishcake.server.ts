@@ -88,7 +88,14 @@ export async function planWishPayout(db: Db, r: SweetRequestRow): Promise<void> 
   const { FEE_RATE } = await import("@/showly/pricing");
   const { orderPayoutDay } = await import("@/showly/policies");
   const { reserveFor } = await import("@/showly/cloudRules");
-  const rate = pickRate(await loadFeeRules(db), { kind: "baker", providerId: r.baker_ref }, FEE_RATE);
+  /* Startphase: in den ersten drei Monaten keine Provision (AGB § 21 Abs. 1) */
+  const { inStartPhase } = await import("@/showly/feeRules");
+  const { data: prov } = r.baker_ref
+    ? await db.from("providers").select("created_at").eq("id", r.baker_ref).maybeSingle()
+    : { data: null };
+  const rate = inStartPhase(prov?.created_at)
+    ? 0
+    : pickRate(await loadFeeRules(db), { kind: "baker", providerId: r.baker_ref }, FEE_RATE);
   const fee = Math.round(gross * rate);
   const { provisionFelder } = await import("@/showly/cloudRules");
   const pf = provisionFelder(gross, fee);

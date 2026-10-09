@@ -4,7 +4,6 @@ import {
   clearSpotlight,
   citySlug,
   daysLeft,
-  getSpotlightFor,
   listClickStats,
   listSpotlightsOf,
   subscribeSpotlights,
@@ -353,8 +352,10 @@ function Portal() {
   }, [profileCity, viewer.city, targetCity]);
 
   const refreshSpots = useCallback(() => {
-    setSpot(getSpotlightFor(targetCity || profileCity));
     const own = listSpotlightsOf(session?.email ?? "", `/kuenstler/${pid}`);
+    /* Bis zu fünf Top Acts je Stadt: hier zählt nur der eigene */
+    const here = citySlug(targetCity || profileCity);
+    setSpot(own.find((s) => citySlug(s.city) === here) ?? null);
     setMySpots(own);
     const keys = new Set(own.map((s) => citySlug(s.city)));
     setStats(listClickStats().filter((c) => keys.has(citySlug(c.city))));
@@ -600,7 +601,7 @@ function Portal() {
                     <button
                       className="action-btn"
                       onClick={() => {
-                        clearSpotlight(s.city);
+                        clearSpotlight(s.city, s.name);
                         refreshSpots();
                       }}
                     >
@@ -678,7 +679,7 @@ function Portal() {
                     <button
                       className="action-btn"
                       onClick={() => {
-                        clearSpotlight(spot?.city ?? "");
+                        clearSpotlight(spot?.city ?? "", spot?.name);
                         refreshSpots();
                       }}
                     >

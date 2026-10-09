@@ -1,10 +1,20 @@
-import { Link } from "@tanstack/react-router";
-import { artistParams } from "@/showly/slugs";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { artistParams, artistPath } from "@/showly/slugs";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ARTISTS, type Artist } from "@/showly/data";
 import { useShowly } from "@/showly/store";
 import { CatIcon, Icon, bgOf } from "@/showly/ui";
+import {
+  getSpotlightsNear,
+  loadCloudSpotlights,
+  subscribeSpotlights,
+  trackSpotlightClick,
+  SPOTLIGHT_SLOTS,
+  type Spotlight,
+} from "@/showly/spotlight";
+import { useViewerCity } from "@/showly/useViewerCity";
+import stageImg from "@/assets/spotlight-stage.jpg";
 
 /* Act der Woche im Kopfbereich der Startseite.
  *
@@ -18,9 +28,10 @@ import { CatIcon, Icon, bgOf } from "@/showly/ui";
  * damit Server und Browser dieselben Acts zeigen. Planer sind keine Acts und
  * kommen nicht in die Auswahl.
  *
- * Die bezahlte Platzierung "Top Act der Woche" ist davon getrennt: sie steht,
- * wenn gebucht, als eigenes Band direkt unter dem Kopfbereich und ist dort
- * als bezahlt gekennzeichnet.
+ * Die gebuchten "Top Acts der Woche" (bis zu fünf je Stadt, 99 € je Woche)
+ * stehen hier ganz vorn: zuerst die der Stadt des Besuchers, dann aus der
+ * Umgebung. Sie sind als bezahlt gekennzeichnet. Freie Plätze füllt die
+ * Wochenauswahl auf, so laufen immer fünf Profile durch.
  *
  * Mit der Maus über der Karte oder mit dem Fokus darin hält der Wechsel an.
  * Wer weniger Bewegung eingestellt hat, sieht kein automatisches Weiterrücken;
@@ -29,23 +40,32 @@ import { CatIcon, Icon, bgOf } from "@/showly/ui";
 const COPY = {
   de: {
     label: "Act der Woche",
+    top: "Top Acts der Woche",
+    paid: "Top Act · Anzeige",
     of: (i: number, n: number) => `Profil ${i} von ${n}`,
     view: "Profil ansehen",
   },
   en: {
     label: "Act of the week",
+    top: "Top acts of the week",
+    paid: "Top act · Ad",
     of: (i: number, n: number) => `Profile ${i} of ${n}`,
     view: "View profile",
   },
   es: {
     label: "Artista de la semana",
+    top: "Top acts de la semana",
+    paid: "Top act · Anuncio",
     of: (i: number, n: number) => `Perfil ${i} de ${n}`,
     view: "Ver perfil",
   },
 } as const;
 
 const SHOW_MS = 5000;
-const PICKS = 5;
+const PICKS = SPOTLIGHT_SLOTS;
+
+/** Eine Karte im Wechsel: gebuchter Top Act oder Profil aus der Wochenauswahl */
+type Slide = { key: string; artist: Artist | null; spot: Spotlight | null };
 
 function picksForWeek(): Artist[] {
   const pool = ARTISTS.filter((a) => a["kind"] !== "planner").sort((x, y) => x.id - y.id);
@@ -58,8 +78,40 @@ function picksForWeek(): Artist[] {
 export function ActOfWeek() {
   const { t, L, fmt, num, lang, catLabel } = useShowly();
   const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
-  const picks = useMemo(picksForWeek, []);
+  const weekly = useMemo(picksForWeek, []);
+  const { city, country } = useViewerCity();
+  const [spots, setSpots] = useState<Spotlight[]>([]);
+
+  /* Gebuchte Top Acts erst im Browser laden, damit Server und Browser
+     zunächst dasselbe zeigen */
+  useEffect(() => {
+    void loadCloudSpotlights();
+    const load = () => setSpots(getSpotlightsNear(city, country).map((h) => h.spot));
+    load();
+    return subscribeSpotlights(load);
+  }, [city, country]);
+
+  const picks = useMemo<Slide[]>(() => {
+    const paid: Slide[] = spots.map((sp, i) => ({
+      key: "top-" + i + "-" + sp.name,
+      spot: sp,
+      artist: ARTISTS.find((a) => sp.link && artistPath(a) === sp.link) ?? null,
+    }));
+    const taken = new Set(paid.map((p) => p.artist?.id));
+    const fill: Slide[] = weekly
+      .filter((a) => !taken.has(a.id))
+      .map((a) => ({ key: "a-" + a.id, artist: a, spot: null }));
+    return [...paid, ...fill].slice(0, PICKS);
+  }, [spots, weekly]);
   const n = picks.length;
+  const hasPaid = spots.length > 0;
+
+  /* Neue Liste: von vorn beginnen */
+  useEffect(() => {
+    setCur(0);
+    setPrev(null);
+    elapsed.current = 0;
+  }, [hasPaid, spots.length]);
 
   const [cur, setCur] = useState(0);
   const [prev, setPrev] = useState<number | null>(null);
@@ -111,12 +163,12 @@ export function ActOfWeek() {
     >
       <div className="aotw-head">
         <span className="aotw-label">
-          <Icon name="trophy" /> {C.label}
+          <Icon name="trophy" /> {hasPaid ? C.top : C.label}
         </span>
         <div className="aotw-bars">
-          {picks.map((a, i) => (
+          {picks.map((p, i) => (
             <button
-              key={a.id}
+              key={p.key}
               type="button"
               className={"aotw-bar" + (i < cur ? " done" : "") + (i === cur ? " on" : "")}
               onClick={() => go(i)}
@@ -131,13 +183,16 @@ export function ActOfWeek() {
       </div>
 
       <div className="aotw-stage">
-        {picks.map((a, i) => {
+        {picks.map((p, i) => {
           /* 0 = im Bild, 1 = nach unten hinaus, -1 = wartet oben */
           const slot = i === cur ? 0 : i === prev ? 1 : -1;
+          const a = p.artist;
+          if (!a) return p.spot ? <SpotCard key={p.key} spot={p.spot} slot={slot} /> : null;
           const hasPackages = (a["packages"] || []).length > 0;
           return (
             <Link
-              key={a.id}
+              key={p.key}
+              onClick={() => p.spot && trackSpotlightClick(p.spot.city, p.spot.name)}
               to="/kuenstler/$stadt/$kategorie/$name"
               params={artistParams(a)}
               className={"aotw-card" + (slot === -1 ? " wait" : "")}
@@ -149,8 +204,13 @@ export function ActOfWeek() {
                 <span className="aotw-chip">
                   <CatIcon id={a.cat} /> {catLabel(a.cat)}
                 </span>
+                {p.spot && (
+                  <span className="aotw-chip gold">
+                    <Icon name="trophy" /> {C.paid}
+                  </span>
+                )}
                 {a.demo && <DemoBadge className="on-card" />}
-                {a.superhost && (
+                {!p.spot && a.superhost && (
                   <span className="aotw-chip gold">
                     <Icon name="trophy" /> {t("card.superhost")}
                   </span>
@@ -179,7 +239,7 @@ export function ActOfWeek() {
                     </>
                   )}
                 </span>
-                <span className="aotw-desc">{String(L(a.desc))}</span>
+                <span className="aotw-desc">{p.spot?.tagline || String(L(a.desc))}</span>
                 <span className="aotw-foot">
                   <span className="aotw-price">
                     {hasPackages && <small>{t("pkg.from")} </small>}
@@ -196,5 +256,65 @@ export function ActOfWeek() {
         })}
       </div>
     </div>
+  );
+}
+
+/** Gebuchter Top Act ohne passendes Profil in der Auswahl: Daten aus der Buchung */
+function SpotCard({ spot, slot }: { spot: Spotlight; slot: number }) {
+  const { lang, catLabel } = useShowly();
+  const C = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
+  const navigate = useNavigate();
+  const external = !!spot.link?.startsWith("http");
+  const catName = spot.cat ? String(catLabel(spot.cat) || spot.cat) : "";
+  return (
+    <a
+      href={spot.link || "#"}
+      className={"aotw-card" + (slot === -1 ? " wait" : "")}
+      style={{ ["--slot" as string]: slot }}
+      tabIndex={slot === 0 ? 0 : -1}
+      aria-hidden={slot !== 0}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+      onClick={(e) => {
+        if (!spot.link) return e.preventDefault();
+        trackSpotlightClick(spot.city, spot.name);
+        if (external) return;
+        e.preventDefault();
+        navigate({ to: spot.link as never });
+      }}
+    >
+      <span
+        className="aotw-img"
+        style={{
+          backgroundImage: `url("${spot.image || stageImg}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
+      >
+        {catName && (
+          <span className="aotw-chip">
+            <CatIcon id={spot.cat} /> {catName}
+          </span>
+        )}
+        <span className="aotw-chip gold">
+          <Icon name="trophy" /> {C.paid}
+        </span>
+      </span>
+      <span className="aotw-body">
+        <span className="aotw-row">
+          <b className="aotw-name">{spot.name}</b>
+        </span>
+        <span className="aotw-meta">
+          <Icon name="pin" /> {spot.city}
+        </span>
+        {spot.tagline && <span className="aotw-desc">{spot.tagline}</span>}
+        <span className="aotw-foot">
+          <span />
+          <span className="aotw-go">
+            {C.view} <Icon name="arrow" />
+          </span>
+        </span>
+      </span>
+    </a>
   );
 }

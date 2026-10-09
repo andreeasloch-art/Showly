@@ -1,5 +1,6 @@
-/* "Top Act der Woche" – bezahlte Platzierung pro Stadt (7 Tage).
-   Jede Stadt der Welt hat ihren eigenen Top Act; bezahlt wird nur für die
+/* "Top Act der Woche" – bezahlte Platzierung pro Stadt (7 Tage je Woche).
+   Jede Stadt der Welt hat bis zu fünf Top Acts gleichzeitig; sie wechseln
+   sich oben auf der Startseite im Kopfbereich ab. Bezahlt wird nur für die
    eigene Stadt und deren Umgebung (gleiches Land / gleiche Region). */
 
 import { allowed } from "./consent";
@@ -8,6 +9,8 @@ import { countryForCity } from "./country";
 export const SPOTLIGHT_PRICE = 99;
 export const SPOTLIGHT_PRICE_ID = "spotlight_week_99";
 export const SPOTLIGHT_DAYS = 7;
+/** Plätze je Stadt und Tag */
+export const SPOTLIGHT_SLOTS = 5;
 
 export interface SpotlightInput {
   /** gebuchte Wochen (1 bis 4), Standard 1 */
@@ -38,59 +41,53 @@ export function citySlug(city: string): string {
     .replace(/^-|-$/g, "");
 }
 
-type Store = Record<string, Spotlight>;
+type Store = Spotlight[];
 
-/* Gebuchte Top Acts aus der Datenbank (für alle sichtbar). Sie gehen den
-   Einträgen aus diesem Browser vor. */
-let cloud: Store = {};
+/* Gebuchte Top Acts aus der Datenbank (für alle sichtbar). Sie stehen vor
+   den Einträgen aus diesem Browser. */
+let cloud: Store = [];
 export function setCloudSpotlights(list: (SpotlightInput & { until: number })[]) {
-  cloud = {};
-  for (const s of list) cloud[citySlug(s.city)] = s;
+  cloud = [...list];
   if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENT));
 }
 
-function read(): Store {
-  if (typeof localStorage === "undefined") return {};
-  let store: Store = {};
+/** Nur die Einträge aus diesem Browser (ohne Datenbank) */
+function readOwn(): Store {
+  if (typeof localStorage === "undefined") return [];
+  let store: Store = [];
   try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) store = (JSON.parse(raw) as Store) ?? {};
+    const raw = JSON.parse(localStorage.getItem(KEY) || "[]") as Store | Record<string, Spotlight>;
+    /* Früher eine Platzierung je Stadt (Objekt), jetzt eine Liste */
+    store = Array.isArray(raw) ? raw : Object.values(raw ?? {});
   } catch {
-    store = {};
+    store = [];
   }
   // Alte Einzel-Platzierung übernehmen
   try {
     const legacy = localStorage.getItem(LEGACY_KEY);
     if (legacy) {
       const s = JSON.parse(legacy) as Spotlight;
-      if (s?.city && typeof s.until === "number") {
-        const k = citySlug(s.city);
-        if (!store[k]) store[k] = s;
-      }
+      if (s?.city && typeof s.until === "number") store.push(s);
       localStorage.removeItem(LEGACY_KEY);
       write(store);
     }
   } catch {
     /* ignorieren */
   }
-  // Abgelaufene entfernen
   const now = Date.now();
-  let changed = false;
-  for (const k of Object.keys(store)) {
-    if (!store[k] || store[k]!.until < now) {
-      delete store[k];
-      changed = true;
-    }
-  }
-  if (changed) write(store);
-  return { ...store, ...Object.fromEntries(Object.entries(cloud).filter(([, v]) => v.until >= now)) };
+  const live = store.filter((x) => x && x.city && x.until >= now);
+  if (live.length !== store.length) write(live);
+  return live;
+}
+
+function read(): Store {
+  const now = Date.now();
+  return [...cloud.filter((v) => v.until >= now), ...readOwn()];
 }
 
 function write(store: Store) {
   try {
-    /* Einträge aus der Datenbank nicht in den Browser-Speicher schreiben */
-    const own = Object.fromEntries(Object.entries(store).filter(([k, v]) => cloud[k] !== v));
-    localStorage.setItem(KEY, JSON.stringify(own));
+    localStorage.setItem(KEY, JSON.stringify(store));
   } catch {
     /* Storage nicht verfügbar */
   }
@@ -179,7 +176,7 @@ export function listClickStats(): { city: string; act: string; clicks: number; l
 
 /** Alle aktiven Platzierungen (weltweit). */
 export function listSpotlights(): Spotlight[] {
-  return Object.values(read()).sort((a, b) => a.city.localeCompare(b.city));
+  return read().sort((a, b) => a.city.localeCompare(b.city));
 }
 
 /** Eigene Platzierungen (alle Städte) eines Künstlers – per E-Mail oder Profil-Link. */
@@ -193,37 +190,67 @@ export function listSpotlightsOf(email?: string | null, link?: string | null): S
   );
 }
 
-/** Aktive Platzierung genau für diese Stadt. */
-export function getSpotlightFor(city: string): Spotlight | null {
-  if (!city) return null;
-  return read()[citySlug(city)] ?? null;
+/** Ein Act steht in einer Stadt nur einmal, auch wenn er doppelt gespeichert ist */
+function uniqueActs(list: Spotlight[]): Spotlight[] {
+  const seen = new Set<string>();
+  return list.filter((s) => {
+    const k = citySlug(s.city) + "::" + (s.link || citySlug(s.name));
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
 }
 
-/** Ist für diese Stadt die Woche schon vergeben? */
+/** Alle aktiven Top Acts genau dieser Stadt (höchstens fünf). */
+export function getSpotlightsFor(city: string): Spotlight[] {
+  if (!city) return [];
+  const k = citySlug(city);
+  return uniqueActs(read().filter((s) => citySlug(s.city) === k)).slice(0, SPOTLIGHT_SLOTS);
+}
+
+/** Erste aktive Platzierung dieser Stadt. */
+export function getSpotlightFor(city: string): Spotlight | null {
+  return getSpotlightsFor(city)[0] ?? null;
+}
+
+/** Freie Plätze in dieser Stadt (0 bis 5). */
+export function freeSlots(city: string): number {
+  return Math.max(0, SPOTLIGHT_SLOTS - getSpotlightsFor(city).length);
+}
+
+/** Sind in dieser Stadt alle fünf Plätze vergeben? */
 export function isCityTaken(city: string): boolean {
-  return !!getSpotlightFor(city);
+  return freeSlots(city) === 0;
 }
 
 /**
- * Platzierung für Stadt + Umgebung.
- * 1. exakt die Stadt, 2. eine Stadt im selben Land (Umgebung).
+ * Top Acts für Stadt + Umgebung, höchstens fünf.
+ * Zuerst die der Stadt selbst, dann aufgefüllt aus demselben Land.
  */
+export function getSpotlightsNear(
+  city: string | null | undefined,
+  country?: string | null,
+): { spot: Spotlight; exact: boolean }[] {
+  const all = read();
+  const k = city ? citySlug(city) : "";
+  const exact = k ? uniqueActs(all.filter((s) => citySlug(s.city) === k)) : [];
+  const out = exact.map((spot) => ({ spot, exact: true }));
+  const cc = (country || countryForCity(city || "") || "").toLowerCase();
+  if (cc && out.length < SPOTLIGHT_SLOTS) {
+    const near = uniqueActs(
+      all.filter((s) => citySlug(s.city) !== k && (countryForCity(s.city) || "").toLowerCase() === cc),
+    );
+    for (const spot of near) out.push({ spot, exact: false });
+  }
+  return out.slice(0, SPOTLIGHT_SLOTS);
+}
+
+/** Erster Top Act für Stadt + Umgebung. */
 export function getSpotlightNear(
   city: string | null | undefined,
   country?: string | null,
 ): { spot: Spotlight; exact: boolean } | null {
-  const store = read();
-  if (city) {
-    const hit = store[citySlug(city)];
-    if (hit) return { spot: hit, exact: true };
-  }
-  const cc = (country || countryForCity(city || "") || "").toLowerCase();
-  if (cc) {
-    for (const s of Object.values(store)) {
-      if ((countryForCity(s.city) || "").toLowerCase() === cc) return { spot: s, exact: false };
-    }
-  }
-  return null;
+  return getSpotlightsNear(city, country)[0] ?? null;
 }
 
 /** Kompatibel: irgendeine aktive Platzierung (erste). */
@@ -233,17 +260,18 @@ export function getSpotlight(): Spotlight | null {
 
 export function activateSpotlight(input: SpotlightInput): Spotlight {
   const s: Spotlight = { ...input, until: Date.now() + SPOTLIGHT_DAYS * Math.max(1, Math.min(4, input.weeks ?? 1)) * 864e5 };
-  const store = read();
-  store[citySlug(input.city)] = s;
-  write(store);
+  const k = citySlug(input.city);
+  /* Derselbe Act in derselben Stadt ersetzt seinen alten Eintrag */
+  const own = readOwn().filter((x) => !(citySlug(x.city) === k && citySlug(x.name) === citySlug(input.name)));
+  write([...own, s]);
   return s;
 }
 
-export function clearSpotlight(city?: string) {
-  const store = read();
-  if (city) delete store[citySlug(city)];
-  else for (const k of Object.keys(store)) delete store[k];
-  write(store);
+/** Platzierungen aus diesem Browser löschen: für eine Stadt (optional nur einen Act) oder alle. */
+export function clearSpotlight(city?: string, name?: string) {
+  if (!city) return write([]);
+  const k = citySlug(city);
+  write(readOwn().filter((x) => !(citySlug(x.city) === k && (!name || citySlug(x.name) === citySlug(name)))));
 }
 
 export function daysLeft(s: Spotlight): number {

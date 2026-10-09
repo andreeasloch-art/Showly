@@ -239,10 +239,23 @@ export async function recordCartCore(
     })
     .filter((x): x is NonNullable<typeof x> => !!x);
 
+  /* Startphase: Torten-, Deko- und Kostümanbieter zahlen in den ersten drei
+     Monaten keine Provision (AGB § 21 Abs. 1), wie die Künstler */
+  const { inStartPhase } = await import("@/showly/feeRules");
+  const provIds = [...new Set([...bakerRefs, ...sh.map((l) => l.providerId).filter((x): x is number => typeof x === "number")])];
+  const provSince = new Map<number, string>();
+  if (provIds.length) {
+    const { data: rows } = await admin.from("providers").select("id, created_at").in("id", provIds);
+    for (const r of rows || []) provSince.set(r.id, r.created_at);
+  }
+
   const drafts = splitIntoSubOrders({
     paid,
     feeRate: FEE_RATE,
-    rateFor: (kind, providerId) => pickRate(feeRules, { kind, providerId }, FEE_RATE),
+    rateFor: (kind, providerId) =>
+      providerId != null && inStartPhase(provSince.get(providerId))
+        ? 0
+        : pickRate(feeRules, { kind, providerId }, FEE_RATE),
     bookings: bk.map((x) => ({
       artistId: x.t.artist_id ?? x.b.artistId,
       owner: x.t.artist_id ? (artistOwner.get(x.t.artist_id) ?? null) : null,

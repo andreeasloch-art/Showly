@@ -42,7 +42,7 @@ export function pickRate(
   return fallback;
 }
 
-/* Startphase: Künstler zahlen in den ersten 3 Monaten nach der Anmeldung
+/* Startphase: alle Anbieter (Künstler, Konditoreien, Deko- und Kostümanbieter) zahlen in den ersten 3 Monaten nach der Anmeldung
    keine Provision (AGB § 21 Abs. 1a). Maßgeblich ist der Tag der Buchung,
    nicht der Auftrittstag. */
 export const START_FREE_MONTHS = 3;

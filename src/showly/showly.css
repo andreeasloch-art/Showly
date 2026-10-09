@@ -6648,3 +6648,13 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .topact-ok{font-size:15px;line-height:1.55;font-weight:600;color:#127a4a}
 .topact-checkout{background:#fff;border-radius:14px;overflow:hidden;min-height:320px}
 .topact-back{background:none;border:none;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;margin-top:8px}
+
+/* Vorspann: Menüleiste unten (und ihr Glaseffekt, der auf iOS durch Ebenen
+   hindurch zeichnen kann) ganz ausblenden, solange der Vorspann zu sehen
+   ist; danach weich einblenden. :has greift schon vor dem Laden des
+   JavaScripts, die Klasse splash-open als Rückfall für ältere Browser. */
+html body:has(.splash) .tabbar,
+html.splash-open body .tabbar{opacity:0!important;visibility:hidden!important;pointer-events:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+html body .tabbar{transition:opacity .4s ease,visibility 0s linear}
+.startphase-note{display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border-radius:14px;background:#ecfbf3;border:1px solid #bfe9d2;color:#0f5f39;font-size:14px;font-weight:600;line-height:1.45}
+.startphase-note svg{flex:none;width:18px;height:18px;margin-top:1px}

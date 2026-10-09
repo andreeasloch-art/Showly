@@ -41,6 +41,7 @@ const COPY = {
     badIban: "Die IBAN stimmt nicht. Bitte prüf sie noch einmal.",
     needHolder: "Bitte gib den Kontoinhaber an.",
     listH: "Deine Auszahlungen",
+    startFree: (d: string) => `Startphase: Bis ${d} zahlst du keine Provision. Für alle Buchungen bis dahin bekommst du deine volle Gage.`,
     none: "Noch keine Auszahlungen. Sie erscheinen hier nach deiner ersten Buchung.",
     on: (d: string) => `Auszahlung am ${d}`,
     waitBank: "wartet auf Kontodaten",
@@ -73,6 +74,7 @@ const COPY = {
     badIban: "The IBAN isn't valid. Please check it again.",
     needHolder: "Please enter the account holder.",
     listH: "Your payouts",
+    startFree: (d: string) => `Start phase: no commission until ${d}. For every booking until then you get your full fee.`,
     none: "No payouts yet. They show up here after your first booking.",
     on: (d: string) => `Payout on ${d}`,
     waitBank: "waiting for account details",
@@ -105,6 +107,7 @@ const COPY = {
     badIban: "El IBAN no es válido. Revísalo de nuevo.",
     needHolder: "Indica el titular de la cuenta.",
     listH: "Tus pagos",
+    startFree: (d: string) => `Fase inicial: sin comisión hasta el ${d}. Por cada reserva hasta entonces cobras tu caché completo.`,
     none: "Aún no hay pagos. Aparecerán aquí tras tu primera reserva.",
     on: (d: string) => `Pago el ${d}`,
     waitBank: "esperando datos bancarios",
@@ -300,8 +303,23 @@ export function PayoutPanel({ artistId }: { artistId?: number | undefined }) {
   const today = new Date().toISOString().slice(0, 10);
   const due = (p: Payout) => p.payoutOn || payoutDate(p.dateISO);
 
+  /* Startphase: die ersten 3 Monate nach der Anmeldung ohne Provision */
+  const [freeUntil, setFreeUntil] = useState<string | null>(null);
+  useEffect(() => {
+    if (!cloud || artistId === undefined) return;
+    void import("@/utils/startphase.functions")
+      .then(({ myStartPhase }) => myStartPhase())
+      .then((r) => setFreeUntil(r.until))
+      .catch(() => undefined);
+  }, [cloud, artistId]);
+
   return (
     <div className="payout">
+      {freeUntil && (
+        <p className="startphase-note">
+          <Icon name="gift" /> {C.startFree(fmtDate(freeUntil))}
+        </p>
+      )}
       {cloud ? <ConnectBox onState={setConnectReady} /> : <BankForm ownerKey={key} />}
       <TaxNotice />
       <SteuerdatenForm />

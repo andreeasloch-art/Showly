@@ -10,37 +10,55 @@ export function Toast() {
 export function TabBar() {
   const { lang, session } = useShowly();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  /* Sechs Ziele (Locations seit der neuen Sparte). "Mitmachen" war auf dem Handy ueberhaupt nicht erreichbar:
-     in der Kopfzeile sind die Verweise dort ausgeblendet, und in der
-     Leiste unten stand der Punkt nicht. Wer sich als Kuenstler eintragen
-     wollte, kam vom Telefon aus nicht hin.
+  const search = useRouterState({ select: (s) => s.location.search as Record<string, unknown> });
+  /* Fünf Ziele: Suche, Künstler, Shop (Kostüme, Deko und Torten in einem,
+     umgeschaltet oben im Shop), Locations und Profil. "Mitmachen" steht im
+     Profil und auf der Startseite.
 
-     Das Konto fuehrt wie in der Kopfzeile zur Anmeldung, solange niemand
-     angemeldet ist. Vorher zeigte die Leiste immer auf die Uebersicht,
+     Das Profil führt wie in der Kopfzeile zur Anmeldung, solange niemand
+     angemeldet ist. Vorher zeigte die Leiste immer auf die Übersicht,
      die ohne Anmeldung leer ist. */
   const items = [
     { to: "/", icon: "search", label: lang === "en" ? "Search" : lang === "es" ? "Buscar" : "Suche" },
-    { to: "/locations", icon: "venue", label: lang === "es" ? "Lugares" : lang === "en" ? "Venues" : "Locations" },
+    {
+      to: "/",
+      search: { zeige: "kuenstler" as const },
+      key: "acts",
+      icon: "mask",
+      label: lang === "en" ? "Artists" : lang === "es" ? "Artistas" : "Künstler",
+    },
     { to: "/shop", icon: "bag", label: lang === "es" ? "Tienda" : "Shop" },
-    { to: "/torten", icon: "cake", label: lang === "en" ? "Cakes" : lang === "es" ? "Tartas" : "Torten" },
-    { to: "/mitmachen", icon: "sparkle", label: lang === "en" ? "Join" : lang === "es" ? "Únete" : "Mitmachen" },
+    { to: "/locations", icon: "venue", label: lang === "es" ? "Lugares" : lang === "en" ? "Venues" : "Locations" },
     {
       to: session ? "/dashboard" : "/konto",
       icon: "user",
-      label: lang === "en" ? "Account" : lang === "es" ? "Cuenta" : "Konto",
+      label: lang === "en" ? "Profile" : lang === "es" ? "Perfil" : "Profil",
     },
-  ] as const;
+  ];
 
-  /* Die Leiste steht auf jeder Seite, auch im Profil, damit man von überall
-     zurück zur Suche und zu den anderen Bereichen kommt. Im Profil sitzt der
-     Buchungsbalken direkt darüber. */
-  const isOn = (to: string) =>
-    to === "/" ? path === "/" || path.startsWith("/kuenstler/") : path === to || path.startsWith(to + "/");
+  /* Die Leiste steht auf jeder Seite, auch im Künstlerprofil, damit man von
+     überall zurück zur Suche und zu den anderen Bereichen kommt. Torten
+     gehören zum Shop, das Künstlerprofil zu "Künstler". */
+  const artists = path.startsWith("/kuenstler/") || (path === "/" && search?.["zeige"] === "kuenstler");
+  const isOn = (i: (typeof items)[number]) => {
+    if ("key" in i) return artists;
+    if (i.to === "/") return path === "/" && !artists;
+    if (i.to === "/shop") return path === "/shop" || path.startsWith("/torten");
+    return path === i.to || path.startsWith(i.to + "/");
+  };
 
   return (
     <div className="tabbar" role="navigation" aria-label="Hauptnavigation">
       {items.map((i) => (
-        <Link key={i.to} to={i.to} className={"tab" + (isOn(i.to) ? " active on" : "")}>
+        <Link
+          key={"key" in i ? i.key : i.to}
+          to={i.to}
+          search={("search" in i ? i.search : {}) as never}
+          /* Suche und Künstler liegen beide auf "/": nur mit genau passender
+             Suche gilt der Link als aktuelle Seite */
+          activeOptions={{ exact: i.to === "/", includeSearch: i.to === "/" }}
+          className={"tab" + (isOn(i) ? " active on" : "")}
+        >
           <Icon name={i.icon} />
           <span>{i.label}</span>
         </Link>

@@ -25,6 +25,9 @@ import { todayISO } from "@/showly/ui";
 import { VENUE_KINDS } from "@/showly/locations";
 
 export const Route = createFileRoute("/")({
+  /* ?zeige=kuenstler kommt vom Reiter "Künstler" unten: Acts wählen und zur Liste springen */
+  validateSearch: (search: Record<string, unknown>): { zeige?: "kuenstler" } =>
+    search["zeige"] === "kuenstler" ? { zeige: "kuenstler" } : {},
   head: (ctx) => seoHead("/", "/", headLang(ctx)),
   component: Home,
 });
@@ -186,6 +189,14 @@ function Home() {
     const verified = real.filter((a) => a.verified).length;
     return { acts: real.length, reviews, rating, cities, cats, verified };
   }, [L]);
+
+  const { zeige } = Route.useSearch();
+  useEffect(() => {
+    if (zeige !== "kuenstler") return;
+    setMode("acts");
+    const id = setTimeout(scrollToGrid, 150);
+    return () => clearTimeout(id);
+  }, [zeige]);
 
   function scrollToGrid() {
     if (typeof document === "undefined") return;

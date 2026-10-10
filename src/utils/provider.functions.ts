@@ -5,6 +5,7 @@
  * (Nachweise: Registrierung beim Lebensmittelamt bzw. Gewerbe). Angebote
  * pflegt nur der Besitzer; Texte prüft der Server auf Kontaktdaten. */
 import { createServerFn } from "@tanstack/react-start";
+import { cleanVenue } from "@/showly/locations";
 import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import { cleanFoodInfo, foodInfoComplete, type FoodInfo } from "@/showly/cakeRules";
@@ -30,13 +31,29 @@ async function ctxOrError() {
 }
 
 /* ------------------------------------------------------------------ */
-export type ProviderKind = "baker" | "deco";
+export type ProviderKind = "baker" | "deco" | "location";
 
 /** Nur die bekannten Felder, gekürzt. Kontaktangaben werden nicht gespeichert. */
+/* Location: alle Angaben wie in showly/locations.ts geprüft; Fotos nur vom
+   Server ("c:" + Kennung aus public.media), Bewertung und Freischaltung
+   setzt nicht der Anbieter */
+function cleanLocationData(d: Record<string, unknown>, taxAckAt: string) {
+  const v = cleanVenue(d, 0);
+  const { id: _i, rating: _r, reviews: _n, verified: _v, demo: _d, own: _o, photos, ...rest } = v;
+  return {
+    ...rest,
+    photos: (photos || [])
+      .map((m) => ({ id: m.id.replace(/^c:/, ""), kind: m.kind, ratio: m.ratio }))
+      .filter((m) => /^[0-9a-f-]{36}$/.test(m.id)),
+    taxAckAt,
+  };
+}
+
 function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
   /* Steuerhinweis bestätigt (AGB § 18 Abs. 5); bei Deko zusätzlich privat
      oder gewerblich, Bäcker geben das über "kind" an */
   const taxAckAt = s(d["taxAckAt"], 40);
+  if (kind === "location") return cleanLocationData(d, taxAckAt);
   if (kind === "deco")
     return { vendor: s(d["vendor"], 80), city: s(d["city"], 60), business: d["business"] === true, taxAckAt };
   const cats = ["wedding", "birthday", "motif", "cupcakes", "macarons", "candybar", "cakepops", "donuts", "cookies", "vegan", "other"];
@@ -71,7 +88,7 @@ function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
 
 export const saveProvider = createServerFn({ method: "POST" })
   .inputValidator((d: { kind: ProviderKind; data: Record<string, unknown> }) => {
-    if (d.kind !== "baker" && d.kind !== "deco") throw new Error("Ungültige Art");
+    if (d.kind !== "baker" && d.kind !== "deco" && d.kind !== "location") throw new Error("Ungültige Art");
     if (!d.data || typeof d.data !== "object") throw new Error("Angaben fehlen");
     return { kind: d.kind, data: cleanProviderData(d.kind, d.data) };
   })
@@ -80,7 +97,11 @@ export const saveProvider = createServerFn({ method: "POST" })
     if (!ctx) return { error: "Bitte melde dich an" };
     if (!(await allow("offer", ctx.user.id))) return { error: TOO_MANY };
     const d = data.data as Record<string, unknown>;
-    if (data.kind === "baker") {
+    if (data.kind === "location") {
+      if (!d["name"] || !d["city"] || !d["address"]) return { error: "Name, Stadt und Adresse fehlen" };
+      const texts = [String(d["about"] || ""), String(d["notes"] || ""), ...((d["packages"] as { name: string; includes: string[] }[]) || []).map((p) => p.name + " " + p.includes.join(" ")), ...((d["extras"] as { name: string }[]) || []).map((x) => x.name)];
+      if (!(await noContact(...texts))) return { error: "Bitte keine Kontaktdaten in der Beschreibung" };
+    } else if (data.kind === "baker") {
       if (!d["name"] || !d["city"]) return { error: "Name und Ort fehlen" };
       /* AGB § 17 Abs. 4: Lebensmittelbetrieb registriert */
       if (!d["foodRegistered"]) return { error: "Bitte bestätige die Registrierung beim Lebensmittelamt" };

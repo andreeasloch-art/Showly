@@ -10,7 +10,7 @@ export function Toast() {
 export function TabBar() {
   const { lang, session } = useShowly();
   const path = useRouterState({ select: (s) => s.location.pathname });
-  /* Fuenf Ziele. "Mitmachen" war auf dem Handy ueberhaupt nicht erreichbar:
+  /* Sechs Ziele (Locations seit der neuen Sparte). "Mitmachen" war auf dem Handy ueberhaupt nicht erreichbar:
      in der Kopfzeile sind die Verweise dort ausgeblendet, und in der
      Leiste unten stand der Punkt nicht. Wer sich als Kuenstler eintragen
      wollte, kam vom Telefon aus nicht hin.
@@ -20,6 +20,7 @@ export function TabBar() {
      die ohne Anmeldung leer ist. */
   const items = [
     { to: "/", icon: "search", label: lang === "en" ? "Search" : lang === "es" ? "Buscar" : "Suche" },
+    { to: "/locations", icon: "venue", label: lang === "es" ? "Lugares" : lang === "en" ? "Venues" : "Locations" },
     { to: "/shop", icon: "bag", label: lang === "es" ? "Tienda" : "Shop" },
     { to: "/torten", icon: "cake", label: lang === "en" ? "Cakes" : lang === "es" ? "Tartas" : "Torten" },
     { to: "/mitmachen", icon: "sparkle", label: lang === "en" ? "Join" : lang === "es" ? "Únete" : "Mitmachen" },

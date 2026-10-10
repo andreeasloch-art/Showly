@@ -36,6 +36,18 @@ export type Snapshot = {
     ship?: "pickup" | "delivery" | "shipping" | undefined;
     care?: boolean | undefined;
   }[];
+  /** Locations: Tag, Startzeit, Dauer bzw. Paket, Gäste, Extras */
+  venues?: {
+    venueId: number;
+    dateISO: string;
+    start: string;
+    hours: number;
+    guests: number;
+    pkg?: string | undefined;
+    extras?: string[] | undefined;
+    occasion?: string | undefined;
+    notes?: string | undefined;
+  }[];
   /** Firma und USt-IdNr. nur bei Firmenkunden (Rechnung, E-Rechnung) */
   contact: { name: string; address?: string | undefined; company?: string | undefined; vatId?: string | undefined };
 };
@@ -48,7 +60,8 @@ const text = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, ma
 export function cleanSnapshot(s: Snapshot): Snapshot {
   if (!s || !Array.isArray(s.bookings) || !Array.isArray(s.requests) || !Array.isArray(s.shop))
     throw new Error("Ungültiger Warenkorb");
-  if (s.bookings.length > 10 || s.requests.length > 20 || s.shop.length > 50) throw new Error("Warenkorb zu groß");
+  if (s.bookings.length > 10 || s.requests.length > 20 || s.shop.length > 50 || (s.venues?.length ?? 0) > 5)
+    throw new Error("Warenkorb zu groß");
   return {
     bookings: s.bookings.map((b) => {
       if (!Number.isInteger(b.artistId) || !DATE.test(b.dateISO) || !SLOT.test(b.slot)) throw new Error("Ungültige Buchung");
@@ -90,6 +103,20 @@ export function cleanSnapshot(s: Snapshot): Snapshot {
         ...(typeof l.size === "string" && l.size ? { size: l.size.slice(0, 20) } : {}),
         ...(l.ship === "pickup" || l.ship === "delivery" || l.ship === "shipping" ? { ship: l.ship } : {}),
         ...(l.mode === "rent" && l.care === true ? { care: true } : {}),
+      };
+    }),
+    venues: (Array.isArray(s.venues) ? s.venues : []).map((v) => {
+      if (!Number.isInteger(v.venueId) || !DATE.test(v.dateISO) || !SLOT.test(v.start)) throw new Error("Ungültige Location");
+      return {
+        venueId: v.venueId,
+        dateISO: v.dateISO,
+        start: v.start,
+        hours: Math.max(1, Math.min(16, Math.round(Number(v.hours)) || 1)),
+        guests: Math.max(1, Math.min(2000, Math.round(Number(v.guests)) || 1)),
+        ...(typeof v.pkg === "string" && v.pkg ? { pkg: v.pkg.slice(0, 20) } : {}),
+        ...(Array.isArray(v.extras) ? { extras: v.extras.map(String).map((x) => x.slice(0, 20)).slice(0, 20) } : {}),
+        occasion: text(v.occasion, 120),
+        notes: text(v.notes, 2000),
       };
     }),
     contact: {

@@ -6,7 +6,7 @@
  * zahlen immer den angezeigten Endpreis; die Provision ändert nur, was beim
  * Anbieter ankommt. */
 
-export type FeeScope = "category" | "artist" | "baker" | "deco";
+export type FeeScope = "category" | "artist" | "baker" | "deco" | "location";
 
 export interface FeeRule {
   scope: FeeScope;
@@ -27,14 +27,14 @@ export function cleanRate(v: unknown): number | null {
 
 export function pickRate(
   rules: FeeRule[],
-  who: { kind: "artist" | "baker" | "deco"; providerId?: number | null | undefined; category?: string | null | undefined },
+  who: { kind: "artist" | "baker" | "deco" | "location"; providerId?: number | null | undefined; category?: string | null | undefined },
   fallback: number,
 ): number {
   if (who.providerId != null) {
     const own = rules.find((r) => r.scope === who.kind && r.ref === String(who.providerId));
     if (own) return own.rate;
   }
-  const cat = who.category ?? (who.kind === "baker" ? "sweets" : who.kind === "deco" ? "deko" : null);
+  const cat = who.category ?? (who.kind === "baker" ? "sweets" : who.kind === "deco" ? "deko" : who.kind === "location" ? "locations" : null);
   if (cat) {
     const c = rules.find((r) => r.scope === "category" && r.ref === cat);
     if (c) return c.rate;

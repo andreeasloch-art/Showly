@@ -39,7 +39,8 @@ import { bookingEntry, clashes, parseBusy, withoutBooking } from "./schedule";
 import { hydrateDbProviders, saveBakerCloud, saveSweetCloud } from "./cloudProviders";
 import type { Baker, Sweet } from "./sweets";
 import { getStripeEnvironment } from "@/lib/stripe";
-import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopLineTotal, findItem, type CartBookingLine, type CartRequestLine, type CartShopLine } from "./pricing";
+import { FEE_RATE, bookingPrice, minHoursOf, cartTotals, findArtist, shopLineTotal, findItem, type CartBookingLine, type CartRequestLine, type CartShopLine, type CartVenueLine, venueLinePrice } from "./pricing";
+import { hydrateVenues } from "./venues";
 import { demoRentTerms, type Ship } from "./rental";
 import {
   HEARING_DAYS,
@@ -128,9 +129,22 @@ export interface CartSnapshot {
   shop: CartLine[];
   bookings: CartBookingLine[];
   requests: CartRequestLine[];
+  venues?: CartVenueLine[];
   contact: { name: string; email: string; phone?: string; address?: string; company?: string; vatId?: string };
 }
 export type CartLine = CartShopLine;
+export interface VenueBooking {
+  id: number;
+  venueId: number;
+  dateISO: string;
+  start: string;
+  hours: number;
+  guests: number;
+  pkg?: string | undefined;
+  amount: number;
+  deposit: number;
+  status: "confirmed" | "requested" | "pending" | "cancelled";
+}
 export interface Booking {
   id: number;
   artistId: number;
@@ -286,6 +300,12 @@ interface Ctx {
   cartRequests: CartRequestLine[];
   addCartRequest: (r: Omit<CartRequestLine, "key">) => void;
   removeCartRequest: (key: string) => void;
+  /** Locations im Warenkorb */
+  cartVenues: CartVenueLine[];
+  addCartVenue: (l: Omit<CartVenueLine, "key">) => void;
+  removeCartVenue: (key: string) => void;
+  /** Gebuchte Locations (im Browser; mit Datenbank zusätzlich auf dem Server) */
+  venueBookings: VenueBooking[];
   /** Warenkorb abschließen: Buchungen, Bestellung und Anfragen anlegen */
   completeCart: (snap: CartSnapshot, paid: boolean, sessionId?: string) => void;
 
@@ -349,7 +369,7 @@ interface Ctx {
   /** Künstler-Registrierung, die nach der Anmeldung an den Server geht */
   queueArtistSignup: (s: ArtistSignup) => void;
   /** Eigene Anbieterprofile in der Datenbank (Torten, Deko) */
-  myProviders: { baker?: number; deco?: number };
+  myProviders: { baker?: number; deco?: number; location?: number };
   /** Torten-Anbieter registrieren; ohne Anmeldung nach dem Login */
   queueBakerSignup: (b: BakerSignup) => Promise<number | null>;
 }
@@ -386,6 +406,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<CartLine[]>([]);
   const [cartBookings, setCartBookings] = useState<CartBookingLine[]>([]);
   const [cartRequests, setCartRequests] = useState<CartRequestLine[]>([]);
+  const [cartVenues, setCartVenues] = useState<CartVenueLine[]>([]);
+  const [venueBookings, setVenueBookings] = useState<VenueBooking[]>([]);
   const [cartOpen, setCartOpen] = useState(false);
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([
@@ -419,6 +441,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     hydrateArtists();
     hydrateSweets();
+    hydrateVenues();
     /* Eigene Fotos und Figurenbilder der Künstler vorab laden, damit sie
        überall sofort als Hintergrund gesetzt werden können. */
     void preloadMedia(
@@ -436,6 +459,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       cart?: CartLine[];
       cartBookings?: CartBookingLine[];
       cartRequests?: CartRequestLine[];
+      cartVenues?: CartVenueLine[];
+      venueBookings?: VenueBooking[];
       favorites?: number[];
       session?: Session | null;
       avail?: Avail;
@@ -451,6 +476,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       if (saved.cart) setCart(saved.cart);
       if (Array.isArray(saved.cartBookings)) setCartBookings(saved.cartBookings);
       if (Array.isArray(saved.cartRequests)) setCartRequests(saved.cartRequests);
+      if (Array.isArray(saved.cartVenues)) setCartVenues(saved.cartVenues);
+      if (Array.isArray(saved.venueBookings)) setVenueBookings(saved.venueBookings);
       if (saved.favorites) setFavorites(saved.favorites);
       if (saved.session !== undefined) setSession(saved.session);
       if (saved.avail) setAvail(saved.avail);
@@ -471,6 +498,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       cart,
       cartBookings,
       cartRequests,
+      cartVenues,
+      venueBookings,
       favorites,
       session,
       avail,
@@ -487,6 +516,8 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     cart,
     cartBookings,
     cartRequests,
+    cartVenues,
+    venueBookings,
     favorites,
     session,
     avail,
@@ -517,7 +548,9 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
       new Intl.NumberFormat(localeFor(lang, geoCountry()), {
         style: "currency",
         currency: "EUR",
-        maximumFractionDigits: 0,
+        /* Ganze Beträge ohne Cent, krumme mit (z. B. 16,90 € je Kind) */
+        minimumFractionDigits: Number.isInteger(Math.round(n * 100) / 100) ? 0 : 2,
+        maximumFractionDigits: Number.isInteger(Math.round(n * 100) / 100) ? 0 : 2,
       }).format(n),
     [lang],
   );
@@ -695,10 +728,13 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
   );
 
   /* wie an der Kasse: Wunschtorten werden zum Richtpreis sofort bezahlt */
-  const cartTotal = useMemo(() => cartTotals(cart, cartBookings, cartRequests).total, [cart, cartBookings, cartRequests]);
+  const cartTotal = useMemo(
+    () => cartTotals(cart, cartBookings, cartRequests, cartVenues).total,
+    [cart, cartBookings, cartRequests, cartVenues],
+  );
   const cartCount = useMemo(
-    () => cart.reduce((s, c) => s + c.qty, 0) + cartBookings.length + cartRequests.length,
-    [cart, cartBookings, cartRequests],
+    () => cart.reduce((s, c) => s + c.qty, 0) + cartBookings.length + cartRequests.length + cartVenues.length,
+    [cart, cartBookings, cartRequests, cartVenues],
   );
 
   const newKey = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -763,6 +799,26 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     },
     [],
   );
+  const addCartVenue = useCallback(
+    (l: Omit<CartVenueLine, "key">) => {
+      setCartVenues((list) => [
+        /* Dieselbe Location am selben Tag ersetzt den alten Eintrag */
+        ...list.filter((x) => !(x.venueId === l.venueId && x.dateISO === l.dateISO)),
+        { ...l, key: newKey() },
+      ]);
+      const p = venueLinePrice(l);
+      toast(t("toast.cartAdd", { name: p?.venue.name ?? "" }));
+      setCartOpen(true);
+    },
+    [t, toast],
+  );
+  const removeCartVenue = useCallback(
+    (key: string) => {
+      setCartVenues((list) => list.filter((x) => x.key !== key));
+      toast(t("toast.cartRemove"));
+    },
+    [t, toast],
+  );
   const removeCartRequest = useCallback(
     (key: string) => {
       setCartRequests((list) => list.filter((x) => x.key !== key));
@@ -799,7 +855,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
    * ------------------------------------------------------------------ */
   const cloudOn = !!session?.backend && isBackendConfigured();
   const refreshing = useRef(false);
-  const [myProviders, setMyProviders] = useState<{ baker?: number; deco?: number }>({});
+  const [myProviders, setMyProviders] = useState<{ baker?: number; deco?: number; location?: number }>({});
 
   const refreshCloud = useCallback(async () => {
     if (!isBackendConfigured() || refreshing.current) return;
@@ -959,6 +1015,29 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         });
         madeRequests.push(made.id);
       }
+      /* Locations: im Browser vormerken, damit der Termin belegt ist */
+      for (const l of snap.venues ?? []) {
+        const p = venueLinePrice(l);
+        if (!p) continue;
+        const id = counters.current.booking++;
+        setVenueBookings((x) => [
+          {
+            id,
+            venueId: l.venueId,
+            dateISO: l.dateISO,
+            start: l.start,
+            hours: p.quote.hours,
+            guests: p.quote.guests,
+            ...(l.pkg ? { pkg: l.pkg } : {}),
+            amount: p.quote.total,
+            deposit: p.quote.deposit,
+            status: !p.venue.instant ? "requested" : paid ? "confirmed" : "pending",
+          },
+          ...x,
+        ]);
+      }
+      const vk = new Set((snap.venues ?? []).map((v) => v.key));
+      setCartVenues((l) => l.filter((x) => !vk.has(x.key)));
       const bk = new Set(snap.bookings.map((b) => b.key));
       const rk = new Set(snap.requests.map((r) => r.key));
       const sk = new Set(snap.shop.map((c) => c.shopId + ":" + c.mode));
@@ -976,6 +1055,7 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
               bookings: snap.bookings,
               requests: snap.requests,
               shop: snap.shop,
+              venues: (snap.venues ?? []).map(({ key: _k, ...v }) => v),
               contact: { name: snap.contact.name, address: snap.contact.address },
             },
             ...(sessionId ? { sessionId, environment: getStripeEnvironment() } : {}),
@@ -1614,6 +1694,10 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
     cartRequests,
     addCartRequest,
     removeCartRequest,
+    cartVenues,
+    addCartVenue,
+    removeCartVenue,
+    venueBookings,
     completeCart,
     bookings,
     addBooking,

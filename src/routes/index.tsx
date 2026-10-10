@@ -17,6 +17,8 @@ import { HeroReel } from "@/components/showly/HeroReel";
 import { StageLight } from "@/components/showly/Motion";
 import { GuaranteeSection } from "@/components/showly/Guarantee";
 import { guaranteeCopy } from "@/showly/guarantee";
+import { VenueAutocomplete, useVenueCopy } from "@/components/showly/Venue";
+import { VENUE_KINDS } from "@/showly/locations";
 
 export const Route = createFileRoute("/")({
   head: (ctx) => seoHead("/", "/", headLang(ctx)),
@@ -89,6 +91,27 @@ function Home() {
   const [query, setQuery] = useState("");
   const [city, setCity] = useState("");
   const [date, setDate] = useState("");
+  /* Suche nach Acts oder nach Locations */
+  const [mode, setMode] = useState<"acts" | "locations">("acts");
+  const V = useVenueCopy();
+  const [venueQ, setVenueQ] = useState("");
+  const [venueKind, setVenueKind] = useState<string | undefined>();
+  const [venueOcc, setVenueOcc] = useState<string | undefined>();
+  function searchVenues(over: { typ?: string | undefined; anlass?: string | undefined } = {}) {
+    const typ = over.typ ?? venueKind;
+    const anlass = over.anlass ?? venueOcc;
+    const q = !typ && !anlass ? venueQ.trim() : "";
+    void navigate({
+      to: "/locations",
+      search: {
+        ...(typ ? { typ } : {}),
+        ...(anlass ? { anlass } : {}),
+        ...(q ? { q } : {}),
+        ...(city.trim() ? { stadt: city.trim() } : {}),
+        ...(date ? { datum: date } : {}),
+      },
+    });
+  }
   /* Erst zwölf Profile, der Rest auf Wunsch: die Seite wird kürzer */
   const [shown, setShown] = useState(12);
 
@@ -213,17 +236,57 @@ function Home() {
               {t("hero.sub")}
             </p>
 
+            <div className="search-mode rise" role="tablist" aria-label={t("search.what")} style={{ ["--d" as string]: "260ms" }}>
+              {(
+                [
+                  ["acts", "mask", lang === "en" ? "Acts" : lang === "es" ? "Artistas" : "Acts"],
+                  ["locations", "venue", V.tab],
+                ] as const
+              ).map(([m, ic, txt]) => (
+                <button
+                  key={m}
+                  type="button"
+                  role="tab"
+                  aria-selected={mode === m}
+                  className={"search-mode-btn" + (mode === m ? " on" : "")}
+                  onClick={() => setMode(m)}
+                >
+                  <Icon name={ic} /> {txt}
+                </button>
+              ))}
+            </div>
             <div className="search-wrap home-search rise" style={{ ["--d" as string]: "300ms" }}>
               <div className="search-field" style={{ flex: 1.5 }}>
-                <Icon name="search" />
+                <Icon name={mode === "acts" ? "search" : "venue"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="search-field-lbl">{t("search.what")}</div>
-                  <ArtistAutocomplete
-                    value={query}
-                    onChange={typeQuery}
-                    onPickCat={pickCatFromSearch}
-                    placeholder={t("search.ph")}
-                  />
+                  <div className="search-field-lbl">{mode === "acts" ? t("search.what") : V.what}</div>
+                  {mode === "acts" ? (
+                    <ArtistAutocomplete
+                      value={query}
+                      onChange={typeQuery}
+                      onPickCat={pickCatFromSearch}
+                      placeholder={t("search.ph")}
+                    />
+                  ) : (
+                    <VenueAutocomplete
+                      value={venueQ}
+                      onChange={(v) => {
+                        setVenueQ(v);
+                        setVenueKind(undefined);
+                        setVenueOcc(undefined);
+                      }}
+                      placeholder={V.whatPh}
+                      onPick={(sug) => {
+                        if (sug.type === "venue") {
+                          void navigate({ to: "/locations/$id", params: { id: sug.id } });
+                          return;
+                        }
+                        if (sug.type === "kind") setVenueKind(sug.id);
+                        else setVenueOcc(sug.id);
+                        setVenueQ(sug.label);
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               <div className="search-divider" />
@@ -244,24 +307,34 @@ function Home() {
                     value={city}
                     onChange={setCity}
                     placeholder={t("search.cityph")}
-                    onSelect={() => setTimeout(scrollToGrid, 60)}
+                    onSelect={() => (mode === "acts" ? setTimeout(scrollToGrid, 60) : undefined)}
                   />
                 </div>
               </div>
-              <button className="search-btn" onClick={scrollToGrid}>
-                <span>{t("search.btn")}</span>
+              <button className="search-btn" onClick={() => (mode === "acts" ? scrollToGrid() : searchVenues())}>
+                <span>{mode === "acts" ? t("search.btn") : V.search}</span>
                 <Icon name="arrow" />
               </button>
             </div>
 
             <div className="home-popular rise" style={{ ["--d" as string]: "380ms" }}>
               <span className="home-popular-lbl">{t("hero.popular")}</span>
-              {(["fairy", "magician", "santa", "dj"] as const).map((id) => (
-                <button className="home-chip" key={id} onClick={() => pickCat(id)}>
-                  <CatIcon id={id} />
-                  <span>{catLabel(id)}</span>
-                </button>
-              ))}
+              {mode === "acts"
+                ? (["fairy", "magician", "santa", "dj"] as const).map((id) => (
+                    <button className="home-chip" key={id} onClick={() => pickCat(id)}>
+                      <CatIcon id={id} />
+                      <span>{catLabel(id)}</span>
+                    </button>
+                  ))
+                : ["indoorspielplatz", "wasserpark", "hochzeitssaal", "restaurant"].map((id) => {
+                    const k = VENUE_KINDS.find((x) => x.id === id)!;
+                    return (
+                      <button className="home-chip" key={id} onClick={() => searchVenues({ typ: id })}>
+                        <Icon name={k.icon} />
+                        <span>{k.label[(lang as "de" | "en" | "es") ?? "de"] || k.label.de}</span>
+                      </button>
+                    );
+                  })}
             </div>
 
             <ul className="home-trust rise" style={{ ["--d" as string]: "440ms" }}>

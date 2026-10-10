@@ -38,6 +38,9 @@ import { Route as AuthRueckkehrRouteImport } from './routes/auth.rueckkehr'
 import { Route as BuchenIndexRouteImport } from './routes/buchen.index'
 import { Route as CheckoutReturnRouteImport } from './routes/checkout_.return'
 import { Route as KuenstlerIdRouteImport } from './routes/kuenstler.$id'
+import { Route as LocationsIndexRouteImport } from './routes/locations.index'
+import { Route as LocationsIdRouteImport } from './routes/locations.$id'
+import { Route as LocationsAnbietenRouteImport } from './routes/locations.anbieten'
 import { Route as RatgeberIndexRouteImport } from './routes/ratgeber.index'
 import { Route as RatgeberSlugRouteImport } from './routes/ratgeber.$slug'
 import { Route as RechtlichesDocRouteImport } from './routes/rechtliches.$doc'
@@ -195,6 +198,21 @@ const KuenstlerIdRoute = KuenstlerIdRouteImport.update({
   path: '/kuenstler/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LocationsIndexRoute = LocationsIndexRouteImport.update({
+  id: '/locations/',
+  path: '/locations/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationsIdRoute = LocationsIdRouteImport.update({
+  id: '/locations/$id',
+  path: '/locations/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LocationsAnbietenRoute = LocationsAnbietenRouteImport.update({
+  id: '/locations/anbieten',
+  path: '/locations/anbieten',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RatgeberIndexRoute = RatgeberIndexRouteImport.update({
   id: '/ratgeber/',
   path: '/ratgeber/',
@@ -281,11 +299,14 @@ export interface FileRoutesByFullPath {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/locations/$id': typeof LocationsIdRoute
+  '/locations/anbieten': typeof LocationsAnbietenRoute
   '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/buchen/': typeof BuchenIndexRoute
+  '/locations/': typeof LocationsIndexRoute
   '/ratgeber/': typeof RatgeberIndexRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
@@ -323,11 +344,14 @@ export interface FileRoutesByTo {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/locations/$id': typeof LocationsIdRoute
+  '/locations/anbieten': typeof LocationsAnbietenRoute
   '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/buchen': typeof BuchenIndexRoute
+  '/locations': typeof LocationsIndexRoute
   '/ratgeber': typeof RatgeberIndexRoute
   '/torten': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
@@ -366,11 +390,14 @@ export interface FileRoutesById {
   '/auth/rueckkehr': typeof AuthRueckkehrRoute
   '/checkout_/return': typeof CheckoutReturnRoute
   '/kuenstler/$id': typeof KuenstlerIdRoute
+  '/locations/$id': typeof LocationsIdRoute
+  '/locations/anbieten': typeof LocationsAnbietenRoute
   '/ratgeber/$slug': typeof RatgeberSlugRoute
   '/rechtliches/$doc': typeof RechtlichesDocRoute
   '/torten/$id': typeof TortenIdRoute
   '/torten/anbieten': typeof TortenAnbietenRoute
   '/buchen/': typeof BuchenIndexRoute
+  '/locations/': typeof LocationsIndexRoute
   '/ratgeber/': typeof RatgeberIndexRoute
   '/torten/': typeof TortenIndexRoute
   '/api/kalender/$token': typeof ApiKalenderTokenRoute
@@ -410,11 +437,14 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
+    | '/locations/$id'
+    | '/locations/anbieten'
     | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
     | '/buchen/'
+    | '/locations/'
     | '/ratgeber/'
     | '/torten/'
     | '/api/kalender/$token'
@@ -452,11 +482,14 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout/return'
     | '/kuenstler/$id'
+    | '/locations/$id'
+    | '/locations/anbieten'
     | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
     | '/buchen'
+    | '/locations'
     | '/ratgeber'
     | '/torten'
     | '/api/kalender/$token'
@@ -494,11 +527,14 @@ export interface FileRouteTypes {
     | '/auth/rueckkehr'
     | '/checkout_/return'
     | '/kuenstler/$id'
+    | '/locations/$id'
+    | '/locations/anbieten'
     | '/ratgeber/$slug'
     | '/rechtliches/$doc'
     | '/torten/$id'
     | '/torten/anbieten'
     | '/buchen/'
+    | '/locations/'
     | '/ratgeber/'
     | '/torten/'
     | '/api/kalender/$token'
@@ -537,11 +573,14 @@ export interface RootRouteChildren {
   AuthRueckkehrRoute: typeof AuthRueckkehrRoute
   CheckoutReturnRoute: typeof CheckoutReturnRoute
   KuenstlerIdRoute: typeof KuenstlerIdRoute
+  LocationsIdRoute: typeof LocationsIdRoute
+  LocationsAnbietenRoute: typeof LocationsAnbietenRoute
   RatgeberSlugRoute: typeof RatgeberSlugRoute
   RechtlichesDocRoute: typeof RechtlichesDocRoute
   TortenIdRoute: typeof TortenIdRoute
   TortenAnbietenRoute: typeof TortenAnbietenRoute
   BuchenIndexRoute: typeof BuchenIndexRoute
+  LocationsIndexRoute: typeof LocationsIndexRoute
   RatgeberIndexRoute: typeof RatgeberIndexRoute
   TortenIndexRoute: typeof TortenIndexRoute
   ApiKalenderTokenRoute: typeof ApiKalenderTokenRoute
@@ -756,6 +795,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof KuenstlerIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/locations/': {
+      id: '/locations/'
+      path: '/locations'
+      fullPath: '/locations/'
+      preLoaderRoute: typeof LocationsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locations/$id': {
+      id: '/locations/$id'
+      path: '/locations/$id'
+      fullPath: '/locations/$id'
+      preLoaderRoute: typeof LocationsIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/locations/anbieten': {
+      id: '/locations/anbieten'
+      path: '/locations/anbieten'
+      fullPath: '/locations/anbieten'
+      preLoaderRoute: typeof LocationsAnbietenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ratgeber/': {
       id: '/ratgeber/'
       path: '/ratgeber'
@@ -865,11 +925,14 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRueckkehrRoute: AuthRueckkehrRoute,
   CheckoutReturnRoute: CheckoutReturnRoute,
   KuenstlerIdRoute: KuenstlerIdRoute,
+  LocationsIdRoute: LocationsIdRoute,
+  LocationsAnbietenRoute: LocationsAnbietenRoute,
   RatgeberSlugRoute: RatgeberSlugRoute,
   RechtlichesDocRoute: RechtlichesDocRoute,
   TortenIdRoute: TortenIdRoute,
   TortenAnbietenRoute: TortenAnbietenRoute,
   BuchenIndexRoute: BuchenIndexRoute,
+  LocationsIndexRoute: LocationsIndexRoute,
   RatgeberIndexRoute: RatgeberIndexRoute,
   TortenIndexRoute: TortenIndexRoute,
   ApiKalenderTokenRoute: ApiKalenderTokenRoute,

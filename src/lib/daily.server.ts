@@ -46,6 +46,14 @@ export async function runDaily(): Promise<DailyResult> {
     await notifyBookingChange("declined", b).catch(() => false);
   }
 
+  /* Locations: Anfragen ohne Antwort nach 48 Stunden verfallen (Geld zurück),
+     Kautionen 3 Tage nach dem Event zurück, wenn kein Schaden gemeldet ist */
+  {
+    const { expireVenueRequests, releaseDueDeposits } = await import("./venues.server");
+    lapsed += await expireVenueRequests().catch(() => 0);
+    await releaseDueDeposits().catch(() => 0);
+  }
+
   /* Wunschtorten (lib/wishcake.server.ts): bis 2 Tage vor dem Liefertag
      nicht zugesagt bzw. höherer Preis nicht bestätigt: Geld zurück */
   {

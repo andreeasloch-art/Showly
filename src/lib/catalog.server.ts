@@ -11,6 +11,7 @@ import type { Artist, ShopItem } from "@/showly/data";
 import type { Sweet } from "@/showly/sweets";
 import type { Extra } from "@/showly/pricing";
 import { cleanPackages } from "@/showly/plannerPackages";
+import type { Venue } from "@/showly/locations";
 
 export const DB_FROM = 100000;
 
@@ -20,11 +21,13 @@ export interface Catalog {
   offerOwner: Map<number, string>;
   /** Anbieter (provider id) je Angebot */
   offerProvider: Map<number, number>;
+  /** Besitzer und Anmeldedatum je Location (providers, kind = 'location') */
+  venueOwner: Map<number, { owner: string; since: string }>;
 }
 
 export async function loadCatalog(
   admin: SupabaseClient<Database>,
-  ids: { artists?: number[]; sweets?: number[]; items?: number[] },
+  ids: { artists?: number[]; sweets?: number[]; items?: number[]; venues?: number[] },
 ): Promise<Catalog> {
   const artists = new Map<number, Artist>();
   const sweets = new Map<number, Sweet>();
@@ -109,13 +112,30 @@ export async function loadCatalog(
     }
   }
 
+  /* Locations: alle Angaben stehen beim Anbieter (providers.data) */
+  const venues = new Map<number, Venue>();
+  const venueOwner = new Map<number, { owner: string; since: string }>();
+  const vIds = (ids.venues || []).filter((x) => x >= DB_FROM);
+  if (vIds.length) {
+    const { venueFromRow } = await import("@/showly/venues");
+    const { data } = await admin.from("providers").select("id, owner, kind, data, published, blocked, created_at").in("id", vIds);
+    for (const r of data || []) {
+      if (r.kind !== "location" || !r.published || r.blocked) continue;
+      venues.set(r.id, { ...venueFromRow(r, false, true), own: false });
+      venueOwner.set(r.id, { owner: r.owner, since: r.created_at });
+    }
+  }
+
   return {
     extra: {
       artist: (id) => artists.get(id),
       sweet: (id) => sweets.get(id),
       item: (id) => items.get(id),
+      /* Nur echte Locations aus der Datenbank; Beispiele sind nicht buchbar */
+      venue: (id) => (id >= DB_FROM ? venues.get(id) : undefined),
     },
     offerOwner,
     offerProvider,
+    venueOwner,
   };
 }

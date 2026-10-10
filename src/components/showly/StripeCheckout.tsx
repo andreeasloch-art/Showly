@@ -49,6 +49,7 @@ export function StripeCartCheckout({
   shop,
   bookings,
   sweets = [],
+  venues = [],
   customerEmail,
   locale,
   snapshot,
@@ -64,6 +65,7 @@ export function StripeCartCheckout({
     slot: string;
   }[];
   sweets?: { sweetId: number; qty: number; dateISO: string; offerId?: number }[];
+  venues?: { venueId: number; dateISO: string; start: string; hours: number; guests: number; pkg?: string | undefined; extras?: string[] | undefined }[];
   customerEmail?: string | undefined;
   locale?: "de" | "en" | "es";
 }) {
@@ -86,6 +88,19 @@ export function StripeCartCheckout({
         shop,
         bookings,
         ...(sweets.length ? { sweets } : {}),
+        ...(venues.length
+          ? {
+              venues: venues.map((v) => ({
+                venueId: v.venueId,
+                dateISO: v.dateISO,
+                start: v.start,
+                hours: v.hours,
+                guests: v.guests,
+                ...(v.pkg ? { pkg: v.pkg } : {}),
+                ...(v.extras?.length ? { extras: v.extras } : {}),
+              })),
+            }
+          : {}),
         ...(customerEmail ? { customerEmail } : {}),
         returnUrl: `${window.location.origin}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),

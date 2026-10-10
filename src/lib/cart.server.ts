@@ -110,6 +110,7 @@ export async function recordCartCore(
     artists: snap.bookings.map((b) => b.artistId),
     sweets: snap.requests.map((r) => r.sweetId),
     items: snap.shop.map((l) => l.shopId),
+    venues: (snap.venues ?? []).map((v) => v.venueId),
   });
   const { newCheckinCode } = await import("@/showly/booking");
   const { cakePrice, findItem, shopLineParts, sweetPrice } = await import("@/showly/pricing");
@@ -170,7 +171,7 @@ export async function recordCartCore(
         return { sweetId: r.sweetId, qty: o ? o.qty : r.qty, dateISO: r.dateISO, ...(o ? { price: o.cents / 100 } : {}) };
       }),
       cat.extra,
-      { allowDemo: false },
+      { allowDemo: false, venues: snap.venues ?? [] },
     );
     const expected = lines.reduce((s, l) => s + l.amountInCents * l.quantity, 0);
     if (unknown.length || expected !== amount) return { error: "Betrag passt nicht zum Warenkorb" };
@@ -249,6 +250,13 @@ export async function recordCartCore(
     for (const r of rows || []) provSince.set(r.id, r.created_at);
   }
 
+  /* Locations: Preis wie im Browser (locations.ts), nur echte aus der Datenbank */
+  const { venueLinePrice } = await import("@/showly/pricing");
+  const vn = (snap.venues ?? [])
+    .map((l, i) => ({ l, i, p: venueLinePrice(l, cat.extra), who: cat.venueOwner.get(l.venueId) }))
+    .filter((x): x is typeof x & { p: NonNullable<typeof x.p>; who: { owner: string; since: string } } => !!x.p && x.p.quote.ok && !!x.who);
+  for (const x of vn) provSince.set(x.l.venueId, x.who.since);
+
   const drafts = splitIntoSubOrders({
     paid,
     feeRate: FEE_RATE,
@@ -271,6 +279,12 @@ export async function recordCartCore(
       direct: x.direct,
     })),
     shop: sh.map((l) => ({ providerId: l.providerId, owner: l.owner, amountCents: l.price_cents })),
+    venues: vn.map((x) => ({
+      venueId: x.l.venueId,
+      owner: x.who.owner,
+      amountCents: Math.round(x.p.quote.total * 100),
+      request: !x.p.venue.instant,
+    })),
   });
 
   /* Bestellung und Teilbestellungen anlegen */
@@ -278,14 +292,14 @@ export async function recordCartCore(
   const subId = new Map<string, number>();
   const partSub = new Map<string, number>();
   if (drafts.length) {
-    const days = [...bk.map((x) => x.b.dateISO), ...sw.map((x) => x.r.dateISO)].sort();
+    const days = [...bk.map((x) => x.b.dateISO), ...sw.map((x) => x.r.dateISO), ...vn.map((x) => x.l.dateISO)].sort();
     const { data: order } = await admin
       .from("orders")
       .insert({
         customer: uid,
         stripe_session_id: data.sessionId ?? null,
         event_day: days[0] ?? null,
-        total_cents: drafts.reduce((n, d) => n + d.amountCents, 0),
+        total_cents: drafts.reduce((n, d) => n + d.amountCents, 0) + vn.reduce((n, x) => n + Math.round(x.p.quote.deposit * 100), 0),
         discount_cents: discount,
         /* Rechnungsempfänger (Belege); Firma und USt-IdNr. nur bei Firmenkunden */
         kunde_name: snap.contact.name || null,
@@ -329,7 +343,9 @@ export async function recordCartCore(
       const { reserveFor, provisionFelder } = await import("@/showly/cloudRules");
       const earlier = new Map<string, number>();
       const orderDay = new Date().toISOString().slice(0, 10);
-      const due = drafts.filter((d) => (d.kind === "baker" || d.kind === "deco") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"));
+      const due = drafts.filter(
+        (d) => (d.kind === "baker" || d.kind === "deco" || d.kind === "location") && d.owner && d.payoutCents > 0 && (d.status === "paid" || d.status === "confirmed"),
+      );
       for (const o of new Set(due.map((d) => d.owner!))) {
         const { count } = await admin.from("payouts").select("id", { count: "exact", head: true }).eq("owner", o);
         earlier.set(o, count || 0);
@@ -339,13 +355,15 @@ export async function recordCartCore(
           const cakeDays = d.parts.filter((p) => p.type === "sweet").map((p) => sw[p.index]?.r.dateISO ?? "");
           const lines = d.parts.filter((p) => p.type === "shop").map((p) => sh[p.index]);
           const rentTo = lines.filter((l) => l?.mode === "rent").map((l) => l?.to ?? "");
-          const when = orderPayoutDay({ cakeDays, rentTo, orderDay });
+          /* Location: wie Künstler 7 Tage nach dem Event */
+          const venueDays = d.parts.filter((p) => p.type === "venue").map((p) => vn[p.index]?.l.dateISO ?? "");
+          const when = orderPayoutDay({ cakeDays: [...cakeDays, ...venueDays], rentTo, orderDay });
           const n = earlier.get(d.owner!) ?? 0;
           earlier.set(d.owner!, n + 1);
           return {
             sub_order_id: subId.get(d.key)!,
             owner: d.owner,
-            kind: d.kind as "baker" | "deco",
+            kind: d.kind as "baker" | "deco" | "location",
             booking_id: null,
             artist_id: null,
             gross_cents: d.amountCents,
@@ -440,6 +458,73 @@ export async function recordCartCore(
       await admin.from("availability").upsert({ artist_id: terms.artist_id, day: b.dateISO, slot: b.slot, blocked: true });
   }
   /* Nicht mehr gebrauchte Reservierungen (z. B. Anfrage-Künstler) freigeben */
+
+  /* ---- Locations: Termin unter Sperre belegen, sonst sofort erstatten ---- */
+  const venueIds: number[] = [];
+  for (const [j, x] of vn.entries()) {
+    const q = x.p.quote;
+    const v = x.p.venue;
+    const status = !v.instant ? "requested" : paid ? "confirmed" : "requested";
+    const { data: res } = await admin.rpc("venue_reservieren", {
+      p: {
+        venue_id: x.l.venueId,
+        day: x.l.dateISO,
+        start: x.l.start,
+        hours: q.hours,
+        parallel: v.parallel,
+        buffer_min: v.bufferMin,
+        booking: {
+          customer: uid,
+          owner: x.who.owner,
+          guests: q.guests,
+          pkg: x.l.pkg ?? "",
+          extras: x.l.extras ?? [],
+          occasion: x.l.occasion ?? "",
+          notes: x.l.notes ?? "",
+          customer_name: snap.contact.name || "",
+          amount_cents: Math.round(q.total * 100),
+          fee_cents: Math.round(q.fee * 100),
+          payout_cents: Math.round(q.payout * 100),
+          deposit_cents: Math.round(q.deposit * 100),
+          status,
+          paid,
+          stripe_session_id: data.sessionId ? `${data.sessionId}:v${j}` : "",
+          sub_order_id: partSub.get(`venue:${j}`) ?? "",
+          policy: policySnapshot("artist", v.cancelTier),
+        },
+      },
+    });
+    const r = res as { id?: number; error?: string } | null;
+    if (!r?.id) {
+      /* In der Zwischenzeit voll geworden: nicht doppelt vermieten, Geld zurück */
+      if (paid && data.sessionId) {
+        const { stripeEnv } = await import("@/lib/money.server");
+        try {
+          const stripe = createStripeClient(data.environment ?? stripeEnv());
+          const s = await stripe.checkout.sessions.retrieve(data.sessionId);
+          const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id;
+          if (pi)
+            await stripe.refunds.create(
+              { payment_intent: pi, amount: Math.round((q.total + q.deposit) * 100), metadata: { venue_full: String(x.l.venueId) } },
+              { idempotencyKey: `venue-full-${data.sessionId}-${j}` },
+            );
+        } catch (e) {
+          console.error("venue refund", e);
+        }
+      }
+      const sid = partSub.get(`venue:${j}`);
+      if (sid) await admin.from("sub_orders").update({ status: "refunded" }).eq("id", sid);
+      continue;
+    }
+    venueIds.push(r.id);
+    const { notify } = await import("@/lib/notify.server");
+    await notify(x.who.owner, status === "requested" ? "Neue Buchungsanfrage für deine Location" : "Neue Buchung deiner Location", [
+      `${v.name}: ${x.l.dateISO.split("-").reverse().join(".")} ab ${x.l.start} Uhr, ${q.guests} Gäste${q.pkg ? `, Paket ${q.pkg.name}` : ""}.`,
+      status === "requested"
+        ? "Bitte sag innerhalb von 48 Stunden in der App zu oder ab. Ohne Antwort verfällt die Anfrage und der Kunde bekommt sein Geld zurück."
+        : "Die Buchung ist bezahlt und verbindlich. Alle Angaben stehen in der App.",
+    ]).catch(() => false);
+  }
 
   /* ---- Torten & Süßes ---- */
   const sweetIds: number[] = [];
@@ -560,6 +645,10 @@ export async function recordCartCore(
     const sum = [
       ...bk.map((x) => ({ label: `Auftritt am ${x.b.dateISO.split("-").reverse().join(".")}, ${x.b.slot} Uhr`, cents: x.t.amount_cents })),
       ...sw.filter((x) => x.direct && x.fixed).map((x) => ({ label: `Torte/Süßes am ${x.r.dateISO.split("-").reverse().join(".")}`, cents: Math.round(x.fixed! * 100) })),
+      ...vn.map((x) => ({
+        label: `${x.p.venue.name} am ${x.l.dateISO.split("-").reverse().join(".")}, ${x.l.start} Uhr${x.p.quote.deposit ? ` inkl. Kaution ${(x.p.quote.deposit).toFixed(2).replace(".", ",")} €` : ""}`,
+        cents: Math.round((x.p.quote.total + x.p.quote.deposit) * 100),
+      })),
       ...sh.map((l) => ({
         label: `${itemName(l.shopId)} (${l.mode === "rent" ? "Miete" : "Kauf"}, ${l.qty}×)${l.deposit_cents ? ` inkl. Kaution ${(l.deposit_cents / 100).toFixed(2).replace(".", ",")} €` : ""}`,
         cents: l.price_cents + l.deposit_cents,

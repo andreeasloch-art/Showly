@@ -213,7 +213,7 @@ export type PayoutRow = {
   sweet_request_id?: number | null;
   sub_order_id?: number | null;
   owner?: string | null;
-  kind?: "artist" | "baker" | "deco";
+  kind?: "artist" | "baker" | "deco" | "location";
   event_day?: string | null;
   gross_cents: number;
   fee_cents: number;
@@ -344,7 +344,7 @@ export type ComplaintRow = {
 export type ProviderRow = {
   id: number;
   owner: string;
-  kind: "baker" | "deco";
+  kind: "baker" | "deco" | "location";
   data: Record<string, unknown>;
   published: boolean;
   blocked: boolean;
@@ -604,7 +604,7 @@ export type Database = {
       bookings: Table<BookingRow>;
       reviews: Table<ReviewRow>;
       /** Aufrufe je Profil und Tag, ohne Personendaten (0019) */
-      provider_views: Table<{ kind: "artist" | "baker" | "deco"; ref: number; day: string; views: number }>;
+      provider_views: Table<{ kind: "artist" | "baker" | "deco" | "location"; ref: number; day: string; views: number }>;
       /** Reklamationen (0016) */
       complaints: Table<ComplaintRow>;
       /** Bewertung des Kunden durch den Künstler, verdeckt (0016) */
@@ -696,7 +696,7 @@ export type Database = {
         created_at: string;
       }>;
       /** Provision je Kategorie oder Anbieter (0014) */
-      fee_rules: Table<{ id: number; scope: "category" | "artist" | "baker" | "deco"; ref: string; rate: number; created_at: string }>;
+      fee_rules: Table<{ id: number; scope: "category" | "artist" | "baker" | "deco" | "location"; ref: string; rate: number; created_at: string }>;
       /** Protokoll aller Aktionen der Verwaltung (0014) */
       admin_audit: Table<{ id: number; actor: string | null; action: string; target: string | null; detail: Record<string, unknown> | null; created_at: string }>;
       /** Belegte Mietartikel je Zeitraum (0013) */
@@ -717,7 +717,7 @@ export type Database = {
       sub_orders: Table<{
         id: number;
         order_id: number;
-        provider_kind: "artist" | "baker" | "deco" | "showly";
+        provider_kind: "artist" | "baker" | "deco" | "location" | "showly";
         provider_id: number | null;
         provider_owner: string | null;
         amount_cents: number;
@@ -765,6 +765,8 @@ export type Database = {
       verrechnungen: Table<VerrechnungRow>;
       auszahlungen: Table<AuszahlungRow>;
       spotlights: Table<SpotlightRow>;
+      /** Gebuchte Locations (0024) */
+      venue_bookings: Table<VenueBookingRow>;
     };
     Views: {
       artists_public: Table<
@@ -821,6 +823,10 @@ export type Database = {
         Args: { p: unknown };
         Returns: { id?: number; error?: string };
       };
+      venue_reservieren: {
+        Args: { p: unknown };
+        Returns: { id?: number; error?: string };
+      };
       wochenabrechnung_buchen: {
         Args: { p: unknown };
         Returns: { status: "neu" | "vorhanden" | "gesperrt" | "unbekannt"; id?: number; provisionsrechnung_id?: number | null; abrechnung_id?: number };
@@ -842,6 +848,37 @@ export type Database = {
 }
 
 /** Top Act der Woche (0022) */
+export type VenueBookingRow = {
+  id: number;
+  customer: string | null;
+  venue_id: number;
+  owner: string | null;
+  day: string;
+  start: string;
+  hours: number;
+  starts_at: string;
+  ends_at: string;
+  guests: number;
+  pkg: string | null;
+  extras: unknown;
+  occasion: string | null;
+  notes: string | null;
+  customer_name: string | null;
+  amount_cents: number;
+  fee_cents: number;
+  payout_cents: number;
+  deposit_cents: number;
+  deposit_status: "held" | "released" | "kept" | "none";
+  status: "hold" | "requested" | "confirmed" | "declined" | "cancelled" | "completed";
+  hold_until: string | null;
+  paid: boolean;
+  stripe_session_id: string | null;
+  sub_order_id: number | null;
+  policy: unknown;
+  requested_at: string | null;
+  created_at: string;
+};
+
 export type SpotlightRow = {
   id: number;
   owner: string;

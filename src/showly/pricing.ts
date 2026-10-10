@@ -9,6 +9,8 @@ import { BAKERS, SWEETS, estimate, isDirectSweet, type Sweet } from "./sweets";
 import { depositOf, rentDays, shipFee, type Ship } from "./rental";
 import { CAREFREE_EUR } from "./policies";
 import { cleanSurcharges, withSurcharge } from "./surcharges";
+import { venueQuote, type Venue } from "./locations";
+import { findVenue } from "./venues";
 
 const bakerIsDemo = (id: number) => !!BAKERS.find((b) => b.id === id)?.demo;
 
@@ -19,6 +21,7 @@ export interface Extra {
   artist?: (id: number) => Artist | undefined;
   sweet?: (id: number) => Sweet | undefined;
   item?: (id: number) => ShopItem | undefined;
+  venue?: (id: number) => Venue | undefined;
 }
 
 /** Provision, die Showly von der Gage einbehält. Kunden zahlen den
@@ -71,6 +74,27 @@ export interface CartRequestLine {
   /** Angebot der Konditorei zu einer Anfrage (sweet_requests.id): bezahlt
    *  wird der angebotene Preis (estimate), den der Server nachprüft */
   offerId?: number;
+}
+
+/** Location: Tag, Startzeit, Dauer bzw. Paket, Gäste und Extras */
+export interface CartVenueLine {
+  key: string;
+  venueId: number;
+  dateISO: string;
+  start: string;
+  hours: number;
+  guests: number;
+  pkg?: string | undefined;
+  extras?: string[] | undefined;
+  occasion?: string | undefined;
+  notes?: string | undefined;
+}
+
+/** Preis einer Location-Zeile (ohne Kaution) und die Kaution */
+export function venueLinePrice(l: Omit<CartVenueLine, "key">, extra?: Extra) {
+  const v = findVenue(l.venueId, extra?.venue);
+  if (!v) return null;
+  return { venue: v, quote: venueQuote(v, l, FEE_RATE) };
 }
 
 export function minHoursOf(a: Artist) {
@@ -164,6 +188,7 @@ export function cartTotals(
     estimate: number;
     offerId?: number | undefined;
   }[] = [],
+  venues: CartVenueLine[] = [],
 ) {
   let items = 0;
   for (const l of shop) {
@@ -181,11 +206,18 @@ export function cartTotals(
   let sweets = 0;
   for (const r of requests)
     sweets += r.offerId ? r.estimate : ((r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate);
+  /* Locations samt Kaution (die nach dem Event zurückgeht) */
+  let locations = 0;
+  for (const l of venues) {
+    const p = venueLinePrice(l);
+    if (p) locations += p.quote.total + p.quote.deposit;
+  }
   return {
     items,
     artists,
     sweets,
-    total: items + artists + sweets,
+    locations,
+    total: items + artists + sweets + locations,
   };
 }
 
@@ -207,7 +239,7 @@ export function priceLines(
   extra?: Extra,
   /* Der Server lässt Beispielprofile und -artikel aus dem Katalog nicht
      bezahlen: Hinter ihnen steht kein echter Anbieter. */
-  opts: { allowDemo?: boolean } = {},
+  opts: { allowDemo?: boolean; venues?: Omit<CartVenueLine, "key">[] } = {},
 ): { lines: PriceLine[]; unknown: string[] } {
   const allowDemo = opts.allowDemo ?? true;
   const lines: PriceLine[] = [];
@@ -279,6 +311,21 @@ export function priceLines(
       amountInCents: Math.round(price * 100),
       quantity: 1,
     });
+  }
+  for (const l of opts.venues ?? []) {
+    const p = venueLinePrice(l, extra);
+    if (!p || !p.quote.ok || p.quote.total <= 0 || (!allowDemo && p.venue.demo) || p.venue.own) {
+      unknown.push(`venue:${l.venueId}`);
+      continue;
+    }
+    const d = l.dateISO.split("-").reverse().join(".");
+    lines.push({
+      name: `${p.venue.name}${p.quote.pkg ? ` · ${p.quote.pkg.name}` : ""} · ${d} ${l.start} · ${p.quote.guests} Gäste`,
+      amountInCents: Math.round(p.quote.total * 100),
+      quantity: 1,
+    });
+    if (p.quote.deposit > 0)
+      lines.push({ name: `Kaution ${p.venue.name} (wird nach dem Event erstattet)`, amountInCents: Math.round(p.quote.deposit * 100), quantity: 1 });
   }
   return { lines, unknown };
 }

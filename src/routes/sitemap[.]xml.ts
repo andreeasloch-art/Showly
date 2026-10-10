@@ -31,6 +31,8 @@ function staticEntries(): SitemapEntry[] {
     { path: "/wie-funktioniert-showly", changefreq: "monthly", priority: "0.8" },
     { path: "/shop", changefreq: "weekly", priority: "0.8" },
     { path: "/torten", changefreq: "weekly", priority: "0.8" },
+    { path: "/locations", changefreq: "weekly", priority: "0.8" },
+    { path: "/locations/anbieten", changefreq: "monthly", priority: "0.5" },
     { path: "/mitmachen", changefreq: "monthly", priority: "0.7" },
     { path: "/torten/anbieten", changefreq: "monthly", priority: "0.6" },
     { path: "/hilfe", changefreq: "monthly", priority: "0.6" },

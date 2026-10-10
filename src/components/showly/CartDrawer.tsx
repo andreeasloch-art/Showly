@@ -10,12 +10,16 @@ import { bookingPrice, findArtist } from "@/showly/pricing";
 import { bakerOf, sweetBg, SWEETS } from "@/showly/sweets";
 import { useRentCopy } from "./Rental";
 import { depositOf } from "@/showly/rental";
+import { venueLinePrice } from "@/showly/pricing";
+import { venueBg } from "./Venue";
 
 const TEXT = {
   de: {
     acts: "Künstler",
     items: "Artikel",
     requests: "Wunschtorten",
+    venues: "Locations",
+    guests: "Gäste",
     requestsP: "Du bezahlst jetzt den Richtpreis. Die Konditorei bestätigt den Endpreis: günstiger = Differenz zurück, teurer = du bestätigst und zahlst nach, Absage = alles zurück.",
     hours: (n: number) => `${n} Std.`,
     fee: "Endpreis",
@@ -35,6 +39,8 @@ const TEXT = {
     acts: "Artists",
     items: "Items",
     requests: "Custom cakes",
+    venues: "Venues",
+    guests: "guests",
     requestsP: "You pay the estimate now. The baker confirms the final price: lower = difference refunded, higher = you confirm and pay the rest, declined = full refund.",
     hours: (n: number) => `${n} hrs`,
     fee: "final price",
@@ -54,6 +60,8 @@ const TEXT = {
     acts: "Artistas",
     items: "Artículos",
     requests: "Tartas a medida",
+    venues: "Lugares",
+    guests: "invitados",
     requestsP: "Pagas ahora el precio orientativo. El repostero confirma el precio final: menor = te devolvemos la diferencia, mayor = lo confirmas y pagas el resto, rechazo = te devolvemos todo.",
     hours: (n: number) => `${n} h`,
     fee: "precio final",
@@ -90,11 +98,13 @@ export function CartDrawer() {
     removeCartBooking,
     cartRequests,
     removeCartRequest,
+    cartVenues,
+    removeCartVenue,
   } = useShowly();
   useEscape(cartOpen, () => setCartOpen(false));
   const X = TEXT[(lang as "de" | "en" | "es") ?? "de"] ?? TEXT.de;
   const navigate = useNavigate();
-  const empty = !cart.length && !cartBookings.length && !cartRequests.length;
+  const empty = !cart.length && !cartBookings.length && !cartRequests.length && !cartVenues.length;
   const requestSum = cartRequests.filter((r) => !r.offerId).reduce((s, r) => s + r.estimate, 0);
 
   function go(to: "/checkout" | "/" | "/shop") {
@@ -188,6 +198,30 @@ export function CartDrawer() {
                           +
                         </button>
                         <button className="cart-remove" onClick={() => removeFromCart(idx)}>
+                          {X.remove}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {cartVenues.length > 0 && <div className="cart-sec">{X.venues}</div>}
+              {cartVenues.map((l) => {
+                const p = venueLinePrice(l);
+                if (!p) return null;
+                return (
+                  <div className="cart-item" key={l.key}>
+                    <div className="cart-img" style={venueBg(p.venue)} />
+                    <div className="cart-info">
+                      <div className="cart-name">{p.venue.name}</div>
+                      <div className="cart-mode">
+                        {fmtDate(l.dateISO)} · {l.start} · {p.quote.guests} {X.guests}
+                        {p.quote.pkg ? ` · ${p.quote.pkg.name}` : ""}
+                      </div>
+                      <div className="cart-price">{fmt(p.quote.total + p.quote.deposit)}</div>
+                      <div className="qty-row">
+                        <button className="cart-remove" onClick={() => removeCartVenue(l.key)}>
                           {X.remove}
                         </button>
                       </div>

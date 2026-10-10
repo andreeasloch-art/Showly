@@ -265,6 +265,16 @@ export function ic(p){return '<svg class="ico" viewBox="0 0 24 24" fill="none" s
 export function icf(p){return '<svg class="ico" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">'+p+'</svg>';}
 
 export const ICON={
+ /* --- Locations --- */
+ venue:   ic('<path d="M3 21h18"/><path d="M4.5 21V9.5L12 4l7.5 5.5V21"/><path d="M9.5 21v-5.5a2.5 2.5 0 0 1 5 0V21"/><path d="M8 11h.01M16 11h.01"/>'),
+ hall:    ic('<path d="M2.5 20.5h19"/><path d="M4 20.5v-9l8-6 8 6v9"/><path d="M7.5 20.5v-6M12 20.5v-6M16.5 20.5v-6"/><path d="M6 12.5h12"/>'),
+ slide:   ic('<path d="M5 21V8.5"/><path d="M9 21V8.5"/><path d="M5 8.5h4"/><path d="M5 12.5h4M5 16.5h4"/><path d="M9 8.5c3 0 4.2 2 5.6 5.2 1.2 2.8 2.6 4.3 5.4 4.3"/><path d="M9 11.8c2 .3 2.8 1.8 3.9 4.3 1 2.3 2.4 4.4 7.1 4.4"/><circle cx="7" cy="5" r="2"/>'),
+ water:   ic('<path d="M2.5 16c1.6 0 1.6-1.2 3.2-1.2s1.6 1.2 3.2 1.2 1.6-1.2 3.1-1.2 1.6 1.2 3.2 1.2 1.6-1.2 3.2-1.2 1.6 1.2 3.1 1.2"/><path d="M2.5 20c1.6 0 1.6-1.2 3.2-1.2s1.6 1.2 3.2 1.2 1.6-1.2 3.1-1.2 1.6 1.2 3.2 1.2 1.6-1.2 3.2-1.2 1.6 1.2 3.1 1.2"/><path d="M12 3.5s-3.5 4-3.5 6.5a3.5 3.5 0 0 0 7 0c0-2.5-3.5-6.5-3.5-6.5Z"/>'),
+ fork:    ic('<path d="M7 3v7a2.5 2.5 0 0 0 5 0V3"/><path d="M9.5 3v18"/><path d="M17 21V3c-2 0-3.5 2.2-3.5 6s1.5 4.5 3.5 4.5"/>'),
+ sun:     ic('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4"/>'),
+ chair:   ic('<path d="M7 3.5h10v8H7z"/><path d="M5.5 11.5h13v3h-13z"/><path d="M7 14.5V21M17 14.5V21"/>'),
+ users:   ic('<circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.6-3.4 3.2-5.5 6.2-5.5s5.6 2.1 6.2 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16.4 14.6c2.5.2 4.3 2 4.8 4.9"/>'),
+ ruler:   ic('<path d="m3.5 16.5 13-13 4 4-13 13z"/><path d="m7 13 2 2M10 10l2 2M13 7l2 2"/>'),
  /* --- Beitraege, Medien, soziale Netze --- */
  band:    ic('<circle cx="7" cy="16.5" r="3.2"/><path d="M10.2 16.5V6.4l6-1.6v9.9"/><circle cx="13" cy="14.7" r="3.2"/><path d="M10.2 9.2 16.2 7.6"/>'),
  hypno:   ic('<path d="M12 12.5a.9.9 0 1 1 .9-.9 1.8 1.8 0 1 1-1.8-1.8 2.7 2.7 0 1 1 2.7 2.7 3.6 3.6 0 1 1-3.6-3.6 4.5 4.5 0 1 1 4.5 4.5 5.4 5.4 0 1 1-5.4-5.4"/>'),

@@ -16,6 +16,7 @@ import { preloadMedia, type MediaRef } from "./media";
 import { removeOffer, saveOffer, saveProvider } from "@/utils/provider.functions";
 import { cleanFoodInfo } from "./cakeRules";
 import { cleanRentTerms } from "./rental";
+import { setCloudOwnVenues, upsertVenue, venueFromRow } from "./venues";
 
 export const DB_FROM = 100000;
 export const isCloudId = (id: number) => id >= DB_FROM;
@@ -139,7 +140,7 @@ let publicLoaded = false;
 
 /** Freigeschaltete Anbieter laden (einmal) und das eigene Profil, falls
  *  angemeldet. Gibt die eigenen Profile zurück. */
-export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: number; deco?: number }> {
+export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: number; deco?: number; location?: number }> {
   if (!isBackendConfigured()) return {};
   const sb = supabase();
   if (!publicLoaded) {
@@ -151,6 +152,7 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
     const vendors = new Map<number, string>();
     for (const p of provs.data || []) {
       if (p.kind === "baker") upsert(BAKERS, bakerFromRow(p, false, true));
+      else if (p.kind === "location") upsertVenue(venueFromRow(p, false, true));
       else vendors.set(p.id, String((p.data as Record<string, unknown>)["vendor"] || ""));
     }
     for (const o of (offers.data || []) as OfferRow[]) {
@@ -160,7 +162,7 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
     /* Galerien: Adressen gleich holen (nur freigegebene kommen zurück) */
     void preloadMedia(BAKERS.flatMap((b) => (b.photos || []).map((m) => m.id)).filter((id) => id.startsWith("c:")));
   }
-  const mine: { baker?: number; deco?: number } = {};
+  const mine: { baker?: number; deco?: number; location?: number } = {};
   if (ownerId) {
     const { data: provs } = await sb.from("providers").select("id, kind, data, published").eq("owner", ownerId);
     const ids = (provs || []).map((p) => p.id);
@@ -168,9 +170,13 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
       if (p.kind === "baker") {
         upsert(BAKERS, bakerFromRow(p, true, p.published));
         mine.baker = p.id;
+      } else if (p.kind === "location") {
+        upsertVenue(venueFromRow(p, true, p.published));
+        mine.location = p.id;
       } else mine.deco = p.id;
     }
     setCloudOwnBakers(mine.baker ? [mine.baker] : []);
+    setCloudOwnVenues(mine.location ? [mine.location] : []);
     if (mine.baker)
       void preloadMedia((BAKERS.find((b) => b.id === mine.baker)?.photos || []).map((m) => m.id));
     if (ids.length) {

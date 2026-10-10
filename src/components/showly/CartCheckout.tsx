@@ -15,13 +15,14 @@ import { SHOP_ITEMS } from "@/showly/data";
 import { Icon, bgOf, shopBg } from "@/showly/ui";
 import { isPaymentConfigured } from "@/lib/stripe";
 import { setPending } from "@/showly/pending";
-import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice, cakePrice } from "@/showly/pricing";
+import { MAX_HOURS, bookingPrice, cartTotals, findArtist, findItem, minHoursOf, shopLineTotal, shopUnit, sweetPrice, cakePrice, venueLinePrice } from "@/showly/pricing";
 import { RentLineEditor, SizeSelect, rentLinesReady, useRentCopy } from "@/components/showly/Rental";
 import { SWEETS, bakerOf, leadOf, sweetBg } from "@/showly/sweets";
 import { StripeCartCheckout } from "@/components/showly/StripeCheckout";
 import { PaymentTestModeBanner } from "@/components/showly/PaymentTestModeBanner";
 import { Footer } from "@/components/showly/Footer";
 import { GuaranteeBadge } from "@/components/showly/Guarantee";
+import { venueBg } from "@/components/showly/Venue";
 import { CancelPolicyNote } from "@/components/showly/Fair";
 import { policySnapshot } from "@/showly/policies";
 
@@ -37,6 +38,9 @@ const TEXT = {
     acts: "Künstler",
     items: "Artikel",
     requests: "Wunschtorten",
+    venues: "Locations",
+    guests: "Gäste",
+    deposit: "inkl. Kaution (kommt nach dem Event zurück)",
     requestsP: "Du bezahlst jetzt den Richtpreis. Die Konditorei bestätigt den Endpreis: günstiger = Differenz zurück, teurer = du bestätigst und zahlst nach, Absage = alles zurück.",
     hours: "Dauer",
     hoursVal: (n: number) => `${n} Std.`,
@@ -104,6 +108,9 @@ const TEXT = {
     acts: "Artists",
     items: "Items",
     requests: "Custom cakes",
+    venues: "Venues",
+    guests: "guests",
+    deposit: "incl. deposit (refunded after the event)",
     requestsP: "You pay the estimate now. The baker confirms the final price: lower = difference refunded, higher = you confirm and pay the rest, declined = full refund.",
     hours: "Duration",
     hoursVal: (n: number) => `${n} hrs`,
@@ -171,6 +178,9 @@ const TEXT = {
     acts: "Artistas",
     items: "Artículos",
     requests: "Tartas a medida",
+    venues: "Lugares",
+    guests: "invitados",
+    deposit: "incl. fianza (se devuelve tras el evento)",
     requestsP: "Pagas ahora el precio orientativo. El repostero confirma el precio final: menor = te devolvemos la diferencia, mayor = lo confirmas y pagas el resto, rechazo = te devolvemos todo.",
     hours: "Duración",
     hoursVal: (n: number) => `${n} h`,
@@ -304,6 +314,8 @@ export function CartCheckout() {
     cart,
     cartBookings,
     cartRequests,
+    cartVenues,
+    removeCartVenue,
     updateCartBooking,
     removeCartBooking,
     removeFromCart,
@@ -344,7 +356,7 @@ export function CartCheckout() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [step]);
 
-  const totals = cartTotals(cart, cartBookings, cartRequests);
+  const totals = cartTotals(cart, cartBookings, cartRequests, cartVenues);
   /* Teilbestellungen je Anbieter, wie sie der Server anlegt (showly/subOrders.ts) */
   const providers = (() => {
     const m = new Map<string, { key: string; name: string; amount: number }>();
@@ -361,6 +373,10 @@ export function CartCheckout() {
       const bk = bakerOf(r.bakerId);
       add(`baker:${r.bakerId}`, bk ? String(L(bk.name)) : "", (r.direct ? sweetPrice(r.sweetId, r.qty) : cakePrice(r.sweetId, r.qty)) ?? r.estimate);
     }
+    for (const l of cartVenues) {
+      const p = venueLinePrice(l);
+      if (p) add(`location:${l.venueId}`, p.venue.name, p.quote.total + p.quote.deposit);
+    }
     for (const l of cart) {
       const it = findItem(l.shopId);
       if (!it) continue;
@@ -372,7 +388,7 @@ export function CartCheckout() {
   /* Wunschtorten zum Richtpreis (in totals enthalten, hier nur zur Info) */
   const askReqs = cartRequests.filter((r) => !r.direct && !r.offerId);
   const reqSum = askReqs.reduce((s, r) => s + r.estimate, 0);
-  const empty = !cart.length && !cartBookings.length && !cartRequests.length;
+  const empty = !cart.length && !cartBookings.length && !cartRequests.length && !cartVenues.length;
   const hasOwnItems = cart.some((c) => SHOP_ITEMS.find((i) => i.id === c.shopId)?.own);
 
   if (!hydrated) return <div className="page active ui26 co-page" />;
@@ -383,6 +399,7 @@ export function CartCheckout() {
       shop: cart,
       bookings: cartBookings.map((b) => ({ ...b, address: address || b.address })),
       requests: cartRequests.map((r) => ({ ...r, city: r.city || contact.city })),
+      venues: cartVenues,
       contact: {
         name: contact.name.trim(),
         email: contact.email.trim(),
@@ -420,7 +437,8 @@ export function CartCheckout() {
     const reserved =
       snap.bookings.length +
         snap.shop.length +
-        snap.requests.filter((r) => r.direct).length >
+        snap.requests.filter((r) => r.direct).length +
+        (snap.venues?.length ?? 0) >
       0;
     completeCart(snap, false);
     setDone({ paid: false, req, reserved });
@@ -594,6 +612,41 @@ export function CartCheckout() {
                   </section>
                 )}
 
+                {cartVenues.length > 0 && (
+                  <section className="pe-card">
+                    <h3 className="co-h">{X.venues}</h3>
+                    {cartVenues.map((l) => {
+                      const p = venueLinePrice(l);
+                      if (!p) return null;
+                      return (
+                        <div className="co-line" key={l.key}>
+                          <span className="co-img" style={venueBg(p.venue)} />
+                          <div className="co-line-text">
+                            <b>{p.venue.name}</b>
+                            <small>
+                              {fmtDate(l.dateISO)} · {l.start} · {p.quote.hours} h · {p.quote.guests} {X.guests}
+                              {p.quote.pkg ? ` · ${p.quote.pkg.name}` : ""}
+                            </small>
+                            {p.quote.extras.length > 0 && <small>{p.quote.extras.map((e) => e.name).join(", ")}</small>}
+                            {p.quote.deposit > 0 && (
+                              <small>
+                                {X.deposit}: {fmt(p.quote.deposit)}
+                              </small>
+                            )}
+                            <CancelPolicyNote tier={p.venue.cancelTier} compact />
+                          </div>
+                          <div className="co-line-end">
+                            <b>{fmt(p.quote.total + p.quote.deposit)}</b>
+                            <button className="co-rm" onClick={() => removeCartVenue(l.key)}>
+                              {X.remove}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </section>
+                )}
+
                 {cartRequests.length > 0 && (
                   <section className="pe-card">
                     <h3 className="co-h">{X.requests}</h3>
@@ -755,6 +808,7 @@ export function CartCheckout() {
                         slot: b.slot,
                         ...(b.pkg ? { pkg: b.pkg } : {}),
                       }))}
+                      venues={cartVenues.map(({ key: _k, occasion: _o, notes: _n, ...v }) => v)}
                       customerEmail={contact.email.trim()}
                       locale={(lang as "de" | "en" | "es") ?? "de"}
                       snapshot={(() => {
@@ -763,6 +817,7 @@ export function CartCheckout() {
                           bookings: snap.bookings,
                           requests: snap.requests,
                           shop: snap.shop,
+                          venues: (snap.venues ?? []).map(({ key: _k, ...v }) => v),
                           contact: {
                             name: snap.contact.name,
                             address: snap.contact.address,

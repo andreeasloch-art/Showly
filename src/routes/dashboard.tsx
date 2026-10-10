@@ -25,6 +25,7 @@ import { BlockedList } from "@/components/showly/BlockedList";
 import { PayoutPanel } from "@/components/showly/PayoutPanel";
 import { Chat, unreadFor, useUnread } from "@/components/showly/Chat";
 import { ProviderInbox } from "@/components/showly/ProviderInbox";
+import { VenueBookings } from "@/components/showly/VenueBookings";
 import { ProviderOverview } from "@/components/showly/ProviderOverview";
 
 export const Route = createFileRoute("/dashboard")({
@@ -267,6 +268,7 @@ function Dashboard() {
     toast,
     catLabel,
     myProviders,
+    venueBookings,
     cancelByCustomer,
     reportNoShow,
     vouchers,
@@ -319,6 +321,7 @@ function Dashboard() {
           ? [["overview", "chart", "Übersicht", ""]]
           : []) as [string, string, string, string | number][]),
         ["bookings", "clipboard", t("dash.bookings"), bookings.length],
+        ["venues", "venue", "Locations", venueBookings.length || ""],
         ["orders", "bag", t("dash.orders"), orders.length],
         ["requests", "gift", C.sweetReq, sweetReqCount],
         ["favorites", "heart", t("dash.favs"), favorites.length],
@@ -389,6 +392,7 @@ function Dashboard() {
 
   const heads: Record<string, [string, string]> = {
     bookings: [t("dash.bookingsH"), t("dash.bookingsSub")],
+    venues: ["Locations", myProviders.location ? "Anfragen und Buchungen deiner Location und deine eigenen Buchungen." : "Deine gebuchten Locations. Die Adresse steht hier nach der Zusage."],
     incoming: [C.incoming, C.incomingSub],
     orders: [t("dash.ordersH"), t("dash.ordersSub")],
     favorites: [t("dash.favsH"), t("dash.favsSub")],
@@ -799,6 +803,7 @@ function Dashboard() {
             />
           ))}
 
+        {active === "venues" && <VenueBookings />}
         {active === "requests" && session?.backend && (myProviders.baker || myProviders.deco) && <ProviderInbox />}
         {active === "requests" &&
           (sweetReqCount ? (
@@ -834,7 +839,7 @@ function Dashboard() {
           <PayoutPanel artistId={myProfile.id} />
         )}
 
-        {active === "payments" && !myProfile && (myProviders.baker || myProviders.deco) && <PayoutPanel />}
+        {active === "payments" && !myProfile && (myProviders.baker || myProviders.deco || myProviders.location) && <PayoutPanel />}
         {active === "payments" && <BelegeListe />}
         {active === "payments" && !myProfile && (
           <>

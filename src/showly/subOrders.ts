@@ -11,11 +11,11 @@
  * Rein und getestet (subOrders.test.ts); recordCart in cloud.functions.ts
  * schreibt das Ergebnis in die Datenbank. */
 
-export type ProviderKind = "artist" | "baker" | "deco" | "showly";
+export type ProviderKind = "artist" | "baker" | "deco" | "location" | "showly";
 export type SubOrderStatus = "pending" | "paid" | "requested" | "confirmed";
 
 export interface CartPart {
-  type: "booking" | "sweet" | "shop";
+  type: "booking" | "sweet" | "shop" | "venue";
   /** Position im jeweiligen Teil des Warenkorbs */
   index: number;
 }
@@ -36,12 +36,14 @@ export interface SplitInput {
   paid: boolean;
   feeRate: number;
   /** Provision je Anbieter (feeRules.ts); ohne Angabe gilt feeRate */
-  rateFor?: ((kind: "baker" | "deco", providerId: number | null) => number) | undefined;
+  rateFor?: ((kind: "baker" | "deco" | "location", providerId: number | null) => number) | undefined;
   bookings: { artistId: number; owner: string | null; amountCents: number; feeCents: number; payoutCents: number; request: boolean }[];
   /** Torten: direkt gebucht (Festpreis, bezahlt) oder Anfrage (noch kein Preis) */
   sweets: { bakerId: number; owner: string | null; priceCents: number; direct: boolean }[];
   /** Shop: Deko-Anbieter (providerId) oder Showly-Katalog (null) */
   shop: { providerId: number | null; owner: string | null; amountCents: number }[];
+  /** Locations: Mietpreis ohne Kaution; mit Anfrage erst nach Zusage verbindlich */
+  venues?: { venueId: number; owner: string | null; amountCents: number; request: boolean }[] | undefined;
 }
 
 export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
@@ -55,7 +57,7 @@ export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
     }
     return d;
   };
-  const fee = (cents: number, kind: "baker" | "deco", id: number | null) =>
+  const fee = (cents: number, kind: "baker" | "deco" | "location", id: number | null) =>
     Math.round(cents * (input.rateFor ? input.rateFor(kind, id) : input.feeRate));
 
   input.bookings.forEach((b, index) => {
@@ -98,6 +100,20 @@ export function splitIntoSubOrders(input: SplitInput): SubOrderDraft[] {
     d.payoutCents += l.amountCents - f;
     d.parts.push({ type: "shop", index });
   });
+
+  (input.venues ?? []).forEach((v, index) => {
+    const d = get("location", v.venueId, v.owner);
+    d.amountCents += v.amountCents;
+    const f = fee(v.amountCents, "location", v.venueId);
+    d.feeCents += f;
+    d.payoutCents += v.amountCents - f;
+    d.parts.push({ type: "venue", index });
+  });
+  for (const d of map.values()) {
+    if (d.kind !== "location") continue;
+    const req = d.parts.some((p) => input.venues![p.index]!.request);
+    d.status = req ? "requested" : input.paid ? "confirmed" : "pending";
+  }
 
   return [...map.values()];
 }

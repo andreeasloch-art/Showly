@@ -133,6 +133,8 @@ export const createCartCheckout = createServerFn({ method: "POST" })
       }[];
       /** direkt gebuchte Süßwaren-Pakete; der Preis kommt aus dem Katalog */
       sweets?: { sweetId: number; qty: number; dateISO: string; offerId?: number }[];
+      /** Locations: Tag, Startzeit, Dauer bzw. Paket, Gäste, Extras */
+      venues?: { venueId: number; dateISO: string; start: string; hours: number; guests: number; pkg?: string; extras?: string[] }[];
       customerEmail?: string;
       returnUrl: string;
       environment: StripeEnv;
@@ -156,7 +158,21 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         )
           throw new Error("Invalid sweet");
       }
-      if (data.shop.length + data.bookings.length + sweets.length === 0)
+      const venues = data.venues ?? [];
+      if (!Array.isArray(venues) || venues.length > 5) throw new Error("Invalid venues");
+      for (const v of venues) {
+        if (
+          !Number.isInteger(v.venueId) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(v.dateISO) ||
+          !/^\d{2}:\d{2}$/.test(v.start) ||
+          !Number.isInteger(v.hours) ||
+          !Number.isInteger(v.guests) ||
+          (v.pkg !== undefined && !/^[a-zA-Z0-9_-]{1,20}$/.test(v.pkg)) ||
+          (v.extras !== undefined && (!Array.isArray(v.extras) || v.extras.length > 20 || v.extras.some((x) => !/^[a-zA-Z0-9_-]{1,20}$/.test(x))))
+        )
+          throw new Error("Invalid venue");
+      }
+      if (data.shop.length + data.bookings.length + sweets.length + venues.length === 0)
         throw new Error("Empty cart");
       if (data.shop.length > 50 || data.bookings.length > 10)
         throw new Error("Cart too large");
@@ -198,6 +214,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
           artists: data.bookings.map((b) => b.artistId),
           sweets: (data.sweets ?? []).map((x) => x.sweetId),
           items: data.shop.map((l) => l.shopId),
+          venues: (data.venues ?? []).map((v) => v.venueId),
         })
       ).extra;
     } catch {
@@ -229,7 +246,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         return { sweetId: x.sweetId, qty: o ? o.qty : x.qty, dateISO: x.dateISO, ...(o ? { price: o.cents / 100 } : {}) };
       }),
       extra,
-      { allowDemo: false },
+      { allowDemo: false, venues: data.venues ?? [] },
     );
     if (unknown.length) {
       return {
@@ -250,6 +267,31 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         if (err) return { error: err };
       } catch {
         /* ohne Datenbank (Vorschau) keine echten Anbieter */
+      }
+    }
+
+    /* Locations: Tag offen und zur Zeit noch ein Platz frei? Endgültig
+       belegt wird nach der Zahlung unter Sperre (recordCart). */
+    if (data.venues?.length && extra?.venue) {
+      const { adminClient } = await import("@/lib/supabase.server");
+      const { venueHasRoom } = await import("@/lib/venues.server");
+      const { dayOpen, slotsFor } = await import("@/showly/locations");
+      const today = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
+      for (const l of data.venues) {
+        const v = extra.venue(l.venueId);
+        if (!v) continue;
+        const pk = l.pkg ? v.packages.find((p) => p.id === l.pkg) : undefined;
+        const hours = pk ? pk.hours : l.hours;
+        const fits = dayOpen(v, l.dateISO, today) && slotsFor(v, l.dateISO, hours, [], today).some((x) => x.start === l.start);
+        if (!fits || !(await venueHasRoom(adminClient(), v, l.dateISO, l.start, hours)))
+          return {
+            error:
+              lang === "en"
+                ? `${v.name} is no longer available at this time. Please choose another time.`
+                : lang === "es"
+                  ? `${v.name} ya no está libre a esa hora. Elige otra hora.`
+                  : `${v.name} ist zu dieser Zeit nicht mehr frei. Bitte eine andere Zeit wählen.`,
+          };
       }
     }
 

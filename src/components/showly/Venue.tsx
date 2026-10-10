@@ -139,6 +139,14 @@ export function venueBg(v: Venue): CSSProperties {
   const first = v.photos?.find((m) => m.kind !== "video");
   const photo = first ? mediaBg(first.id) : null;
   if (photo) return photo;
+  if (v.img)
+    return {
+      backgroundColor: "#2A1A6E",
+      backgroundImage: `url("${v.img}")`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+    };
   const h = v.hue;
   return {
     background: `radial-gradient(120% 90% at 20% 10%, hsl(${(h + 30) % 360} 90% 72% / .95), transparent 60%), linear-gradient(135deg, hsl(${h} 78% 58%), hsl(${(h + 300) % 360} 70% 42%))`,
@@ -146,7 +154,7 @@ export function venueBg(v: Venue): CSSProperties {
 }
 
 export function hasPhoto(v: Venue) {
-  return !!v.photos?.some((m) => m.kind !== "video");
+  return !!v.img || !!v.photos?.some((m) => m.kind !== "video");
 }
 
 /** Kartenbild mit Symbol, falls es noch kein Foto gibt */

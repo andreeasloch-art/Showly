@@ -9,7 +9,13 @@ const open = (from: string, to: string) => ({ from, to });
 const week = (from: string, to: string, closed: number[] = []): WeekHours =>
   Array.from({ length: 7 }, (_, i) => (closed.includes(i) ? null : open(from, to)));
 
-const demo = (id: number, raw: Record<string, unknown>): Venue => ({ ...cleanVenue(raw, id), demo: true, verified: false });
+/* Beispiel mit Katalogbild im Stil der Act-Bilder (stilisiertes 3D, Bühnenlicht, Logofarben) */
+const demo = (id: number, raw: Record<string, unknown>): Venue => ({
+  ...cleanVenue(raw, id),
+  img: `/venues/${id}.webp`,
+  demo: true,
+  verified: false,
+});
 
 export const VENUES: Venue[] = [
   demo(1, {

@@ -6862,3 +6862,6 @@ html body .tabbar{transition:opacity .4s ease,visibility 0s linear}
 html body .tabbar .tab{min-width:0;flex:1 1 0;padding-left:2px;padding-right:2px}
 @media (max-width:430px){html body .tabbar .tab span{font-size:10px!important;letter-spacing:-.02em!important;overflow:visible;text-overflow:clip}}
 .vn-date{padding:10px 12px;border-radius:14px;border:1px solid #E4DEFF;background:#FBFAFF}
+/* Locations-Bilder sind 4:3 wie die Act-Bilder */
+.vn-card-img{aspect-ratio:4/3}
+.vn-gallery .pd-slide{aspect-ratio:4/3;height:auto}

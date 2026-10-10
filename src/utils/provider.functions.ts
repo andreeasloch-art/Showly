@@ -39,7 +39,7 @@ export type ProviderKind = "baker" | "deco" | "location";
    setzt nicht der Anbieter */
 function cleanLocationData(d: Record<string, unknown>, taxAckAt: string) {
   const v = cleanVenue(d, 0);
-  const { id: _i, rating: _r, reviews: _n, verified: _v, demo: _d, own: _o, photos, ...rest } = v;
+  const { id: _i, rating: _r, reviews: _n, verified: _v, demo: _d, own: _o, img: _m, photos, ...rest } = v;
   return {
     ...rest,
     photos: (photos || [])

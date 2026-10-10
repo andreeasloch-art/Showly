@@ -8,7 +8,7 @@ import { DateField } from "@/components/showly/DateField";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import { CancelPolicyNote } from "@/components/showly/Fair";
 import { ProductGallery, type Slide } from "@/components/showly/ProductSheet";
-import { VenueCard, label, useVenueCopy, venueBg } from "@/components/showly/Venue";
+import { VenueCard, hasPhoto, label, useVenueCopy, venueBg } from "@/components/showly/Venue";
 import {
   AMENITIES,
   OCCASIONS,
@@ -301,7 +301,7 @@ function VenueDetail({ v }: { v: Venue }) {
 
         <div className="vn-gallery">
           <ProductGallery slides={slides} alt={v.name} />
-          {!(v.photos || []).length && (
+          {!hasPhoto(v) && (
             <span className="vn-visual-ic big" aria-hidden="true">
               <Icon name={k.icon} />
             </span>

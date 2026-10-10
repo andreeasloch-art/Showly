@@ -230,6 +230,8 @@ export interface Venue {
   own?: boolean | undefined;
   /** Bildfarbe für Karten ohne Foto */
   hue: number;
+  /** Katalogbild der Beispiele (public/venues/<id>.webp) */
+  img?: string | undefined;
   photos?: { id: string; kind: "image" | "video"; ratio: number }[] | undefined;
 }
 

@@ -40,6 +40,8 @@ export interface PendingSpotlight {
   lines: PendingLine[];
   email?: string;
   spot: {
+    kind?: "act" | "location";
+    venueId?: number;
     weeks?: number;
     name: string;
     cat: string;

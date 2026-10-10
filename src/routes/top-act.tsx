@@ -11,6 +11,7 @@ import { OG_IMAGE, SITE } from "@/showly/seo";
 import { setPending } from "@/showly/pending";
 import { SPOTLIGHT_PRICE, SPOTLIGHT_PRICE_ID, getSpotlightsFor, SPOTLIGHT_SLOTS, daysLeft } from "@/showly/spotlight";
 import { useViewerCity } from "@/showly/useViewerCity";
+import { VENUES, myVenueIds } from "@/showly/venues";
 import stageImg from "@/assets/spotlight-stage.jpg";
 
 export const Route = createFileRoute("/top-act")({
@@ -20,6 +21,8 @@ export const Route = createFileRoute("/top-act")({
       typeof search[k] === "string" ? (search[k] as string).slice(0, 200) : undefined;
     const paid = str("bezahlt");
     return {
+      /* art=location: Location der Woche statt Top Act */
+      ...(search["art"] === "location" ? { art: "location" as const } : {}),
       city: str("city"),
       name: str("name"),
       cat: str("cat"),
@@ -175,12 +178,68 @@ const W = {
 
 const dmy = (d: string) => d.split("-").reverse().join(".");
 
+/* Abweichende Texte für „Location der Woche“ (eigene 5 Plätze je Stadt) */
+const LOC = {
+  de: {
+    eyebrow: "Premium-Platzierung für Locations",
+    h1a: "Location",
+    h1b: "der Woche",
+    lead: `7 Tage ganz oben auf der Startseite, wenn Kunden Locations suchen. Je Stadt 5 Plätze im Wechsel. ${SPOTLIGHT_PRICE} € pro Woche.`,
+    p1: "Ganz oben im Bereich Locations",
+    p2: "Bild, Name, Ort und Slogan deiner Location",
+    p3: "Direkter Link zu deiner Location",
+    title: "Location der Woche (7 Tage)",
+    scopeAny: "Jede Stadt hat 5 Plätze für Locations der Woche. Du bezahlst nur für deine Stadt und Umgebung.",
+    fromProfile: "Name, Art, Bild und Link kommen aus deiner Location.",
+    login: "Den Platz buchen Anbieter mit ihrer Location. Bitte melde dich an.",
+    booked: "Gebucht! Deine Location ist Location der Woche. Die Bestätigung kommt per E-Mail.",
+    pick: "Location",
+  },
+  en: {
+    eyebrow: "Premium placement for venues",
+    h1a: "Venue",
+    h1b: "of the week",
+    lead: `7 days at the top of the homepage when customers look for venues. 5 rotating spots per city. €${SPOTLIGHT_PRICE} per week.`,
+    p1: "Top of the venues section",
+    p2: "Your venue's image, name, city and slogan",
+    p3: "Direct link to your venue",
+    title: "Venue of the week (7 days)",
+    scopeAny: "Every city has 5 venue-of-the-week spots. You only pay for your city and its area.",
+    fromProfile: "Name, type, image and link come from your venue.",
+    login: "Hosts book this spot with their venue account. Please log in.",
+    booked: "Booked! Your venue is venue of the week. The confirmation follows by email.",
+    pick: "Venue",
+  },
+  es: {
+    eyebrow: "Colocación premium para lugares",
+    h1a: "Lugar",
+    h1b: "de la semana",
+    lead: `7 días arriba del todo cuando los clientes buscan lugares. 5 plazas rotativas por ciudad. ${SPOTLIGHT_PRICE} € por semana.`,
+    p1: "Arriba del todo en Lugares",
+    p2: "Imagen, nombre, ciudad y eslogan de tu local",
+    p3: "Enlace directo a tu local",
+    title: "Lugar de la semana (7 días)",
+    scopeAny: "Cada ciudad tiene 5 plazas de lugar de la semana. Solo pagas por tu ciudad y su zona.",
+    fromProfile: "Nombre, tipo, imagen y enlace salen de tu local.",
+    login: "Los anfitriones reservan con su cuenta. Inicia sesión.",
+    booked: "¡Reservado! Tu local es lugar de la semana. Recibirás la confirmación por correo.",
+    pick: "Lugar",
+  },
+} as const;
+
 function TopActPage() {
   const { lang, catLabel, session } = useShowly() as any;
-  const T = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
-  const X = W[(lang as "de" | "en" | "es") ?? "de"] ?? W.de;
+  const { bezahlt, art } = Route.useSearch();
+  const loc = art === "location";
+  const kind = loc ? ("location" as const) : ("act" as const);
+  const LT = LOC[(lang as "de" | "en" | "es") ?? "de"] ?? LOC.de;
+  const T0 = COPY[(lang as "de" | "en" | "es") ?? "de"] ?? COPY.de;
+  const T = loc ? { ...T0, ...LT } : T0;
+  const X0 = W[(lang as "de" | "en" | "es") ?? "de"] ?? W.de;
+  const X = loc ? { ...X0, fromProfile: LT.fromProfile, login: LT.login, booked: LT.booked } : X0;
   const navigate = useNavigate();
-  const { bezahlt } = Route.useSearch();
+  /* Vorschau ohne Datenbank: eine Location aus dem Katalog wählen */
+  const [venueId, setVenueId] = useState<number>(() => (myVenueIds()[0] ?? VENUES[0]?.id ?? 0));
   /* Mit Datenbank: echte Buchung über den Server, sonst Vorschau im Browser */
   const cloud = isBackendConfigured();
   const loggedIn = !!session?.backend;
@@ -212,7 +271,7 @@ function TopActPage() {
   }
 
   /* Ohne Datenbank: belegte Plätze aus diesem Browser */
-  const inCity = f.city.trim() ? getSpotlightsFor(f.city.trim()) : [];
+  const inCity = f.city.trim() ? getSpotlightsFor(f.city.trim(), kind) : [];
   const running =
     inCity.length >= SPOTLIGHT_SLOTS ? inCity.reduce((a, b) => (a.until <= b.until ? a : b)) : null;
 
@@ -221,11 +280,11 @@ function TopActPage() {
     if (!cloud || f.city.trim().length < 2) return setStatus(null);
     const t = window.setTimeout(async () => {
       const { topActStatus } = await import("@/utils/spotlight.functions");
-      const r = await topActStatus({ data: { city: f.city.trim(), weeks } }).catch(() => null);
+      const r = await topActStatus({ data: { city: f.city.trim(), weeks, kind } }).catch(() => null);
       setStatus(r && !("error" in r) ? r : null);
     }, 400);
     return () => window.clearTimeout(t);
-  }, [cloud, f.city, weeks]);
+  }, [cloud, f.city, weeks, kind]);
 
   /* Rückkehr aus der Zahlung: Platz fest buchen */
   useEffect(() => {
@@ -252,8 +311,9 @@ function TopActPage() {
         city: f.city.trim(),
         weeks,
         tagline: f.tagline.trim(),
-        returnUrl: `${window.location.origin}/top-act?bezahlt={CHECKOUT_SESSION_ID}`,
+        returnUrl: `${window.location.origin}/top-act?${loc ? "art=location&" : ""}bezahlt={CHECKOUT_SESSION_ID}`,
         environment: getStripeEnvironment(),
+        kind,
       },
     }).catch(() => ({ error: "Hat nicht geklappt" }));
     setBusy(false);
@@ -264,6 +324,29 @@ function TopActPage() {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (cloud) return void submitCloud();
+    const pickedVenue = loc ? VENUES.find((v) => v.id === venueId) : undefined;
+    if (loc && pickedVenue) {
+      if (!f.city.trim() || !f.tagline.trim()) return setErr(T.err);
+      setPending({
+        kind: "spotlight",
+        total,
+        title: T.title,
+        lines: [{ name: T.title, amountInCents: SPOTLIGHT_PRICE * 100, quantity: weeks, priceId: SPOTLIGHT_PRICE_ID }],
+        ...(f.email.trim() ? { email: f.email.trim() } : {}),
+        spot: {
+          kind: "location",
+          venueId: pickedVenue.id,
+          weeks,
+          name: pickedVenue.name,
+          cat: pickedVenue.kind,
+          city: f.city.trim(),
+          tagline: f.tagline.trim(),
+          link: `/locations/${pickedVenue.id}`,
+        },
+      });
+      navigate({ to: "/checkout" });
+      return;
+    }
     if (!f.name.trim() || !f.city.trim() || !f.tagline.trim()) {
       setErr(T.err);
       return;
@@ -356,6 +439,25 @@ function TopActPage() {
             <h2>{T.formH}</h2>
             {cloud ? (
               <p className="topact-scope">{X.fromProfile}</p>
+            ) : loc ? (
+              <label>
+                {LT.pick}
+                <select
+                  value={venueId}
+                  onChange={(e) => {
+                    const id = Number(e.target.value);
+                    setVenueId(id);
+                    const v = VENUES.find((x) => x.id === id);
+                    if (v) setF((x) => ({ ...x, city: v.city }));
+                  }}
+                >
+                  {VENUES.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} · {v.city}
+                    </option>
+                  ))}
+                </select>
+              </label>
             ) : (
               <>
                 <label>

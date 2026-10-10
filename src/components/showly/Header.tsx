@@ -44,6 +44,9 @@ export function Header() {
           <Link className="nav-link" to="/">
             {t("nav.artists")}
           </Link>
+          <Link className="nav-link" to="/locations">
+            {lang === "en" ? "Venues" : lang === "es" ? "Lugares" : "Locations"}
+          </Link>
           <Link className="nav-link" to="/shop">
             {t("nav.shop")}
           </Link>

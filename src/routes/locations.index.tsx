@@ -266,6 +266,9 @@ function Locations() {
               <button className="home-btn light" onClick={() => navigate({ to: "/locations/anbieten" })}>
                 {C.offerBtn} <Icon name="arrow" />
               </button>
+              <button className="home-btn ghost" onClick={() => navigate({ to: "/top-act", search: { art: "location" } as never })}>
+                <Icon name="trophy" /> {C.weekBtn}
+              </button>
             </div>
           </div>
           <div className="home-join-art vn-join-art" aria-hidden="true">

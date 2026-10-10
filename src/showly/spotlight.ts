@@ -12,7 +12,13 @@ export const SPOTLIGHT_DAYS = 7;
 /** Plätze je Stadt und Tag */
 export const SPOTLIGHT_SLOTS = 5;
 
+export type SpotlightKind = "act" | "location";
+
 export interface SpotlightInput {
+  /** act = Top Act der Woche, location = Location der Woche (eigene 5 Plätze je Stadt) */
+  kind?: SpotlightKind | undefined;
+  /** Location der Woche: Kennung der Location */
+  venueId?: number | undefined;
   /** gebuchte Wochen (1 bis 4), Standard 1 */
   weeks?: number | undefined;
   name: string;
@@ -201,11 +207,13 @@ function uniqueActs(list: Spotlight[]): Spotlight[] {
   });
 }
 
-/** Alle aktiven Top Acts genau dieser Stadt (höchstens fünf). */
-export function getSpotlightsFor(city: string): Spotlight[] {
+const kindIs = (s: Spotlight, kind: SpotlightKind) => (s.kind ?? "act") === kind;
+
+/** Alle aktiven Top Acts (bzw. Locations der Woche) genau dieser Stadt (höchstens fünf). */
+export function getSpotlightsFor(city: string, kind: SpotlightKind = "act"): Spotlight[] {
   if (!city) return [];
   const k = citySlug(city);
-  return uniqueActs(read().filter((s) => citySlug(s.city) === k)).slice(0, SPOTLIGHT_SLOTS);
+  return uniqueActs(read().filter((s) => kindIs(s, kind) && citySlug(s.city) === k)).slice(0, SPOTLIGHT_SLOTS);
 }
 
 /** Erste aktive Platzierung dieser Stadt. */
@@ -230,8 +238,9 @@ export function isCityTaken(city: string): boolean {
 export function getSpotlightsNear(
   city: string | null | undefined,
   country?: string | null,
+  kind: SpotlightKind = "act",
 ): { spot: Spotlight; exact: boolean }[] {
-  const all = read();
+  const all = read().filter((s) => kindIs(s, kind));
   const k = city ? citySlug(city) : "";
   const exact = k ? uniqueActs(all.filter((s) => citySlug(s.city) === k)) : [];
   const out = exact.map((spot) => ({ spot, exact: true }));
@@ -290,12 +299,14 @@ export async function loadCloudSpotlights() {
     const list = await activeTopActs();
     setCloudSpotlights(
       list.map((r) => ({
+        kind: r.kind,
         name: r.name,
         cat: r.cat,
         city: r.city,
         tagline: r.tagline,
         ...(r.link ? { link: r.link } : {}),
         ...(r.artistId ? { image: `/api/bild/kuenstler/${r.artistId}` } : {}),
+        ...(r.venueId ? { venueId: r.venueId } : {}),
         until: Date.parse(r.until + "T23:59:59"),
       })),
     );

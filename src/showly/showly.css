@@ -6708,13 +6708,24 @@ html body .tabbar{transition:opacity .4s ease,visibility 0s linear}
 .vn-price small{font-size:12px;color:var(--h-muted)}
 .vn-join-art .home-join-tile{position:relative;overflow:hidden}
 
-/* Suche: Acts / Locations */
-.search-mode{display:inline-flex;gap:4px;padding:4px;border-radius:999px;background:rgba(255,255,255,.75);border:1px solid #E4DEFF;align-self:flex-start;
-  backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);margin-bottom:-2px}
-.search-mode-btn{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:8px 16px;border-radius:999px;cursor:pointer;
-  font:600 14px/1 'Outfit',system-ui,sans-serif;color:var(--h-ink2,#3A3350)}
-.search-mode-btn svg{width:16px;height:16px}
-.search-mode-btn.on{background:var(--lg-knopf);color:#fff;box-shadow:0 6px 16px rgba(72,50,253,.28)}
+/* Suche: Acts / Locations als Reiter oben in der Suchkarte */
+.search-card{position:relative;z-index:30;max-width:760px;background:#fff;border:1px solid var(--h-line,#ECE8FF);border-radius:30px;
+  box-shadow:var(--h-shadow-lg,0 24px 60px -30px rgba(44,20,96,.4));padding:6px;transition:box-shadow .3s,border-color .3s}
+.search-card:focus-within{border-color:#CFC2FB;box-shadow:0 0 0 5px rgba(107,59,232,.12),var(--h-shadow-lg,0 24px 60px -30px rgba(44,20,96,.4))}
+.search-mode{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;padding:4px;margin:0 0 4px;border-radius:24px;background:var(--lg-flieder-l,#F2EFFF)}
+.search-mode::before{content:"";position:absolute;top:4px;bottom:4px;left:4px;width:calc(50% - 4px);border-radius:20px;background:var(--lg-knopf);
+  box-shadow:0 6px 16px rgba(72,50,253,.28);transition:transform .35s cubic-bezier(.65,0,.25,1)}
+.search-card.is-venues .search-mode::before{transform:translateX(100%)}
+.search-mode-btn{position:relative;z-index:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;border:0;background:transparent;
+  padding:10px 12px;border-radius:20px;cursor:pointer;font:700 14.5px/1 'Outfit',system-ui,sans-serif;color:var(--h-ink2,#3A3350);transition:color .25s}
+.search-mode-btn svg{width:17px;height:17px}
+.search-mode-btn.on{color:#fff}
+.search-mode-btn:focus-visible{outline:2px solid var(--lg-violett);outline-offset:2px}
+html body .search-card .home-search,.home .search-card .home-search{background:transparent!important;border:0!important;box-shadow:none!important;max-width:none;margin:0;padding:2px}
+html body .search-card .home-search:focus-within{box-shadow:none!important}
+@media (prefers-reduced-motion:reduce){.search-mode::before{transition:none}}
+@media (max-width:760px){.search-card{border-radius:26px}.search-mode{border-radius:20px}.search-mode::before{border-radius:16px}}
+.vn-home-browse .vn-grid{margin-top:4px}
 
 /* Detailseite */
 .vn-gallery{position:relative;margin-top:12px;border-radius:26px;overflow:hidden}
@@ -6865,3 +6876,4 @@ html body .tabbar .tab{min-width:0;flex:1 1 0;padding-left:2px;padding-right:2px
 /* Locations-Bilder sind 4:3 wie die Act-Bilder */
 .vn-card-img{aspect-ratio:4/3}
 .vn-gallery .pd-slide{aspect-ratio:4/3;height:auto}
+.search-card .search-wrap{animation:none!important}

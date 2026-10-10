@@ -883,6 +883,9 @@ export type SpotlightRow = {
   id: number;
   owner: string;
   artist_id: number | null;
+  /** act = Top Act, location = Location der Woche (0025) */
+  kind: "act" | "location";
+  venue_id: number | null;
   city: string;
   city_slug: string;
   name: string;

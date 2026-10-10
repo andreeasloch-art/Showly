@@ -17,7 +17,11 @@ import { HeroReel } from "@/components/showly/HeroReel";
 import { StageLight } from "@/components/showly/Motion";
 import { GuaranteeSection } from "@/components/showly/Guarantee";
 import { guaranteeCopy } from "@/showly/guarantee";
-import { VenueAutocomplete, useVenueCopy } from "@/components/showly/Venue";
+import { VenueAutocomplete, VenueCard, label as vLabel, useVenueCopy } from "@/components/showly/Venue";
+import { VenueOfWeek } from "@/components/showly/VenueOfWeek";
+import { VENUES } from "@/showly/venues";
+import { OCCASIONS, VENUE_GROUPS, matchVenue } from "@/showly/locations";
+import { todayISO } from "@/showly/ui";
 import { VENUE_KINDS } from "@/showly/locations";
 
 export const Route = createFileRoute("/")({
@@ -97,6 +101,34 @@ function Home() {
   const [venueQ, setVenueQ] = useState("");
   const [venueKind, setVenueKind] = useState<string | undefined>();
   const [venueOcc, setVenueOcc] = useState<string | undefined>();
+  const [venueGroup, setVenueGroup] = useState<string | undefined>();
+  const venueList = useMemo(
+    () =>
+      VENUES.filter((v) =>
+        matchVenue(
+          v,
+          {
+            kind: venueKind,
+            group: venueGroup,
+            occasion: venueOcc,
+            q: !venueKind && !venueOcc && venueQ.trim() ? venueQ.trim() : undefined,
+            city: city.trim() || undefined,
+            date: date || undefined,
+          },
+          todayISO(),
+        ),
+      ).sort((a, b) => Number(!!a.demo) - Number(!!b.demo) || b.rating - a.rating),
+    [venueKind, venueGroup, venueOcc, venueQ, city, date],
+  );
+  const venueFiltered = !!(venueKind || venueGroup || venueOcc || venueQ.trim() || city.trim() || date);
+  function resetVenues() {
+    setVenueKind(undefined);
+    setVenueGroup(undefined);
+    setVenueOcc(undefined);
+    setVenueQ("");
+    setCity("");
+    setDate("");
+  }
   function searchVenues(over: { typ?: string | undefined; anlass?: string | undefined } = {}) {
     const typ = over.typ ?? venueKind;
     const anlass = over.anlass ?? venueOcc;
@@ -225,18 +257,30 @@ function Home() {
 
             <h1 className="home-h1 h1-lockup">
               <span className="rise" style={{ ["--d" as string]: "60ms" }}>
-                {t("hero.h1a")}
+                {mode === "acts" ? t("hero.h1a") : lang === "en" ? "Book your" : lang === "es" ? "Reserva tu" : "Buche deine"}
               </span>
               <span className="rise" style={{ ["--d" as string]: "140ms" }}>
-                <GradientText text={t("hero.h1b")} />
+                <GradientText
+                  key={mode}
+                  word={mode}
+                  text={mode === "acts" ? t("hero.h1b") : lang === "en" ? "venue" : lang === "es" ? "lugar" : "Location"}
+                />
               </span>
             </h1>
 
             <p className="home-lead rise" style={{ ["--d" as string]: "220ms" }}>
-              {t("hero.sub")}
+              {mode === "acts"
+                ? t("hero.sub")
+                : lang === "en"
+                  ? "Halls, playgrounds and gardens for your party – easily and safely booked online."
+                  : lang === "es"
+                    ? "Salones, parques infantiles y jardines para tu fiesta – reservados online, fácil y seguro."
+                    : "Säle, Spielplätze und Gärten für deine Feier – einfach und sicher online gebucht."}
             </p>
 
-            <div className="search-mode rise" role="tablist" aria-label={t("search.what")} style={{ ["--d" as string]: "260ms" }}>
+            {/* Suchkarte: oben die Reiter Acts | Locations, darunter die Felder */}
+            <div className={"search-card rise" + (mode === "locations" ? " is-venues" : "")} style={{ ["--d" as string]: "300ms" }}>
+            <div className="search-mode" role="tablist" aria-label={t("search.what")}>
               {(
                 [
                   ["acts", "mask", lang === "en" ? "Acts" : lang === "es" ? "Artistas" : "Acts"],
@@ -255,7 +299,7 @@ function Home() {
                 </button>
               ))}
             </div>
-            <div className="search-wrap home-search rise" style={{ ["--d" as string]: "300ms" }}>
+            <div className="search-wrap home-search">
               <div className="search-field" style={{ flex: 1.5 }}>
                 <Icon name={mode === "acts" ? "search" : "venue"} />
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -281,9 +325,15 @@ function Home() {
                           void navigate({ to: "/locations/$id", params: { id: sug.id } });
                           return;
                         }
-                        if (sug.type === "kind") setVenueKind(sug.id);
-                        else setVenueOcc(sug.id);
+                        if (sug.type === "kind") {
+                          setVenueKind(sug.id);
+                          setVenueOcc(undefined);
+                        } else {
+                          setVenueOcc(sug.id);
+                          setVenueKind(undefined);
+                        }
                         setVenueQ(sug.label);
+                        setTimeout(scrollToGrid, 60);
                       }}
                     />
                   )}
@@ -311,10 +361,11 @@ function Home() {
                   />
                 </div>
               </div>
-              <button className="search-btn" onClick={() => (mode === "acts" ? scrollToGrid() : searchVenues())}>
+              <button className="search-btn" onClick={() => scrollToGrid()}>
                 <span>{mode === "acts" ? t("search.btn") : V.search}</span>
                 <Icon name="arrow" />
               </button>
+            </div>
             </div>
 
             <div className="home-popular rise" style={{ ["--d" as string]: "380ms" }}>
@@ -329,7 +380,12 @@ function Home() {
                 : ["indoorspielplatz", "wasserpark", "hochzeitssaal", "restaurant"].map((id) => {
                     const k = VENUE_KINDS.find((x) => x.id === id)!;
                     return (
-                      <button className="home-chip" key={id} onClick={() => searchVenues({ typ: id })}>
+                      <button className="home-chip" key={id} onClick={() => {
+                          setVenueKind(id);
+                          setVenueOcc(undefined);
+                          setVenueQ(k.label[(lang as "de" | "en" | "es") ?? "de"] || k.label.de);
+                          setTimeout(scrollToGrid, 60);
+                        }}>
                         <Icon name={k.icon} />
                         <span>{k.label[(lang as "de" | "en" | "es") ?? "de"] || k.label.de}</span>
                       </button>
@@ -360,7 +416,7 @@ function Home() {
             </ul>
           </div>
 
-          <ActOfWeek />
+          {mode === "acts" ? <ActOfWeek /> : <VenueOfWeek />}
         </div>
       </section>
 
@@ -389,6 +445,7 @@ function Home() {
       {/* Kategorieleiste, Überschrift und Raster stehen in einem eigenen
           Rahmen. Die Leiste klebt beim Scrollen unter der Kopfzeile, aber nur
           so lange, wie das Raster zu sehen ist. */}
+      {mode === "acts" && (
       <div className="home-browse">
         <nav className="cat-bar" aria-label={t("grid.all")}>
           <div className="cat-bar-inner">
@@ -443,6 +500,86 @@ function Home() {
           </div>
         )}
       </div>
+      )}
+
+      {mode === "locations" && (
+        <div className="home-browse vn-home-browse">
+          <nav className="cat-bar" aria-label={V.kinds}>
+            <div className="cat-bar-inner">
+              <button
+                className={"cat-chip" + (!venueGroup && !venueKind ? " on" : "")}
+                onClick={() => {
+                  setVenueGroup(undefined);
+                  setVenueKind(undefined);
+                }}
+              >
+                <Icon name="venue" />
+                <span>{V.all}</span>
+              </button>
+              {VENUE_GROUPS.map((g) => (
+                <button
+                  key={g.id}
+                  className={"cat-chip" + (venueGroup === g.id ? " on" : "")}
+                  aria-pressed={venueGroup === g.id}
+                  onClick={() => {
+                    setVenueGroup(venueGroup === g.id ? undefined : g.id);
+                    setVenueKind(undefined);
+                  }}
+                >
+                  <Icon name={g.icon} />
+                  <span>{vLabel(g, lang)}</span>
+                </button>
+              ))}
+            </div>
+          </nav>
+          <div className="occ-row vn-occ-row" role="group" aria-label={V.occasions}>
+            {OCCASIONS.map((o) => (
+              <button
+                key={o.id}
+                className={"occ-chip" + (venueOcc === o.id ? " on" : "")}
+                aria-pressed={venueOcc === o.id}
+                onClick={() => setVenueOcc(venueOcc === o.id ? undefined : o.id)}
+              >
+                {vLabel(o, lang)}
+              </button>
+            ))}
+          </div>
+          <div className="grid-head home-grid-head">
+            <div>
+              <h2>{V.places}</h2>
+              <p>{V.results(venueList.length)}</p>
+            </div>
+            {venueFiltered && (
+              <button className="home-reset" onClick={resetVenues}>
+                <Icon name="close" />
+                <span>{V.reset}</span>
+              </button>
+            )}
+          </div>
+          {venueList.length ? (
+            <div className="vn-grid">
+              {venueList.map((v) => (
+                <VenueCard key={v.id} v={v} />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div className="ic">
+                <Icon name="venue" />
+              </div>
+              <p>{V.none}</p>
+              <button className="btn-secondary" onClick={resetVenues}>
+                {V.reset}
+              </button>
+            </div>
+          )}
+          <div className="home-more-btn">
+            <Link className="btn-secondary" to="/locations">
+              {V.search} <Icon name="arrow" />
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Werbeversprechen: Ersatz oder Geld zurück (showly/guarantee.ts) */}
       <GuaranteeSection />

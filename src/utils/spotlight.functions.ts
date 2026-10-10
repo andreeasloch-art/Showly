@@ -17,11 +17,15 @@ const addDays = (d: string, n: number) => {
 };
 
 /** Belegte Zeiträume einer Stadt ab heute (bezahlt oder gerade reserviert) */
-async function busyOf(slug: string) {
+type Kind = "act" | "location";
+const kindOf = (v: unknown): Kind => (v === "location" ? "location" : "act");
+
+async function busyOf(slug: string, kind: Kind = "act") {
   const { data } = await adminClient()
     .from("spotlights")
     .select("owner, starts_on, ends_on, status, hold_until")
     .eq("city_slug", slug)
+    .eq("kind", kind)
     .gte("ends_on", todayBerlin())
     .in("status", ["paid", "reserved"])
     .order("starts_on");
@@ -56,15 +60,16 @@ function firstFree(
 
 /** Wie sieht es in einer Stadt aus? Wie viele Plätze sind heute frei, ab wann geht es */
 export const topActStatus = createServerFn({ method: "POST" })
-  .inputValidator((d: { city: string; weeks?: number }) => ({
+  .inputValidator((d: { city: string; weeks?: number; kind?: Kind }) => ({
     city: String(d.city || "").trim().slice(0, 80),
     weeks: Math.max(1, Math.min(4, Math.round(Number(d.weeks) || 1))),
+    kind: kindOf(d.kind),
   }))
   .handler(
     async ({ data }): Promise<{ slug: string; nextFree: string; freeToday: number; slots: number } | { error: string }> => {
       const slug = citySlug(data.city);
       if (slug.length < 2) return { error: "Bitte eine Stadt angeben" };
-      const busy = await busyOf(slug);
+      const busy = await busyOf(slug, data.kind);
       const today = todayBerlin();
       return {
         slug,
@@ -77,23 +82,33 @@ export const topActStatus = createServerFn({ method: "POST" })
 
 /** Laufende Top Acts aller Städte (für die Startseite) */
 export const activeTopActs = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ name: string; cat: string; city: string; tagline: string; link: string | null; artistId: number | null; until: string }[]> => {
+  async (): Promise<{ kind: Kind; name: string; cat: string; city: string; tagline: string; link: string | null; artistId: number | null; venueId: number | null; until: string }[]> => {
     const today = todayBerlin();
     const { data } = await adminClient()
       .from("spotlights")
-      .select("name, cat, city, tagline, link, artist_id, ends_on")
+      .select("kind, name, cat, city, tagline, link, artist_id, venue_id, ends_on")
       .eq("status", "paid")
       .lte("starts_on", today)
       .gte("ends_on", today)
       .limit(500);
-    return (data || []).map((r) => ({ name: r.name, cat: r.cat, city: r.city, tagline: r.tagline, link: r.link, artistId: r.artist_id, until: r.ends_on }));
+    return (data || []).map((r) => ({
+      kind: kindOf(r.kind),
+      name: r.name,
+      cat: r.cat,
+      city: r.city,
+      tagline: r.tagline,
+      link: r.link,
+      artistId: r.artist_id,
+      venueId: r.venue_id,
+      until: r.ends_on,
+    }));
   },
 );
 
 /** Zeitraum reservieren und die Zahlungsmaske öffnen */
 export const topActCheckout = createServerFn({ method: "POST" })
   .inputValidator(
-    (d: { city: string; weeks: number; tagline: string; startISO?: string; returnUrl: string; environment: StripeEnv }) => {
+    (d: { city: string; weeks: number; tagline: string; startISO?: string; returnUrl: string; environment: StripeEnv; kind?: Kind }) => {
       if (!/^https?:\/\//.test(String(d.returnUrl))) throw new Error("Ungültig");
       return {
         city: String(d.city || "").trim().slice(0, 80),
@@ -102,6 +117,7 @@ export const topActCheckout = createServerFn({ method: "POST" })
         startISO: ISO.test(String(d.startISO || "")) ? String(d.startISO) : undefined,
         returnUrl: String(d.returnUrl),
         environment: d.environment === "live" ? ("live" as const) : ("sandbox" as const),
+        kind: kindOf(d.kind),
       };
     },
   )
@@ -119,39 +135,61 @@ export const topActCheckout = createServerFn({ method: "POST" })
       const { findContact } = await import("@/showly/contactGuard");
       if (findContact(data.tagline).length) return { error: "Bitte keine Kontaktdaten, Adressen oder Namen im Slogan." };
       const db = adminClient();
-      /* Nur mit freigeschaltetem Künstlerprofil; Name, Sparte und Link kommen von dort */
-      const { data: artist } = await db
-        .from("artists")
-        .select("id, name, cat, loc, published, blocked")
-        .eq("owner", ctx.user.id)
-        .eq("published", true)
-        .eq("blocked", false)
-        .order("created_at")
-        .limit(1)
-        .maybeSingle();
-      if (!artist) return { error: "Den Top-Platz können nur Künstler mit freigeschaltetem Profil buchen." };
-      const L = (v: unknown) => (typeof v === "string" ? v : String((v as { de?: string } | null)?.de ?? ""));
-      const name = L(artist.name).slice(0, 80);
-      const { artistPath } = await import("@/showly/slugs");
-      const link = artistPath({ id: artist.id, cat: artist.cat, name: artist.name, loc: artist.loc } as never);
+      /* Nur mit freigeschaltetem Profil; Name, Sparte und Link kommen von dort:
+         Künstlerprofil (Top Act) bzw. Location (Location der Woche) */
+      let who: { name: string; cat: string; link: string; artistId: number | null; venueId: number | null };
+      if (data.kind === "location") {
+        const { data: prov } = await db
+          .from("providers")
+          .select("id, data, published, blocked")
+          .eq("owner", ctx.user.id)
+          .eq("kind", "location")
+          .maybeSingle();
+        if (!prov || !prov.published || prov.blocked)
+          return { error: "Location der Woche können nur Anbieter mit freigeschalteter Location buchen." };
+        const d = prov.data as Record<string, unknown>;
+        who = { name: String(d["name"] || "").slice(0, 80), cat: String(d["kind"] || "sonstiges"), link: `/locations/${prov.id}`, artistId: null, venueId: prov.id };
+      } else {
+        const { data: artist } = await db
+          .from("artists")
+          .select("id, name, cat, loc, published, blocked")
+          .eq("owner", ctx.user.id)
+          .eq("published", true)
+          .eq("blocked", false)
+          .order("created_at")
+          .limit(1)
+          .maybeSingle();
+        if (!artist) return { error: "Den Top-Platz können nur Künstler mit freigeschaltetem Profil buchen." };
+        const L = (v: unknown) => (typeof v === "string" ? v : String((v as { de?: string } | null)?.de ?? ""));
+        const { artistPath } = await import("@/showly/slugs");
+        who = {
+          name: L(artist.name).slice(0, 80),
+          cat: artist.cat,
+          link: artistPath({ id: artist.id, cat: artist.cat, name: artist.name, loc: artist.loc } as never),
+          artistId: artist.id,
+          venueId: null,
+        };
+      }
 
       const slug = citySlug(data.city);
       const today = todayBerlin();
       const days = data.weeks * 7;
-      const busy = await busyOf(slug);
+      const busy = await busyOf(slug, data.kind);
       const start = data.startISO && data.startISO >= today ? data.startISO : firstFree(busy, today, days, ctx.user.id);
       const end = addDays(start, days - 1);
       const amount = SPOTLIGHT_PRICE * 100 * data.weeks;
       const { data: res, error } = await db.rpc("spotlight_reservieren", {
         p: {
           owner: ctx.user.id,
-          artist_id: artist.id,
+          kind: data.kind,
+          artist_id: who.artistId ?? "",
+          venue_id: who.venueId ?? "",
           city: data.city,
           city_slug: slug,
-          name,
-          cat: artist.cat,
+          name: who.name,
+          cat: who.cat,
           tagline: data.tagline,
-          link,
+          link: who.link,
           starts_on: start,
           ends_on: end,
           weeks: data.weeks,
@@ -174,13 +212,13 @@ export const topActCheckout = createServerFn({ method: "POST" })
             {
               price_data: {
                 currency: "eur",
-                product_data: { name: `Top Act der Woche · ${data.city} · ${d(start)}–${d(end)}` },
+                product_data: { name: `${data.kind === "location" ? "Location" : "Top Act"} der Woche · ${data.city} · ${d(start)}–${d(end)}` },
                 unit_amount: SPOTLIGHT_PRICE * 100,
               },
               quantity: data.weeks,
             },
           ],
-          payment_intent_data: { description: `Showly Top Act ${data.city}` },
+          payment_intent_data: { description: `Showly ${data.kind === "location" ? "Location" : "Top Act"} ${data.city}` },
           metadata: { kind: "spotlight", spotlight_id: String(r.id) },
           expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
           locale: "de",

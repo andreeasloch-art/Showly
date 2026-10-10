@@ -17,9 +17,12 @@ export async function settleSpotlight(sessionId: string, env: "sandbox" | "live"
   await db.from("spotlights").update({ status: "paid", stripe_session_id: sessionId, hold_until: null }).eq("id", id).neq("status", "paid");
   const { notify } = await import("./notify.server");
   const d = (x: string) => x.split("-").reverse().join(".");
-  await notify(row.owner, "Du bist Top Act der Woche", [
+  const loc = row.kind === "location";
+  await notify(row.owner, loc ? "Deine Location ist Location der Woche" : "Du bist Top Act der Woche", [
     `Deine Platzierung in ${row.city} ist gebucht: ${d(row.starts_on)} bis ${d(row.ends_on)}.`,
-    "Ab dem ersten Tag erscheinst du ganz oben auf der Startseite für deine Stadt und Umgebung.",
+    loc
+      ? "Ab dem ersten Tag erscheint deine Location ganz oben auf der Startseite, wenn Kunden nach Locations suchen."
+      : "Ab dem ersten Tag erscheinst du ganz oben auf der Startseite für deine Stadt und Umgebung.",
   ]).catch(() => false);
   return { ok: true, id };
 }

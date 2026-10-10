@@ -24,16 +24,37 @@ import { useShowly } from "@/showly/store";
  * Umlautpunkte stehen und mal nichts. Bei gleicher Bildhöhe erschiene das
  * eine Wort größer als das andere. Die Werte gleichen x-Höhe und Versalhöhe
  * über die drei Sprachen an (auf gut zweieinhalb Prozent genau), top hält
- * dabei den Abstand zur Zeile darüber gleich. */
-const ART: Record<string, { src: string; ratio: number; em: number; top: number }> = {
-  de: { src: "/wort-kuenstler.webp", ratio: 4.126, em: 0.9, top: 0.06 },
-  en: { src: "/wort-artist.webp", ratio: 3.434, em: 0.83, top: 0.11 },
-  es: { src: "/wort-artista.webp", ratio: 3.847, em: 0.86, top: 0.09 },
+ * dabei den Abstand zur Zeile darüber gleich.
+ *
+ * Zwei Wortsätze: „Künstler“ für die Acts und „Location“ für die Locations
+ * (Umschalter in der Suchkarte der Startseite). Die Location-Wörter sind an
+ * der Versalhöhe von „Künstler“ ausgerichtet; „Lugar“ ist höher, weil das g
+ * unter die Zeile reicht. */
+type Art = { src: string; ratio: number; em: number; top: number };
+const ART: Record<"acts" | "locations", Record<string, Art>> = {
+  acts: {
+    de: { src: "/wort-kuenstler.webp", ratio: 4.126, em: 0.9, top: 0.06 },
+    en: { src: "/wort-artist.webp", ratio: 3.434, em: 0.83, top: 0.11 },
+    es: { src: "/wort-artista.webp", ratio: 3.847, em: 0.86, top: 0.09 },
+  },
+  locations: {
+    de: { src: "/wort-location.webp", ratio: 4.536, em: 0.92, top: 0.19 },
+    en: { src: "/wort-venue.webp", ratio: 3.541, em: 0.9, top: 0.18 },
+    es: { src: "/wort-lugar.webp", ratio: 2.589, em: 1.15, top: 0.18 },
+  },
 };
 
-export function GradientText({ text, className = "" }: { text: string; className?: string }) {
+export function GradientText({
+  text,
+  className = "",
+  word = "acts",
+}: {
+  text: string;
+  className?: string;
+  word?: keyof typeof ART;
+}) {
   const { lang } = useShowly();
-  const art = ART[lang];
+  const art = ART[word][lang];
 
   if (art)
     return (

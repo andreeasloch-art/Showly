@@ -283,7 +283,7 @@ function Home() {
             <div className="search-mode" role="tablist" aria-label={t("search.what")}>
               {(
                 [
-                  ["acts", "mask", lang === "en" ? "Acts" : lang === "es" ? "Artistas" : "Acts"],
+                  ["acts", "mask", lang === "en" ? "Acts" : lang === "es" ? "Artistas" : "Künstler"],
                   ["locations", "venue", V.tab],
                 ] as const
               ).map(([m, ic, txt]) => (

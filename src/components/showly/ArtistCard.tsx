@@ -26,7 +26,7 @@ export function ArtistCard({ a }: { a: Artist }) {
   return (
     <article className="act-card">
       <div className="act-card-media">
-        <div className="act-card-img" style={bgOf(a)}>
+        <div className="act-card-img" style={bgOf(a, undefined, "s")}>
           {!hasImg(a) && (
             <span className="img-fallback">
               <CatIcon id={a.cat} />

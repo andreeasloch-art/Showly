@@ -273,7 +273,7 @@ function BakerProfile() {
                 <div
                   key={i}
                   className="bk-thumb"
-                  style={(p && mediaBg(p.id)) || (offers[i] ? sweetBg(offers[i]!) : bakerBg(b))}
+                  style={(p && mediaBg(p.id)) || (offers[i] ? sweetBg(offers[i]!, "s") : bakerBg(b, "s"))}
                 />
               ))}
             </div>
@@ -387,7 +387,7 @@ function BakerProfile() {
                     {offers.slice(0, 5).map((s) => (
                       <li key={s.id}>
                         <button onClick={() => setAsking(s)}>
-                          <span className="bk-pick-img" style={sweetBg(s)} />
+                          <span className="bk-pick-img" style={sweetBg(s, "s")} />
                           <span className="bk-pick-name">{L(s.name)}</span>
                           <span className="bk-pick-price">
                             {fmt(s.price)} {S.unit[s.unit]}

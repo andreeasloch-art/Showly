@@ -13,6 +13,7 @@ import type { CSSProperties } from "react";
 import { SHOP_ITEMS, type Lang, type LText, type ShopItem } from "./data";
 import type { MediaRef } from "./media";
 import { mediaUrlSync, preloadMedia } from "./media";
+import { sizedSrc, type ImgSize } from "./imgSize";
 import { loadJSON, saveJSON } from "./persist";
 import type { FoodInfo } from "./cakeRules";
 import type { RentTerms } from "./rental";
@@ -417,18 +418,18 @@ function bg(url: string, pos = "center"): CSSProperties {
   };
 }
 
-export function sweetBg(s: Sweet): CSSProperties {
+export function sweetBg(s: Sweet, size: ImgSize = "l"): CSSProperties {
   const u = s.photo ? mediaUrlSync(s.photo.id) : null;
   if (u) return bg(u);
-  if (s.img) return bg(`/sweets/${s.img}.webp`);
+  if (s.img) return bg(sizedSrc(`/sweets/${s.img}.webp`, size));
   return { background: "linear-gradient(135deg,#FFF1F4,#F6EEFF)" };
 }
 
-export function bakerBg(b: Baker): CSSProperties {
+export function bakerBg(b: Baker, size: ImgSize = "l"): CSSProperties {
   const first = b.photos?.find((m) => m.kind !== "video");
   const u = first ? mediaUrlSync(first.id) : null;
   if (u) return bg(u);
-  return bg(`/sweets/${b.coverImg || 1}.webp`);
+  return bg(sizedSrc(`/sweets/${b.coverImg || 1}.webp`, size));
 }
 
 export function sweetsOf(bakerId: number) {

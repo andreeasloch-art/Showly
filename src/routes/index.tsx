@@ -4,7 +4,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useShowly } from "@/showly/store";
 import { ARTISTS, CATS } from "@/showly/data";
-import { CatIcon, Icon, bgOf } from "@/showly/ui";
+import { CatIcon, Icon, bgOf, sizedSrc } from "@/showly/ui";
 import { ArtistCard, matchArtist } from "@/components/showly/ArtistCard";
 import { Footer } from "@/components/showly/Footer";
 import { GradientText } from "@/components/showly/GradientText";
@@ -669,7 +669,7 @@ function Home() {
           </div>
           <div className="home-join-art" aria-hidden="true">
             {ARTISTS.slice(0, 6).map((a, i) => (
-              <span className={"home-join-tile t" + i} key={a.id} style={bgOf(a)} />
+              <span className={"home-join-tile t" + i} key={a.id} style={bgOf(a, undefined, "s")} />
             ))}
           </div>
         </div>
@@ -683,7 +683,7 @@ function Home() {
 function MoreTile({ img, icon, text }: { img: string; icon: string; text: readonly string[] }) {
   return (
     <>
-      <span className="more-tile-img" style={{ backgroundImage: `url('${img}')` }} />
+      <span className="more-tile-img" style={{ backgroundImage: `url('${sizedSrc(img, "s")}')` }} />
       <span className="more-tile-text">
         <span className="more-tile-ic">
           <Icon name={icon} />

@@ -419,7 +419,7 @@ function Dashboard() {
         <div className="dash26-top-inner">
           <div className="dash26-hello rise" style={{ ["--d" as string]: "0ms" }}>
             {myProfile ? (
-              <span className="dash26-avatar img" style={bgOf(myProfile, "center 28%")} />
+              <span className="dash26-avatar img" style={bgOf(myProfile, "center 28%", "s")} />
             ) : (
               <span className="dash26-avatar">{initials(name)}</span>
             )}
@@ -553,7 +553,7 @@ function Dashboard() {
                     <article className="dash26-item" key={b.id}>
                       <button
                         className="dash26-thumb"
-                        style={bgOf(a)}
+                        style={bgOf(a, undefined, "s")}
                         onClick={go}
                         aria-label={String(L(a.name))}
                       >
@@ -755,7 +755,7 @@ function Dashboard() {
                   <article className="dash26-item" key={o.id}>
                     <span
                       className="dash26-thumb light"
-                      style={firstItem ? shopBg(firstItem) : {}}
+                      style={firstItem ? shopBg(firstItem, "s") : {}}
                     />
                     <div className="dash26-item-body">
                       <div className="dash26-item-top">

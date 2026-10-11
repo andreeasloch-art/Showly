@@ -510,7 +510,7 @@ function Become() {
           <div className="join26-marquee-track">
             {[...showcase, ...showcase].map((a, k) => (
               <span className="join26-face" key={a.id + "-" + k} aria-hidden={k >= showcase.length}>
-                <span className="join26-face-img" style={bgOf(a, "center 30%")} />
+                <span className="join26-face-img" style={bgOf(a, "center 30%", "s")} />
                 <span>
                   <b>{String(L(a.name))}</b>
                   <small>{catLabel(a.cat)}</small>

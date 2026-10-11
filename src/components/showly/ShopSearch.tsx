@@ -144,7 +144,7 @@ export function ShopSearch({
                   onMouseEnter={() => setActive(i)}
                   onClick={() => choose(row)}
                 >
-                  <span className="aa-img" style={shopBg(row.item)} />
+                  <span className="aa-img" style={shopBg(row.item, "s")} />
                   <span className="aa-text">
                     <span className="aa-name">{String(L(row.item.name))}</span>
                     <span className="aa-meta">{t("shop." + row.item.cat)}</span>

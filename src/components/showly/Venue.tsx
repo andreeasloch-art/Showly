@@ -3,7 +3,7 @@
 import { Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useShowly } from "@/showly/store";
-import { Icon, mediaBg } from "@/showly/ui";
+import { Icon, mediaBg, sizedSrc, type ImgSize } from "@/showly/ui";
 import { DemoBadge } from "@/components/showly/DemoBadge";
 import {
   OCCASIONS,
@@ -138,14 +138,14 @@ export const label = (x: { label: Record<Lang, string> }, lang: string) => x.lab
 
 /** Bild einer Location: erstes eigenes Foto, sonst ein Farbverlauf in der
  *  Farbe der Location (das Symbol der Art liegt darüber) */
-export function venueBg(v: Venue): CSSProperties {
+export function venueBg(v: Venue, size: ImgSize = "l"): CSSProperties {
   const first = v.photos?.find((m) => m.kind !== "video");
   const photo = first ? mediaBg(first.id) : null;
   if (photo) return photo;
   if (v.img)
     return {
       backgroundColor: "#2A1A6E",
-      backgroundImage: `url("${v.img}")`,
+      backgroundImage: `url("${sizedSrc(v.img, size)}")`,
       backgroundSize: "cover",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
@@ -163,7 +163,7 @@ export function hasPhoto(v: Venue) {
 /** Kartenbild mit Symbol, falls es noch kein Foto gibt */
 export function VenueVisual({ v, className = "" }: { v: Venue; className?: string }) {
   return (
-    <span className={"vn-visual " + className} style={venueBg(v)}>
+    <span className={"vn-visual " + className} style={venueBg(v, "s")}>
       {!hasPhoto(v) && (
         <span className="vn-visual-ic" aria-hidden="true">
           <Icon name={kindOf(v.kind).icon} />

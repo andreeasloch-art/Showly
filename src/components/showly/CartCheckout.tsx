@@ -546,7 +546,7 @@ export function CartCheckout() {
                       const min = minHoursOf(a);
                       return (
                         <div className="co-line" key={b.key}>
-                          <span className="co-img" style={bgOf(a)} />
+                          <span className="co-img" style={bgOf(a, undefined, "s")} />
                           <div className="co-line-text">
                             <b>{L(a.name)}</b>
                             <small>
@@ -590,7 +590,7 @@ export function CartCheckout() {
                       return (
                         <div className="co-line-wrap" key={`${c.shopId}-${c.mode}-${idx}`}>
                           <div className="co-line">
-                            <span className="co-img" style={shopBg(i)} />
+                            <span className="co-img" style={shopBg(i, "s")} />
                             <div className="co-line-text">
                               <b>{L(i.name)}</b>
                               <small>
@@ -620,7 +620,7 @@ export function CartCheckout() {
                       if (!p) return null;
                       return (
                         <div className="co-line" key={l.key}>
-                          <span className="co-img" style={venueBg(p.venue)} />
+                          <span className="co-img" style={venueBg(p.venue, "s")} />
                           <div className="co-line-text">
                             <b>{p.venue.name}</b>
                             <small>
@@ -656,7 +656,7 @@ export function CartCheckout() {
                       const b = bakerOf(r.bakerId);
                       return (
                         <div className="co-line" key={r.key}>
-                          <span className="co-img" style={sw ? sweetBg(sw) : undefined} />
+                          <span className="co-img" style={sw ? sweetBg(sw, "s") : undefined} />
                           <div className="co-line-text">
                             <b>{sw ? L(sw.name) : "—"}</b>
                             <small>

@@ -80,7 +80,7 @@ export function ArtistTagPicker({
         <div className="tagpick-chosen">
           {chosen.map((a) => (
             <span className="tagpick-chip" key={a.id}>
-              <span className="tagpick-chip-img" style={bgOf(a, "center 26%")} />
+              <span className="tagpick-chip-img" style={bgOf(a, "center 26%", "s")} />
               <span className="tagpick-chip-name">
                 {String(L(a.name))}
                 {a.id === ownId && <em> · {T.me}</em>}
@@ -118,7 +118,7 @@ export function ArtistTagPicker({
           {hits.length === 0 && <div className="ac-empty">{T.none}</div>}
           {hits.map((a) => (
             <button type="button" className="tagpick-item" key={a.id} onClick={() => add(a.id)}>
-              <span className="tagpick-img" style={bgOf(a, "center 26%")} />
+              <span className="tagpick-img" style={bgOf(a, "center 26%", "s")} />
               <span className="tagpick-text">
                 <span className="tagpick-name">{String(L(a.name))}</span>
                 <span className="tagpick-meta">

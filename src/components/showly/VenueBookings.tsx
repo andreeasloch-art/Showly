@@ -96,7 +96,7 @@ export function VenueBookings() {
         const v = findVenue(b.venueId);
         return (
           <article key={b.id} className={"vn-bk " + b.status}>
-            <span className="vn-bk-img" style={v ? venueBg(v) : undefined} />
+            <span className="vn-bk-img" style={v ? venueBg(v, "s") : undefined} />
             <div className="vn-bk-body">
               <div className="vn-bk-top">
                 <b>{b.venueName}</b>

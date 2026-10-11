@@ -514,7 +514,7 @@ function Shop() {
           )}
           <div className="home-join-art" aria-hidden="true">
             {pool.slice(0, 6).map((i, k) => (
-              <span className={"home-join-tile t" + k} key={i.id} style={shopBg(i)} />
+              <span className={"home-join-tile t" + k} key={i.id} style={shopBg(i, "s")} />
             ))}
           </div>
         </div>
@@ -1003,7 +1003,7 @@ function ProductCard({
         onClick={() => setOpen(true)}
         onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen(true))}
       >
-        <div className="act-card-img" style={shopBg(i)} />
+        <div className="act-card-img" style={shopBg(i, "s")} />
         {i.own && <span className="prod-new">{C.newTag}</span>}
         {i.demo && <DemoBadge className="on-card" />}
         <span className={"act-card-badge prod-badge" + (both ? " both" : "")}>

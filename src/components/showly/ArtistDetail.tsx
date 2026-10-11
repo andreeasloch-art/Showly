@@ -208,10 +208,10 @@ export function ArtistDetail({ id }: { id: string }) {
             </div>
             {photos.length >= 2 ? (
               <div className="gallery-side">
-                <div className="gallery-thumb" style={mediaBg(photos[1]!.id) ?? bgOf(a)} />
+                <div className="gallery-thumb" style={mediaBg(photos[1]!.id) ?? bgOf(a, undefined, "s")} />
                 <div
                   className="gallery-thumb"
-                  style={(photos[2] && mediaBg(photos[2].id)) || mediaBg(photos[0]!.id) || bgOf(a)}
+                  style={(photos[2] && mediaBg(photos[2].id)) || mediaBg(photos[0]!.id) || bgOf(a, undefined, "s")}
                 />
               </div>
             ) : null}
@@ -438,7 +438,7 @@ export function ArtistDetail({ id }: { id: string }) {
                     key={c.id}
                     onClick={() => navigate({ to: "/shop" })}
                   >
-                    <span className="bridge-emoji" style={shopBg(c)} />
+                    <span className="bridge-emoji" style={shopBg(c, "s")} />
                     <span>
                       <span className="bridge-name">{L(c.name)}</span>
                       <span className="bridge-price">
@@ -507,7 +507,7 @@ export function ArtistDetail({ id }: { id: string }) {
                   key={s.id}
                   onClick={() => navigate({ to: "/kuenstler/$stadt/$kategorie/$name", params: artistParams(s) })}
                 >
-                  <div className="similar-img" style={bgOf(s, "center 30%")}>
+                  <div className="similar-img" style={bgOf(s, "center 30%", "s")}>
                     <Face a={s} />
                   </div>
                   <div className="similar-body">

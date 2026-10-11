@@ -1,6 +1,7 @@
 /* Gemeinsame UI-Helfer für die Showly-App (portiert aus dem Prototyp) */
 import { mediaUrlSync } from "@/showly/media";
 import type { CSSProperties } from "react";
+import { sizedSrc, type ImgSize } from "./imgSize";
 import { ICON, ART_IMG, SHOP_IMG, CATS, type Artist, type ShopItem } from "./data";
 
 export function Icon({ name, className }: { name: string; className?: string }) {
@@ -28,6 +29,8 @@ export function CatIcon({ id }: { id: string }) {
 function fileUrl(path: string) {
   return `url('${path}')`;
 }
+
+export { sizedSrc, type ImgSize } from "./imgSize";
 
 /** Anbieter mit festen Paketen (Planer). Alle anderen rechnen pro Stunde ab. */
 export function hasPackages(a?: Artist | null) {
@@ -57,9 +60,11 @@ export function mediaBg(id: string | undefined, pos?: string): CSSProperties | n
   };
 }
 
-export function bgOf(a: Artist, pos?: string): CSSProperties {
+export function bgOf(a: Artist, pos?: string, size: ImgSize = "l"): CSSProperties {
   /* Eigene Fotos des Künstlers haben Vorrang vor der Zeichnung */
-  const src = ownPhotoUrl(a) || ART_IMG[String(a.id)];
+  const own = ownPhotoUrl(a);
+  const art = ART_IMG[String(a.id)];
+  const src = own || (art ? sizedSrc(art, size) : null);
   if (src) {
     return {
       background: a.color,
@@ -72,10 +77,11 @@ export function bgOf(a: Artist, pos?: string): CSSProperties {
   return { background: `linear-gradient(140deg,${a.color || "#F1EAFF"},#FFFFFF)` };
 }
 
-export function shopBg(i: ShopItem): CSSProperties {
+export function shopBg(i: ShopItem, size: ImgSize = "l"): CSSProperties {
   const own = i.photo ? mediaBg(i.photo.id) : null;
   if (own) return own;
-  const src = SHOP_IMG[String(i.id)];
+  const raw = SHOP_IMG[String(i.id)];
+  const src = raw ? sizedSrc(raw, size) : null;
   if (src) {
     return {
       backgroundImage: fileUrl(src),

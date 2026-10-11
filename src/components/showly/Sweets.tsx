@@ -297,7 +297,7 @@ export function BakerCard({ b }: { b: Baker }) {
   return (
     <article className="act-card baker-card">
       <div className="act-card-media">
-        <div className="act-card-img" style={bakerBg(b)} />
+        <div className="act-card-img" style={bakerBg(b, "s")} />
         <span className="act-card-badge">
           <KindBadge b={b} />
         </span>
@@ -485,7 +485,7 @@ export function SweetCard({
         onClick={() => setOpen(true)}
         onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && (e.preventDefault(), setOpen(true))}
       >
-        <div className="act-card-img" style={sweetBg(s)} />
+        <div className="act-card-img" style={sweetBg(s, "s")} />
         <span className="act-card-badge prod-badge">
           {catName(s.cat, lang)}
         </span>
@@ -751,7 +751,7 @@ export function RequestModal({ s, onClose }: { s: Sweet; onClose: () => void }) 
         </header>
         <div className="feed26-sheet-body">
           <div className="req-item">
-            <span className="req-img" style={sweetBg(s)} />
+            <span className="req-img" style={sweetBg(s, "s")} />
             <span>
               <b>{L(s.name)}</b>
               {b && (

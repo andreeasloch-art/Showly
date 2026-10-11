@@ -306,7 +306,7 @@ function BlogPage() {
               aria-label={T.onlyWith(String(L(a.name)))}
             >
               <span className={"story-ring" + (n > 0 ? " has" : "")}>
-                <span className="story-img" style={bgOf(a, "center 28%")} />
+                <span className="story-img" style={bgOf(a, "center 28%", "s")} />
               </span>
               <span className="story-name">{String(L(a.name))}</span>
             </button>
@@ -336,7 +336,7 @@ function BlogPage() {
               </div>
               {filterAct && (
                 <button className="feed26-actchip" onClick={() => setActFilter(null)}>
-                  <span className="feed26-actchip-img" style={bgOf(filterAct, "center 28%")} />
+                  <span className="feed26-actchip-img" style={bgOf(filterAct, "center 28%", "s")} />
                   {String(L(filterAct.name))}
                   <Icon name="close" />
                 </button>
@@ -348,7 +348,7 @@ function BlogPage() {
             <div className="feed26-empty" data-reveal>
               {filterAct ? (
                 <>
-                  <span className="feed26-empty-img" style={bgOf(filterAct, "center 28%")} />
+                  <span className="feed26-empty-img" style={bgOf(filterAct, "center 28%", "s")} />
                   <h3>{T.emptyActH(String(L(filterAct.name)))}</h3>
                   <p>{T.emptyActP}</p>
                   <div className="feed26-empty-btns">
@@ -408,7 +408,7 @@ function BlogPage() {
                   to="/kuenstler/$id"
                   params={{ id: String(a.id) }}
                 >
-                  <span className="feed26-suggest-img" style={bgOf(a, "center 28%")} />
+                  <span className="feed26-suggest-img" style={bgOf(a, "center 28%", "s")} />
                   <span className="feed26-suggest-text">
                     <b>{String(L(a.name))}</b>
                     <small>
@@ -634,7 +634,7 @@ function PostCard({
             onClick={() => openProfile(authorProfile.id)}
             aria-label={String(L(authorProfile.name))}
           >
-            <span style={bgOf(authorProfile, "center 26%")} />
+            <span style={bgOf(authorProfile, "center 26%", "s")} />
           </button>
         ) : (
           <span className="ig-avatar">{initials(post.author)}</span>
@@ -719,7 +719,7 @@ function PostCard({
             <span className="ig-tags-h">{T.tagged}</span>
             {acts.map((a) => (
               <button className="ig-tag" key={a.id} onClick={() => openProfile(a.id)}>
-                <span className="ig-tag-img" style={bgOf(a, "center 26%")} />
+                <span className="ig-tag-img" style={bgOf(a, "center 26%", "s")} />
                 <span>
                   <b>{String(L(a.name))}</b>
                   <small>{catLabel(a.cat)}</small>

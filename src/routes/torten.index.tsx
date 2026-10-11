@@ -243,7 +243,7 @@ function Sweets() {
           </div>
           <div className="home-join-art" aria-hidden="true">
             {SWEETS.slice(0, 6).map((s, k) => (
-              <span className={"home-join-tile t" + k} key={s.id} style={sweetBg(s)} />
+              <span className={"home-join-tile t" + k} key={s.id} style={sweetBg(s, "s")} />
             ))}
           </div>
         </div>

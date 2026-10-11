@@ -255,7 +255,7 @@ export function EventBundle({
   const modeOf = (d: ShopItem) => (d.rent > 0 ? "rent" : "buy") as "rent" | "buy";
   const decoRow = (key: string, d: ShopItem): Row => ({
     key,
-    img: shopBg(d),
+    img: shopBg(d, "s"),
     name: String(L(d.name)),
     sub: [d.vendor, modeOf(d) === "rent" ? `${X.rent} ${X.day}` : ""].filter(Boolean).join(" · "),
     price: modeOf(d) === "rent" ? d.rent : d.buy,
@@ -263,11 +263,11 @@ export function EventBundle({
   });
   type Row = { key: string; img: React.CSSProperties; name: string; sub: string; price: number; tag: string };
   const rows: Row[] = [
-    { key: "a", img: bgOf(a), name: String(L(a.name)), sub: `${X.thisArtist} · ${hours} ${X.perH.replace("/ ", "")}`, price: artistTotal, tag: X.act },
+    { key: "a", img: bgOf(a, undefined, "s"), name: String(L(a.name)), sub: `${X.thisArtist} · ${hours} ${X.perH.replace("/ ", "")}`, price: artistTotal, tag: X.act },
     ...(d1 ? [decoRow("d1", d1)] : []),
     ...(d2 ? [decoRow("d2", d2)] : []),
     ...(s1
-      ? [{ key: "s1", img: sweetBg(s1), name: String(L(s1.name)), sub: String(L(bakerOf(s1.bakerId)?.name ?? "")), price: sweetEst, tag: X.cake }]
+      ? [{ key: "s1", img: sweetBg(s1, "s"), name: String(L(s1.name)), sub: String(L(bakerOf(s1.bakerId)?.name ?? "")), price: sweetEst, tag: X.cake }]
       : []),
   ];
   const sum = rows.reduce((t, r) => t + (on[r.key] ? r.price : 0), 0);
@@ -398,7 +398,7 @@ export function AddOnShelf({
       <div className="shelf-row">
         {artists.map((a) => (
           <article className="shelf-card" key={"a" + a.id}>
-            <span className="shelf-img" style={bgOf(a)}>
+            <span className="shelf-img" style={bgOf(a, undefined, "s")}>
               <span className="shelf-tag">{X.act}</span>
             </span>
             <b className="shelf-name">{L(a.name)}</b>
@@ -414,7 +414,7 @@ export function AddOnShelf({
           const has = inCart(d.id);
           return (
             <article className="shelf-card" key={"d" + d.id}>
-              <span className="shelf-img" style={shopBg(d)}>
+              <span className="shelf-img" style={shopBg(d, "s")}>
                 <span className="shelf-tag">{X.deco}</span>
               </span>
               <b className="shelf-name">{L(d.name)}</b>
@@ -445,7 +445,7 @@ export function AddOnShelf({
                   Angebot, der Knopf darunter fragt direkt an. */}
               <Link
                 className="shelf-img"
-                style={sweetBg(s)}
+                style={sweetBg(s, "s")}
                 to="/torten/$id"
                 params={{ id: String(s.bakerId) }}
                 search={{ angebot: s.id }}
@@ -524,7 +524,7 @@ export function CartAddOns({ onLeave }: { onLeave: () => void }) {
           <div className="cart-addons-h">{X.cartH}</div>
           {list.map((d) => (
             <div className="cart-addon" key={d.id}>
-              <span className="cart-addon-img" style={shopBg(d)} />
+              <span className="cart-addon-img" style={shopBg(d, "s")} />
               <span className="cart-addon-text">
                 <b>{L(d.name)}</b>
                 <small>{fmt(d.buy)}</small>

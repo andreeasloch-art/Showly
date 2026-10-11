@@ -106,7 +106,7 @@ export function BookingModal({
             {step === 1 && (
               <>
                 <div className="modal-artist-row">
-                  <div className="modal-artist-icon" style={bgOf(a)}>
+                  <div className="modal-artist-icon" style={bgOf(a, undefined, "s")}>
                     {!hasImg(a) && (
                       <span className="img-fallback">
                         <CatIcon id={a.cat} />

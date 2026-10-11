@@ -148,7 +148,7 @@ export function CartDrawer() {
                 const p = bookingPrice(a, b.hours, b.pkg, b.dateISO);
                 return (
                   <div className="cart-item" key={b.key}>
-                    <div className="cart-img" style={bgOf(a)} />
+                    <div className="cart-img" style={bgOf(a, undefined, "s")} />
                     <div className="cart-info">
                       <div className="cart-name">{L(a.name)}</div>
                       <div className="cart-mode">
@@ -173,7 +173,7 @@ export function CartDrawer() {
                 if (!item) return null;
                 return (
                   <div className="cart-item" key={`${c.shopId}-${c.mode}-${idx}`}>
-                    <div className="cart-img" style={shopBg(item)} />
+                    <div className="cart-img" style={shopBg(item, "s")} />
                     <div className="cart-info">
                       <div className="cart-name">{L(item.name)}</div>
                       <div className="cart-mode">
@@ -212,7 +212,7 @@ export function CartDrawer() {
                 if (!p) return null;
                 return (
                   <div className="cart-item" key={l.key}>
-                    <div className="cart-img" style={venueBg(p.venue)} />
+                    <div className="cart-img" style={venueBg(p.venue, "s")} />
                     <div className="cart-info">
                       <div className="cart-name">{p.venue.name}</div>
                       <div className="cart-mode">
@@ -241,7 +241,7 @@ export function CartDrawer() {
                 const b = bakerOf(r.bakerId);
                 return (
                   <div className="cart-item" key={r.key}>
-                    <div className="cart-img" style={s ? sweetBg(s) : undefined} />
+                    <div className="cart-img" style={s ? sweetBg(s, "s") : undefined} />
                     <div className="cart-info">
                       <div className="cart-name">{s ? L(s.name) : "—"}</div>
                       <div className="cart-mode">

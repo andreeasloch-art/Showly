@@ -16,7 +16,7 @@
  * die Route die fertige Antwort in den Cloudflare-Zwischenspeicher. */
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
-import { adminClient } from "./supabase.server";
+import { adminClient, publicSupabase } from "./supabase.server";
 
 export const CATALOG_TTL_MS = 5 * 60_000;
 export const AVAIL_TTL_MS = 60_000;
@@ -62,9 +62,7 @@ export async function activeSpotlights(): Promise<SpotlightOut[]> {
  *  lesen, genau wie vorher der Browser. So kommt nichts mit, was die
  *  Freigaben in der Datenbank nicht ohnehin öffentlich zeigen. */
 function publicClient() {
-  const url = process.env["VITE_SUPABASE_URL"];
-  const key = process.env["VITE_SUPABASE_ANON_KEY"];
-  if (!url || !key) throw new Error("Datenbank nicht eingerichtet");
+  const { url, key } = publicSupabase();
   return createClient<Database>(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
 

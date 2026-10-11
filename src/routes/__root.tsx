@@ -27,6 +27,7 @@ import { ErrorReporter } from "@/components/showly/ErrorReporter";
 import { MfaGate } from "@/components/showly/AccountSecurity";
 import { ConsentBanner } from "@/components/showly/ConsentBanner";
 import { registerServiceWorker } from "@/showly/sw";
+import { browserPublicSupabase, publicSupabaseScript, serverPublicSupabase } from "@/lib/publicConfig";
 import { CardLights } from "@/components/showly/Motion";
 
 import { Toast, TabBar } from "@/components/showly/Chrome";
@@ -170,10 +171,16 @@ const requestCountry = createIsomorphicFn()
   .server(() => countryFromHeaders((h) => getRequestHeader(h)))
   .client(() => serverCountry());
 
+/* Öffentliche Datenbank-Angaben für den Browser (lib/publicConfig.ts) */
+const requestSupabase = createIsomorphicFn()
+  .server(() => serverPublicSupabase())
+  .client(() => browserPublicSupabase());
+
 const BOOT = LANG_BOOT_SCRIPT.replace("__GEO_MAP__", JSON.stringify(COUNTRY_LANG));
 
 function RootShell({ children }: { children: ReactNode }) {
   const geo = requestCountry();
+  const sb = requestSupabase();
   /* Sprachfassung aus ?lang=en|es schon im HTML des Servers (für Google) */
   const searchStr = useRouterState({ select: (s) => s.location.searchStr });
   const htmlLang = langFromUrl(searchStr) ?? "de";
@@ -182,7 +189,9 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         <script
-          dangerouslySetInnerHTML={{ __html: `window.__SHOWLY_GEO=${JSON.stringify(geo ?? "")};` }}
+          dangerouslySetInnerHTML={{
+            __html: `window.__SHOWLY_GEO=${JSON.stringify(geo ?? "")};` + publicSupabaseScript(sb),
+          }}
         />
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>

@@ -15,11 +15,19 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
 import type { Database } from "./database.types";
+import { serverPublicSupabase } from "./publicConfig";
 
 function env(key: string): string {
   const v = process.env[key];
   if (!v) throw new Error(`${key} ist nicht gesetzt`);
   return v;
+}
+
+/** Adresse und öffentlicher Schlüssel, unter jedem Namen, den Lovable nutzt */
+export function publicSupabase() {
+  const c = serverPublicSupabase();
+  if (!c) throw new Error("VITE_SUPABASE_URL bzw. der öffentliche Schlüssel ist nicht gesetzt");
+  return c;
 }
 
 function parseCookies(header: string | undefined) {
@@ -34,8 +42,7 @@ function parseCookies(header: string | undefined) {
 
 /** Arbeitet mit den Rechten der angemeldeten Person. */
 export function serverClient(): SupabaseClient<Database> {
-  const url = env("VITE_SUPABASE_URL");
-  const key = env("VITE_SUPABASE_ANON_KEY");
+  const { url, key } = publicSupabase();
   const pending: string[] = [];
 
   const client = createServerClient<Database>(url, key, {
@@ -57,7 +64,7 @@ export function serverClient(): SupabaseClient<Database> {
 
 /** Nur für Vorgänge, die der Browser nicht selbst auslösen darf. */
 export function adminClient(): SupabaseClient<Database> {
-  return createClient<Database>(env("VITE_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
+  return createClient<Database>(publicSupabase().url, env("SUPABASE_SERVICE_ROLE_KEY"), {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 }

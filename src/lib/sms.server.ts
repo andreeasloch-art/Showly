@@ -18,7 +18,7 @@
  * auch wenn jemand es darauf anlegt. Für mehr Spielraum die Werte in Lovable
  * unter Secrets erhöhen. */
 import { createClient } from "@supabase/supabase-js";
-import { adminClient } from "./supabase.server";
+import { adminClient, publicSupabase } from "./supabase.server";
 import { clientIp } from "./guard.server";
 import { checkSmsNumber, isCoreCountry, parseCountryList, type SmsRefusal } from "@/showly/smsPolicy";
 
@@ -173,7 +173,8 @@ async function sessionForPhone(e164: string) {
     ...(user.user?.email ? {} : { email, email_confirm: true }),
   });
   if (upd.error) return null;
-  const anon = createClient(env("VITE_SUPABASE_URL"), env("VITE_SUPABASE_ANON_KEY"), {
+  const pub = publicSupabase();
+  const anon = createClient(pub.url, pub.key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
   const { data: signed } = await anon.auth.signInWithPassword({ email: loginMail, password: once });

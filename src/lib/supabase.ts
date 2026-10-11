@@ -11,13 +11,16 @@ import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "./database.types";
 
-const url = import.meta.env["VITE_SUPABASE_URL"] as string | undefined;
-const anonKey = import.meta.env["VITE_SUPABASE_ANON_KEY"] as string | undefined;
+import { browserPublicSupabase, serverPublicSupabase } from "./publicConfig";
+
+/* Adresse und Schlüssel: aus dem Build oder vom Server ins HTML geschrieben
+   (publicConfig.ts). Auf dem Server direkt aus den Umgebungsvariablen. */
+const cfg = () => (typeof window === "undefined" ? serverPublicSupabase() : browserPublicSupabase());
 
 /** Ist eine Datenbank hinterlegt? Ohne Schlüssel läuft die App im örtlichen
  *  Übungsbetrieb weiter, damit nichts kaputtgeht, bevor das Projekt steht. */
 export function isBackendConfigured(): boolean {
-  return !!url && !!anonKey;
+  return !!cfg();
 }
 
 let client: SupabaseClient<Database> | null = null;
@@ -29,7 +32,8 @@ export function supabase(): SupabaseClient<Database> {
     );
   }
   if (!client) {
-    client = createBrowserClient<Database>(url!, anonKey!, {
+    const c = cfg()!;
+    client = createBrowserClient<Database>(c.url, c.key, {
       auth: {
         flowType: "pkce",
         detectSessionInUrl: true,

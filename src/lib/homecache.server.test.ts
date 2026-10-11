@@ -16,7 +16,10 @@ function query(table: string) {
 }
 
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => ({ from: query }) }));
-vi.mock("./supabase.server", () => ({ adminClient: () => ({ from: query }) }));
+vi.mock("./supabase.server", () => ({
+  adminClient: () => ({ from: query }),
+  publicSupabase: () => ({ url: "https://x.supabase.co", key: "anon" }),
+}));
 vi.mock("./schedule.server", () => ({
   scheduleEntries: async () => {
     calls.avail++;

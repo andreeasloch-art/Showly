@@ -1505,8 +1505,13 @@ export function ShowlyProvider({ children }: { children: ReactNode }) {
         if (!n) return;
         /* Gesperrte und gebuchte Zeitfenster der echten Profile */
         const ids = ARTISTS.filter((x) => (x as { fromDb?: boolean }).fromDb).map((x) => x.id);
-        const { listAvailability } = await import("@/utils/community.functions");
-        const server = await listAvailability({ data: { artistIds: ids } }).catch(() => ({}));
+        /* Belegte Termine: erst aus dem Zwischenspeicher des Servers (eine
+           Minute alt höchstens), sonst wie früher direkt */
+        const { loadHomeCatalog } = await import("./homeCache");
+        const cached = await loadHomeCatalog();
+        const server: Record<number, Record<string, string[]>> = cached
+          ? cached.avail
+          : await (await import("@/utils/community.functions")).listAvailability({ data: { artistIds: ids } }).catch(() => ({}));
         setAvail((a) => {
           const next = { ...a };
           for (const [id, days] of Object.entries(server)) {

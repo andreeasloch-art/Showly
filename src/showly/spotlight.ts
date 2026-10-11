@@ -295,8 +295,12 @@ export async function loadCloudSpotlights() {
   try {
     const { isBackendConfigured } = await import("@/lib/supabase");
     if (!isBackendConfigured()) return;
-    const { activeTopActs } = await import("@/utils/spotlight.functions");
-    const list = await activeTopActs();
+    /* Erst den Zwischenspeicher des Servers, sonst wie früher direkt */
+    const { loadHomeCatalog } = await import("./homeCache");
+    const cached = await loadHomeCatalog();
+    const list = cached
+      ? cached.spotlights
+      : await (await import("@/utils/spotlight.functions")).activeTopActs();
     setCloudSpotlights(
       list.map((r) => ({
         kind: r.kind,

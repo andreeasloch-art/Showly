@@ -31,6 +31,7 @@ import { Route as UeberShowlyRouteImport } from './routes/ueber-showly'
 import { Route as WiderrufRouteImport } from './routes/widerruf'
 import { Route as WieFunktioniertShowlyRouteImport } from './routes/wie-funktioniert-showly'
 import { Route as ApiCheckinRouteImport } from './routes/api.checkin'
+import { Route as ApiKatalogRouteImport } from './routes/api.katalog'
 import { Route as ApiStatusRouteImport } from './routes/api.status'
 import { Route as ApiTaeglichRouteImport } from './routes/api.taeglich'
 import { Route as ApiWocheRouteImport } from './routes/api.woche'
@@ -163,6 +164,11 @@ const ApiCheckinRoute = ApiCheckinRouteImport.update({
   path: '/api/checkin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiKatalogRoute = ApiKatalogRouteImport.update({
+  id: '/api/katalog',
+  path: '/api/katalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStatusRoute = ApiStatusRouteImport.update({
   id: '/api/status',
   path: '/api/status',
@@ -293,6 +299,7 @@ export interface FileRoutesByFullPath {
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/checkin': typeof ApiCheckinRoute
+  '/api/katalog': typeof ApiKatalogRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/api/woche': typeof ApiWocheRoute
@@ -338,6 +345,7 @@ export interface FileRoutesByTo {
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/checkin': typeof ApiCheckinRoute
+  '/api/katalog': typeof ApiKatalogRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/api/woche': typeof ApiWocheRoute
@@ -384,6 +392,7 @@ export interface FileRoutesById {
   '/widerruf': typeof WiderrufRoute
   '/wie-funktioniert-showly': typeof WieFunktioniertShowlyRoute
   '/api/checkin': typeof ApiCheckinRoute
+  '/api/katalog': typeof ApiKatalogRoute
   '/api/status': typeof ApiStatusRoute
   '/api/taeglich': typeof ApiTaeglichRoute
   '/api/woche': typeof ApiWocheRoute
@@ -431,6 +440,7 @@ export interface FileRouteTypes {
     | '/widerruf'
     | '/wie-funktioniert-showly'
     | '/api/checkin'
+    | '/api/katalog'
     | '/api/status'
     | '/api/taeglich'
     | '/api/woche'
@@ -476,6 +486,7 @@ export interface FileRouteTypes {
     | '/widerruf'
     | '/wie-funktioniert-showly'
     | '/api/checkin'
+    | '/api/katalog'
     | '/api/status'
     | '/api/taeglich'
     | '/api/woche'
@@ -521,6 +532,7 @@ export interface FileRouteTypes {
     | '/widerruf'
     | '/wie-funktioniert-showly'
     | '/api/checkin'
+    | '/api/katalog'
     | '/api/status'
     | '/api/taeglich'
     | '/api/woche'
@@ -567,6 +579,7 @@ export interface RootRouteChildren {
   WiderrufRoute: typeof WiderrufRoute
   WieFunktioniertShowlyRoute: typeof WieFunktioniertShowlyRoute
   ApiCheckinRoute: typeof ApiCheckinRoute
+  ApiKatalogRoute: typeof ApiKatalogRoute
   ApiStatusRoute: typeof ApiStatusRoute
   ApiTaeglichRoute: typeof ApiTaeglichRoute
   ApiWocheRoute: typeof ApiWocheRoute
@@ -746,6 +759,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCheckinRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/katalog': {
+      id: '/api/katalog'
+      path: '/api/katalog'
+      fullPath: '/api/katalog'
+      preLoaderRoute: typeof ApiKatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/status': {
       id: '/api/status'
       path: '/api/status'
@@ -919,6 +939,7 @@ const rootRouteChildren: RootRouteChildren = {
   WiderrufRoute: WiderrufRoute,
   WieFunktioniertShowlyRoute: WieFunktioniertShowlyRoute,
   ApiCheckinRoute: ApiCheckinRoute,
+  ApiKatalogRoute: ApiKatalogRoute,
   ApiStatusRoute: ApiStatusRoute,
   ApiTaeglichRoute: ApiTaeglichRoute,
   ApiWocheRoute: ApiWocheRoute,

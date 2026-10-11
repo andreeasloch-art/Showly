@@ -81,29 +81,10 @@ export const topActStatus = createServerFn({ method: "POST" })
   );
 
 /** Laufende Top Acts aller Städte (für die Startseite) */
-export const activeTopActs = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ kind: Kind; name: string; cat: string; city: string; tagline: string; link: string | null; artistId: number | null; venueId: number | null; until: string }[]> => {
-    const today = todayBerlin();
-    const { data } = await adminClient()
-      .from("spotlights")
-      .select("kind, name, cat, city, tagline, link, artist_id, venue_id, ends_on")
-      .eq("status", "paid")
-      .lte("starts_on", today)
-      .gte("ends_on", today)
-      .limit(500);
-    return (data || []).map((r) => ({
-      kind: kindOf(r.kind),
-      name: r.name,
-      cat: r.cat,
-      city: r.city,
-      tagline: r.tagline,
-      link: r.link,
-      artistId: r.artist_id,
-      venueId: r.venue_id,
-      until: r.ends_on,
-    }));
-  },
-);
+export const activeTopActs = createServerFn({ method: "GET" }).handler(async () => {
+  const { activeSpotlights } = await import("@/lib/homecache.server");
+  return activeSpotlights();
+});
 
 /** Zeitraum reservieren und die Zahlungsmaske öffnen */
 export const topActCheckout = createServerFn({ method: "POST" })

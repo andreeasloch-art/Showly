@@ -11,6 +11,7 @@
  * Standardbild. */
 import { SHOP_ITEMS, type ShopItem } from "./data";
 import { BAKERS, SWEETS, setCloudOwnBakers, type Baker, type Sweet } from "./sweets";
+import { loadHomeCatalog } from "./homeCache";
 import { isBackendConfigured, supabase } from "@/lib/supabase";
 import { preloadMedia, type MediaRef } from "./media";
 import { removeOffer, saveOffer, saveProvider } from "@/utils/provider.functions";
@@ -145,10 +146,14 @@ export async function hydrateDbProviders(ownerId?: string): Promise<{ baker?: nu
   const sb = supabase();
   if (!publicLoaded) {
     publicLoaded = true;
-    const [provs, offers] = await Promise.all([
-      sb.from("providers_public").select("id, kind, data").limit(1000),
-      sb.from("provider_offers_public").select("*").limit(3000),
-    ]);
+    /* Erst den Zwischenspeicher des Servers, sonst wie früher direkt */
+    const cached = await loadHomeCatalog();
+    const [provs, offers] = cached
+      ? [{ data: cached.providers as Row[] }, { data: cached.offers as OfferRow[] }]
+      : await Promise.all([
+          sb.from("providers_public").select("id, kind, data").limit(1000),
+          sb.from("provider_offers_public").select("*").limit(3000),
+        ]);
     const vendors = new Map<number, string>();
     for (const p of provs.data || []) {
       if (p.kind === "baker") upsert(BAKERS, bakerFromRow(p, false, true));

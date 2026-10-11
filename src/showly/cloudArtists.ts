@@ -13,6 +13,7 @@ import { cleanWorkHours } from "./workHours";
 import { cleanPackages } from "./plannerPackages";
 import { tierOf } from "./policies";
 import { cleanSurcharges } from "./surcharges";
+import { loadHomeCatalog } from "./homeCache";
 
 /* Titelbilder werden synchron als Hintergrund gesetzt; deshalb ihre Adressen
    gleich nach dem Laden der Profile holen (nur freigegebene kommen zurück). */
@@ -97,7 +98,9 @@ export async function hydrateDbArtists(ownerId?: string): Promise<number> {
   let n = 0;
   if (!loaded) {
     loaded = true;
-    const { data } = await sb.from("artists_public").select("*").limit(1000);
+    /* Erst den Zwischenspeicher des Servers, sonst wie früher direkt */
+    const cached = await loadHomeCatalog();
+    const data = cached ? (cached.artists as PublicRow[]) : (await sb.from("artists_public").select("*").limit(1000)).data;
     for (const r of data || []) {
       upsertArtist(artistFromRow(r));
       n++;

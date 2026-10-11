@@ -1,0 +1,41 @@
+# Wie lange Browser und Cloudflare Dateien aus public/ behalten dürfen.
+#
+# Programmcode und Design unter /assets/* tragen einen Prüfwert im Namen und
+# bekommen von der Bau-Software ohnehin ein Jahr (wird beim Bauen hier
+# angehängt). Die Dateien unten heißen dagegen immer gleich, auch wenn sie
+# ausgetauscht werden. Deshalb nur einen Tag fest gemerkt; danach zeigt der
+# Browser noch bis zu einer Woche die gemerkte Fassung sofort an und holt
+# im Hintergrund die neue (stale-while-revalidate). Ein ausgetauschtes Bild
+# ist so spätestens beim übernächsten Besuch überall zu sehen.
+#
+# Schriften und die Texterkennung (ocr) ändern sich praktisch nie: 30 Tage.
+
+/acts/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/shop/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/sweets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/venues/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/icons/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/textures/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/wort-*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/splash*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/logo-*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/wordmark-paint.webp
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/og-showly.jpg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/favicon.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/fonts/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+/ocr/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=604800

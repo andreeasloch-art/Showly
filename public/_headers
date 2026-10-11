@@ -39,3 +39,8 @@
   Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
 /ocr/*
   Cache-Control: public, max-age=2592000, stale-while-revalidate=604800
+
+# Der Offline-Speicher selbst: jedes Mal frisch prüfen, damit neue Regeln
+# und die Notbremse sofort ankommen.
+/sw.js
+  Cache-Control: no-cache

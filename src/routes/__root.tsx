@@ -26,6 +26,7 @@ import { Splash } from "@/components/showly/Splash";
 import { ErrorReporter } from "@/components/showly/ErrorReporter";
 import { MfaGate } from "@/components/showly/AccountSecurity";
 import { ConsentBanner } from "@/components/showly/ConsentBanner";
+import { registerServiceWorker } from "@/showly/sw";
 import { CardLights } from "@/components/showly/Motion";
 
 import { Toast, TabBar } from "@/components/showly/Chrome";
@@ -195,6 +196,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => registerServiceWorker(), []);
 
   return (
     <QueryClientProvider client={queryClient}>

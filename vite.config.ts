@@ -7,6 +7,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  vite: {
+    /* Kennung dieses Builds. Der Seiten-Zwischenspeicher (src/server.ts)
+       nimmt sie in den Schlüssel auf, damit nach einer neuen Version keine
+       gemerkte Seite mehr auf alte, schon gelöschte Programmdateien zeigt. */
+    define: { __SHOWLY_BUILD__: JSON.stringify(Date.now().toString(36)) },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

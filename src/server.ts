@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { PAGE_TTL, edgeCache, pageCacheKey } from "./lib/pageCache";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -73,12 +74,40 @@ function withSecurityHeaders(res: Response): Response {
   }
 }
 
+declare const __SHOWLY_BUILD__: string;
+
+function waitUntil(ctx: unknown, p: Promise<unknown>) {
+  const w = (ctx as { waitUntil?: (p: Promise<unknown>) => void } | null)?.waitUntil;
+  if (typeof w === "function") w.call(ctx, p);
+  else void p;
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const build = typeof __SHOWLY_BUILD__ === "string" ? __SHOWLY_BUILD__ : "dev";
+      const key = pageCacheKey(request, build);
+      const edge = key ? edgeCache() : null;
+      if (key && edge) {
+        const hit = await edge.match(key).catch(() => undefined);
+        if (hit) {
+          /* Für den Browser nicht merken (siehe unten) */
+          const out = new Response(hit.body, hit);
+          out.headers.set("Cache-Control", "no-cache");
+          return out;
+        }
+      }
       const handler = await getServerEntry();
-      const response = await handler.fetch(request, env, ctx);
-      return withSecurityHeaders(await normalizeCatastrophicSsrResponse(response));
+      const response = withSecurityHeaders(await normalizeCatastrophicSsrResponse(await handler.fetch(request, env, ctx)));
+      if (key && edge && response.status === 200 && !response.headers.has("set-cookie")) {
+        /* Im Speicher 5 Minuten; der Browser selbst fragt jedes Mal nach,
+           damit er nach einer neuen Version sofort die neue Seite bekommt */
+        const stored = new Response(response.clone().body, response);
+        stored.headers.set("Cache-Control", `public, max-age=${PAGE_TTL}`);
+        waitUntil(ctx, edge.put(key, stored).catch(() => undefined));
+        response.headers.set("Cache-Control", "no-cache");
+      }
+      return response;
     } catch (error) {
       console.error(error);
       return new Response(renderErrorPage(), {

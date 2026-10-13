@@ -54,6 +54,12 @@ export async function runDaily(): Promise<DailyResult> {
     await releaseDueDeposits().catch(() => 0);
   }
 
+  /* Stories: abgelaufene samt Datei löschen (lib/stories.server.ts) */
+  {
+    const { purgeStories } = await import("./stories.server");
+    await purgeStories().catch(() => 0);
+  }
+
   /* Wunschtorten (lib/wishcake.server.ts): bis 2 Tage vor dem Liefertag
      nicht zugesagt bzw. höherer Preis nicht bestätigt: Geld zurück */
   {

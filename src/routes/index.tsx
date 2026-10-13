@@ -9,6 +9,7 @@ import { ArtistCard, matchArtist } from "@/components/showly/ArtistCard";
 import { Footer } from "@/components/showly/Footer";
 import { GradientText } from "@/components/showly/GradientText";
 import { HomeSearch } from "@/components/showly/HomeSearchSheet";
+import { StoryBar } from "@/components/showly/StoryBar";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ArtistAutocomplete } from "@/components/showly/ArtistAutocomplete";
 import { DateField } from "@/components/showly/DateField";
@@ -266,6 +267,9 @@ function Home() {
           <div className="home-hero-copy">
             {/* Die Plakette oben wiederholte die drei Versprechen unter der
                 Suche und ist deshalb entfallen. */}
+
+            {/* Stories der Anbietenden, eine durchlaufende Reihe (StoryBar.tsx) */}
+            <StoryBar mode={mode} />
 
             <h1 className="home-h1 h1-lockup">
               <span className="rise" style={{ ["--d" as string]: "60ms" }}>

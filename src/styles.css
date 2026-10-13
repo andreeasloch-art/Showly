@@ -5,6 +5,7 @@
 @import "./showly/logo-farben.css";
 @import "./showly/tablet.css";
 @import "./showly/suche.css";
+@import "./showly/stories.css";
 
 @custom-variant dark (&:is(.dark *));
 

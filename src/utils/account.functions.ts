@@ -94,7 +94,7 @@ export const deleteMyAccount = createServerFn({ method: "POST" }).handler(
   },
 );
 
-const TARGETS: ReportTarget[] = ["post", "comment", "review", "profile"];
+const TARGETS: ReportTarget[] = ["post", "comment", "review", "profile", "story"];
 
 export const reportContent = createServerFn({ method: "POST" })
   .inputValidator((d: { target: ReportTarget; id: string; reason: string; details?: string }) => {

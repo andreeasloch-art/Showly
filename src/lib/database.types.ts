@@ -21,7 +21,7 @@ export type PenaltyReason = "late" | "noshow";
 export type PenaltyStatus = "hearing" | "due" | "proof" | "waived";
 export type PayoutStatus = "scheduled" | "held" | "paid" | "cancelled";
 export type SweetStatus = "sent" | "quoted" | "confirmed" | "declined" | "booked" | "cancelled";
-export type ReportTarget = "post" | "comment" | "review" | "profile";
+export type ReportTarget = "post" | "comment" | "review" | "profile" | "story";
 export type ReportStatus = "open" | "removed" | "kept";
 export type VerificationStatus =
   | "none"
@@ -85,6 +85,20 @@ export type MediaRow = {
   reason: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
+  created_at: string;
+};
+
+/** Stories der Anbietenden (0028), 24 Stunden ab Freigabe der Datei */
+export type StoryRow = {
+  id: string;
+  owner: string;
+  provider_kind: "artist" | "baker" | "deco" | "location";
+  provider_id: number;
+  media_id: string;
+  caption: string;
+  live_from: string | null;
+  expires_at: string | null;
+  removed: boolean;
   created_at: string;
 };
 
@@ -767,6 +781,8 @@ export type Database = {
       spotlights: Table<SpotlightRow>;
       /** Gebuchte Locations (0024) */
       venue_bookings: Table<VenueBookingRow>;
+      /** Stories (0028) */
+      stories: Table<StoryRow>;
     };
     Views: {
       artists_public: Table<

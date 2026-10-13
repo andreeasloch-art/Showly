@@ -292,6 +292,9 @@ export const adminAct = createServerFn({ method: "POST" })
               if (r.target_type === "review")
                 await a.from("reviews").delete().eq("id", id);
             }
+            /* Stories haben eine UUID als Kennung */
+            if (r.target_type === "story")
+              await a.from("stories").update({ removed: true }).eq("id", String(r.target_id));
           }
           await a
             .from("reports")

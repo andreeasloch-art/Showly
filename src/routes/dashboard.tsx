@@ -27,6 +27,7 @@ import { Chat, unreadFor, useUnread } from "@/components/showly/Chat";
 import { ProviderInbox } from "@/components/showly/ProviderInbox";
 import { VenueBookings } from "@/components/showly/VenueBookings";
 import { ProviderOverview } from "@/components/showly/ProviderOverview";
+import { StoryComposer } from "@/components/showly/StoryComposer";
 
 export const Route = createFileRoute("/dashboard")({
   /* ?tab=edit öffnet direkt einen Bereich, etwa aus dem eigenen Profil heraus */
@@ -304,6 +305,7 @@ function Dashboard() {
         ["overview", "chart", "Übersicht", ""],
         ["incoming", "clipboard", C.incoming, bookings.filter((b) => b.artistId === myProfile.id && b.status === "requested").length || ""],
         ["edit", "sparkle", C.edit, ""],
+        ["story", "camera", "Story", ""],
         ["calendar", "calendar", t("dash.calendar"), ""],
         ...(((myProfile as any).packages || []).length
           ? ([["packages", "gift", t("dash.packages"), ((myProfile as any).packages || []).length]] as [
@@ -319,6 +321,9 @@ function Dashboard() {
     : [
         ...((myProviders.baker || myProviders.deco
           ? [["overview", "chart", "Übersicht", ""]]
+          : []) as [string, string, string, string | number][]),
+        ...((myProviders.baker || myProviders.deco || myProviders.location
+          ? [["story", "camera", "Story", ""]]
           : []) as [string, string, string, string | number][]),
         ["bookings", "clipboard", t("dash.bookings"), bookings.length],
         ["venues", "venue", "Locations", venueBookings.length || ""],
@@ -394,6 +399,7 @@ function Dashboard() {
     bookings: [t("dash.bookingsH"), t("dash.bookingsSub")],
     venues: ["Locations", myProviders.location ? "Anfragen und Buchungen deiner Location und deine eigenen Buchungen." : "Deine gebuchten Locations. Die Adresse steht hier nach der Zusage."],
     incoming: [C.incoming, C.incomingSub],
+    story: ["Story", "Foto oder Video für 24 Stunden ganz oben auf der Startseite."],
     orders: [t("dash.ordersH"), t("dash.ordersSub")],
     favorites: [t("dash.favsH"), t("dash.favsSub")],
     payments: [t("dash.paymentsH"), t("dash.paymentsSub")],
@@ -915,6 +921,17 @@ function Dashboard() {
               </div>
             )}
           </>
+        )}
+
+        {active === "story" && (
+          <StoryComposer
+            kinds={[
+              ...(myProfile ? (["artist"] as const) : []),
+              ...(myProviders.baker ? (["baker"] as const) : []),
+              ...(myProviders.deco ? (["deco"] as const) : []),
+              ...(myProviders.location ? (["location"] as const) : []),
+            ]}
+          />
         )}
 
         {active === "overview" && <ProviderOverview artistId={myProfile?.id} onGo={setSection} />}

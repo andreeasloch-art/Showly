@@ -11,7 +11,7 @@
  * Tabelle reports zur Prüfung landet. */
 import { loadJSON, saveJSON } from "./persist";
 
-export type ReportTarget = "post" | "comment" | "review" | "profile";
+export type ReportTarget = "post" | "comment" | "review" | "profile" | "story";
 
 export const REPORT_REASONS = ["abuse", "spam", "false", "explicit", "rights", "other"] as const;
 export type ReportReason = (typeof REPORT_REASONS)[number];

@@ -1,0 +1,137 @@
+/* ==========================================================================
+   Startseite: weißer Kopfbereich und Suche nach Airbnb-Vorbild
+   ==========================================================================
+   Der Kopfbereich ist jetzt weiß wie der Rest der Seite: kein Farbverlauf,
+   keine durchscheinenden Figuren, keine Scheinwerfer.
+
+   Am Handy und Tablet hochkant (bis 860 px) stehen oben nur noch:
+     kleiner Umschalter Künstler | Locations,
+     schlichte Suchleiste „Jetzt suchen“,
+     darunter gleich Act bzw. Location der Woche.
+   Überschrift, Unterzeile, große Suchkarte, „Beliebt“ und die drei
+   Versprechen entfallen dort. Am Computer bleibt die große Suchkarte. */
+
+/* ---------- Weißer Kopfbereich (alle Größen) ---------- */
+html body .home-hero{background:#fff!important;border-bottom:none}
+html body .home-hero::before,
+html body .home-hero::after{display:none!important}
+html body .home-hero .hero-reel,
+html body .home-hero .stage-light{display:none!important}
+
+/* ---------- Neue Suche: nur Handy / Tablet hochkant ---------- */
+.hs{display:none}
+
+@media(max-width:860px){
+  .hs{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .home-hero{padding-top:calc(var(--h-nav) + 14px)!important;padding-bottom:22px!important}
+  .home-hero .home-h1,
+  .home-hero .home-lead,
+  .home-hero .search-card,
+  .home-hero .home-popular,
+  .home-hero .home-trust{display:none!important}
+  .home-hero-inner{gap:22px!important}
+
+  /* Kleiner Umschalter über der Suchleiste */
+  .hs-mode{display:inline-flex;gap:2px;padding:3px;border-radius:999px;background:#F2F1F6}
+  .hs-mode-btn{
+    display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 14px;border:0;border-radius:999px;
+    background:transparent;color:#6B6478;font:600 13.5px/1 var(--font-body,'Outfit',system-ui,sans-serif);cursor:pointer;
+  }
+  .hs-mode-btn svg{width:16px;height:16px}
+  .hs-mode-btn.on{background:#fff;color:var(--lg-ink,#1A0E3D);box-shadow:0 1px 3px rgba(26,14,61,.14)}
+  .hs-mode-btn.on svg{color:var(--lg-blau,#4832FD)}
+
+  /* Die schlichte Suchleiste */
+  .hs-pill{
+    width:100%;max-width:640px;height:60px;display:flex;align-items:center;justify-content:center;gap:10px;
+    padding:0 22px;border:1px solid #EEEDF2;border-radius:999px;background:#fff;cursor:pointer;
+    box-shadow:0 6px 22px -6px rgba(26,14,61,.18),0 1px 2px rgba(26,14,61,.06);
+    font:600 17px/1 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D);
+  }
+  .hs-pill svg{width:20px;height:20px;flex:none}
+  .hs-pill-txt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hs-pill-txt.set{font-weight:600;font-size:15.5px}
+}
+
+/* ---------- Die Suche Schritt für Schritt (bildschirmfüllend) ---------- */
+.hs-sheet{
+  position:fixed;inset:0;z-index:3000;display:flex;flex-direction:column;
+  background:#F4F3F7;animation:hs-in .28s cubic-bezier(.2,.8,.2,1);
+  padding-top:env(safe-area-inset-top);
+}
+@keyframes hs-in{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.hs-sheet{animation:none}}
+
+.hs-top{display:flex;align-items:center;gap:8px;padding:14px 16px 6px}
+.hs-tabs{flex:1;display:flex;justify-content:center;gap:28px}
+.hs-tab{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 4px 8px;border:0;background:none;cursor:pointer;
+  color:#6B6478;font:600 14px/1.1 var(--font-body,'Outfit',system-ui,sans-serif);border-bottom:3px solid transparent;
+}
+.hs-tab-ic{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(26,14,61,.08)}
+.hs-tab-ic svg{width:24px;height:24px}
+.hs-tab.on{color:var(--lg-ink,#1A0E3D);border-bottom-color:var(--lg-ink,#1A0E3D)}
+.hs-tab.on .hs-tab-ic{background:var(--lg-flieder-l,#F2EFFF)}
+.hs-tab.on .hs-tab-ic svg{color:var(--lg-blau,#4832FD)}
+.hs-close{
+  flex:none;width:44px;height:44px;border-radius:50%;border:1px solid #E6E4EC;background:#fff;cursor:pointer;
+  display:grid;place-items:center;box-shadow:0 2px 8px rgba(26,14,61,.08);
+}
+.hs-close svg{width:18px;height:18px}
+
+.hs-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:10px 14px 18px;display:flex;flex-direction:column;gap:12px;
+  max-width:680px;width:100%;margin:0 auto}
+.hs-card{background:#fff;border-radius:28px;padding:22px 20px 18px;box-shadow:0 10px 30px -14px rgba(26,14,61,.22)}
+.hs-card h2{margin:0 0 16px;font:700 26px/1.1 var(--font-head,'Outfit',system-ui,sans-serif);letter-spacing:-.02em;color:var(--lg-ink,#1A0E3D)}
+.hs-input{display:flex;align-items:center;gap:12px;height:56px;padding:0 16px;border:1px solid #CFCCD8;border-radius:14px;background:#fff}
+.hs-input svg{width:20px;height:20px;flex:none;color:var(--lg-ink,#1A0E3D)}
+.hs-input input{flex:1;min-width:0;border:0;outline:0;background:none;font:500 16px/1.2 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D)}
+.hs-input:focus-within{border-color:var(--lg-ink,#1A0E3D);box-shadow:0 0 0 1px var(--lg-ink,#1A0E3D)}
+.hs-city{height:auto;min-height:56px}
+.hs-city .ac-wrap{flex:1;min-width:0}
+.hs-city input{width:100%;border:0;outline:0;background:none;font:500 16px/1.2 var(--font-body,'Outfit',system-ui,sans-serif)}
+
+.hs-sugg-h{margin:18px 0 6px;font-size:14px;color:#6B6478;font-weight:500}
+.hs-sugg{list-style:none;margin:0;padding:0;max-height:46vh;overflow-y:auto}
+.hs-sugg button{
+  width:100%;display:flex;align-items:center;gap:14px;padding:8px 0;border:0;background:none;cursor:pointer;text-align:left;
+  font:600 16.5px/1.2 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D);
+}
+.hs-sugg-ic{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:14px;background:var(--lg-flieder-l,#F2EFFF)}
+.hs-sugg-ic svg{width:24px;height:24px;color:var(--lg-blau,#4832FD)}
+.hs-sugg li:nth-child(3n+2) .hs-sugg-ic{background:var(--lg-pink-l,#FFEEF4)}
+.hs-sugg li:nth-child(3n+2) .hs-sugg-ic svg{color:var(--lg-magenta-d,#B4178F)}
+.hs-sugg li:nth-child(3n) .hs-sugg-ic{background:var(--lg-koralle-l,#FFF1EA)}
+.hs-sugg li:nth-child(3n) .hs-sugg-ic svg{color:var(--lg-koralle-d,#B5461A)}
+
+/* Zugeklappte Schritte */
+.hs-row{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;
+  padding:20px 22px;border:0;border-radius:20px;background:#fff;cursor:pointer;
+  box-shadow:0 4px 16px -10px rgba(26,14,61,.25);font-family:var(--font-body,'Outfit',system-ui,sans-serif);
+}
+.hs-row-t{font-size:16px;color:#6B6478;font-weight:500}
+.hs-row-v{font-size:16px;font-weight:600;color:var(--lg-ink,#1A0E3D);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+/* Kalender fest im Schritt „Wann?“ */
+.df-inline .df-pop{position:static!important;width:auto!important;box-shadow:none!important;border:0!important;padding:0!important;left:auto!important;top:auto!important}
+.hs-card-foot{display:flex;justify-content:flex-end;margin-top:8px}
+.hs-link{border:0;background:none;padding:8px 2px;font:600 15px/1 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D);text-decoration:underline;cursor:pointer}
+
+/* Fußleiste */
+.hs-foot{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 22px calc(14px + env(safe-area-inset-bottom));background:#F4F3F7;
+  max-width:680px;width:100%;margin:0 auto;
+}
+.hs-clear{border:0;background:none;padding:10px 0;font:600 16px/1 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D);text-decoration:underline;cursor:pointer}
+.hs-go{
+  display:inline-flex;align-items:center;gap:10px;height:56px;padding:0 30px;border:0;border-radius:16px;cursor:pointer;
+  background:var(--lg-knopf,linear-gradient(120deg,#4832FD,#6D3EEA 45%,#B4178F));color:#fff;
+  font:700 17px/1 var(--font-body,'Outfit',system-ui,sans-serif);box-shadow:0 10px 24px -10px rgba(72,50,253,.6);
+}
+.hs-go svg{width:20px;height:20px}
+
+/* Geschlossenes Seitenmenü: sein Schatten ragte als grauer Streifen in den
+   rechten Bildschirmrand */
+.drawer:not(.open){box-shadow:none}

@@ -46,10 +46,13 @@ export function DateField({
   value,
   onChange,
   label,
+  inline = false,
 }: {
   value: string;
   onChange: (iso: string) => void;
   label: string;
+  /** Kalender fest eingeblendet statt aufklappend (Suche am Handy) */
+  inline?: boolean;
 }) {
   const { lang } = useShowly();
   const T = LABELS[(lang as "de" | "en" | "es") ?? "de"] ?? LABELS.de;
@@ -105,7 +108,8 @@ export function DateField({
     : "";
 
   return (
-    <div className="ac-wrap df-wrap" ref={wrap}>
+    <div className={"ac-wrap df-wrap" + (inline ? " df-inline" : "")} ref={wrap}>
+      {!inline && (
       <button
         type="button"
         className="df-trigger"
@@ -116,8 +120,9 @@ export function DateField({
         <span className="search-field-lbl">{label}</span>
         <span className={"df-value" + (value ? " set" : "")}>{pretty || T.open}</span>
       </button>
+      )}
 
-      {open && (
+      {(open || inline) && (
         <div className="df-pop" role="dialog" aria-label={T.open}>
           <div className="df-head">
             <button className="df-nav" onClick={() => shift(-1)} aria-label={T.prev}>
@@ -173,9 +178,11 @@ export function DateField({
                 {T.clear}
               </button>
             )}
-            <button className="df-done" onClick={() => setOpen(false)}>
-              {T.close}
-            </button>
+            {!inline && (
+              <button className="df-done" onClick={() => setOpen(false)}>
+                {T.close}
+              </button>
+            )}
           </div>
         </div>
       )}

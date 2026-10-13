@@ -8,6 +8,7 @@ import { CatIcon, Icon, bgOf, sizedSrc } from "@/showly/ui";
 import { ArtistCard, matchArtist } from "@/components/showly/ArtistCard";
 import { Footer } from "@/components/showly/Footer";
 import { GradientText } from "@/components/showly/GradientText";
+import { HomeSearch } from "@/components/showly/HomeSearchSheet";
 import { CityAutocomplete } from "@/components/showly/CityAutocomplete";
 import { ArtistAutocomplete } from "@/components/showly/ArtistAutocomplete";
 import { DateField } from "@/components/showly/DateField";
@@ -288,6 +289,44 @@ function Home() {
                     ? "Salones, parques infantiles y jardines para tu fiesta – reservados online, fácil y seguro."
                     : "Säle, Spielplätze und Gärten für deine Feier – einfach und sicher online gebucht."}
             </p>
+
+            {/* Handy und Tablet hochkant: kleiner Umschalter, schlichte
+                Suchleiste, Suche Schritt für Schritt (HomeSearchSheet.tsx).
+                Die große Suchkarte darunter gilt ab Computer-Breite. */}
+            <HomeSearch
+              mode={mode}
+              setMode={setMode}
+              cat={cat}
+              query={query}
+              onPickCat={(id) => {
+                catFromSearch.current = true;
+                setQuery("");
+                setCat(id);
+              }}
+              onQuery={typeQuery}
+              venueKind={venueKind}
+              venueQ={venueQ}
+              onPickKind={(id, label) => {
+                setVenueKind(id);
+                setVenueOcc(undefined);
+                setVenueQ(label);
+              }}
+              onVenueQ={(v) => {
+                setVenueQ(v);
+                setVenueKind(undefined);
+                setVenueOcc(undefined);
+              }}
+              date={date}
+              setDate={setDate}
+              city={city}
+              setCity={setCity}
+              onClear={() => {
+                if (mode === "acts") reset();
+                else resetVenues();
+                setDate("");
+              }}
+              onSearch={() => void setTimeout(scrollToGrid, 80)}
+            />
 
             {/* Suchkarte: oben die Reiter Acts | Locations, darunter die Felder */}
             <div className={"search-card rise" + (mode === "locations" ? " is-venues" : "")} style={{ ["--d" as string]: "300ms" }}>

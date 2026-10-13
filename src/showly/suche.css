@@ -23,7 +23,7 @@ html body .home-hero .stage-light{display:none!important}
 
 @media(max-width:860px){
   .hs{display:flex;flex-direction:column;align-items:center;gap:14px}
-  .home-hero{padding-top:calc(var(--h-nav) + 14px)!important;padding-bottom:22px!important}
+  .home-hero{padding-top:calc(var(--h-nav) + 4px)!important;padding-bottom:22px!important}
   .home-hero .home-h1,
   .home-hero .home-lead,
   .home-hero .search-card,

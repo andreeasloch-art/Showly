@@ -8,7 +8,7 @@
   -webkit-mask:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent);
           mask:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent)}
 .sb-scroll::-webkit-scrollbar{display:none}
-.sb-track{display:flex;gap:12px;list-style:none;margin:0;padding:4px 10px 2px;width:max-content}
+.sb-track{display:flex;gap:12px;list-style:none;margin:0;padding:6px 10px 2px;width:max-content}
 .sb-item{display:flex;flex-direction:column;align-items:center;gap:6px;width:76px;padding:0;border:0;background:none;cursor:pointer;
   font:600 11.5px/1.15 var(--font-body,'Outfit',system-ui,sans-serif);color:var(--lg-ink,#1A0E3D);-webkit-tap-highlight-color:transparent}
 .sb-ring{position:relative;display:block;width:70px;height:70px;border-radius:50%;padding:3px;
@@ -23,7 +23,7 @@
 .sb-item:active .sb-ring{transform:scale(.95)}
 
 /* "Deine Story" vorne */
-.sb-mine{flex:none;margin:4px 0 0 2px}
+.sb-mine{flex:none;margin:6px 0 0 2px}
 .sb-mine .sb-ring{background:#EEEDF2}
 .sb-plus{position:absolute;right:-2px;bottom:-2px;display:grid;place-items:center;width:24px;height:24px;border-radius:50%;
   background:var(--lg-knopf,linear-gradient(120deg,#4832FD,#B4178F));color:#fff;border:2.5px solid #fff}

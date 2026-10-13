@@ -12,7 +12,11 @@
    Versprechen entfallen dort. Am Computer bleibt die große Suchkarte. */
 
 /* ---------- Weißer Kopfbereich (alle Größen) ---------- */
-html body .home-hero{background:#fff!important;border-bottom:none}
+/* Durchsichtig statt weiß (die Seite ist ohnehin weiß): auf dem iPhone
+   malte der weiße Kopfbereich sonst über die feste Kopfleiste mit Logo,
+   Sprache und Warenkorb, oben blieb nur eine leere weiße Fläche */
+html body .home-hero{background:transparent!important;border-bottom:none;isolation:auto!important}
+html body nav{transform:translateZ(0);z-index:1000}
 html body .home-hero::before,
 html body .home-hero::after{display:none!important}
 html body .home-hero .hero-reel,

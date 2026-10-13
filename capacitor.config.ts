@@ -7,7 +7,7 @@ const config: CapacitorConfig = {
   // Load the published Lovable web app inside the native shell. This keeps
   // content updates automatic; only native plugin changes need a store resubmission.
   server: {
-    url: "https://app-maker-magic-588.lovable.app",
+    url: "https://showly-events.lovable.app",
     cleartext: false,
   },
   plugins: {

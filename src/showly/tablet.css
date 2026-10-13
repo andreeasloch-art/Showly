@@ -1,0 +1,79 @@
+/* ==========================================================================
+   Tablet
+   ==========================================================================
+   Zwei Fälle:
+
+   1. Hochformat (700–860 px breit, z. B. iPad 10,9", iPad mini, Galaxy Tab):
+      Hier gilt der Handy-Aufbau mit der Leiste unten. Er war aber nur in die
+      Breite gezogen: zwei riesige Karten nebeneinander, Act der Woche als
+      Bild über die ganze Breite. Jetzt mit mehr Rand, drei Spalten und einer
+      quer liegenden Karte für Act/Location der Woche.
+
+   2. Querformat und große Tablets (861–1366 px, Touch-Bedienung): Hier kam
+      die Computer-Ansicht ohne Leiste unten. Jetzt bekommen Tablets wie am
+      Handy die schwebende Leiste unten (Suche, Künstler, Shop, Locations,
+      Profil); die Textverweise oben fallen dafür weg, wie am Handy.
+      Computer mit Maus sind davon nicht betroffen (hover/pointer).
+   ========================================================================== */
+
+/* ---------- 1. Tablet im Hochformat ---------- */
+@media (min-width:700px) and (max-width:860px){
+  /* Mehr Luft am Rand als am Handy */
+  .cat-bar-inner{padding:12px 32px}
+  .ui26 .home-grid-head{padding:34px 32px 0}
+
+  /* Drei Karten nebeneinander statt zwei großer */
+  .act-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:28px 18px;padding:20px 32px 56px}
+  .act-grid .act-card-media{aspect-ratio:4/5}
+  .vn-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+  .grid,.shop-grid{grid-template-columns:repeat(3,minmax(0,1fr));padding-left:32px;padding-right:32px;gap:18px}
+
+  /* Act / Location der Woche: Bild links, Text rechts */
+  .aotw-stage{height:360px}
+  .aotw-card{flex-direction:row}
+  .aotw-img{flex:0 0 52%}
+  .aotw-body{flex:1 1 auto;justify-content:center;padding:22px 24px;gap:9px}
+  .aotw-name{white-space:normal;font-size:26px}
+  .aotw-desc{-webkit-line-clamp:4}
+  .aotw-foot{flex-wrap:wrap;margin-top:10px}
+
+  /* Leiste unten: schmaler und mittig statt über die volle Breite */
+  html body .tabbar{
+    left:50%!important;right:auto!important;width:min(560px,calc(100% - 64px));
+    transform:translateX(-50%);
+  }
+}
+
+/* ---------- 2. Tablet quer und große Tablets (Touch) ---------- */
+@media (min-width:861px) and (max-width:1366px) and (hover:none) and (pointer:coarse){
+  /* Leiste unten wie am Handy */
+  html body .tabbar{
+    display:flex!important;
+    left:50%!important;right:auto!important;width:min(600px,calc(100% - 64px));
+    transform:translateX(-50%);
+    bottom:calc(14px + env(safe-area-inset-bottom))!important;
+    padding:4px 6px!important;border-radius:26px!important;
+    background:rgba(255,255,255,.64)!important;
+    -webkit-backdrop-filter:saturate(180%) blur(22px)!important;backdrop-filter:saturate(180%) blur(22px)!important;
+    border:1px solid rgba(255,255,255,.8)!important;
+    box-shadow:inset 0 1px 0 #fff,0 18px 40px -16px rgba(26,14,61,.35),0 4px 14px -6px rgba(72,50,253,.25)!important;
+    overflow:hidden;
+  }
+  html body .tabbar::before{display:none}
+  html body .tabbar .tab{border-radius:20px;margin:2px 0;height:56px}
+  html body .tabbar .tab span{font-size:12px!important}
+  html body .tabbar .tab svg{width:22px;height:22px}
+  html body .tabbar .tab.active,html body .tabbar .tab.on{background:linear-gradient(180deg,rgba(184,174,252,.38),rgba(184,174,252,.18))!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.8)}
+
+  /* Platz unter dem Inhalt, damit die Leiste nichts verdeckt */
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  #toast{bottom:calc(92px + env(safe-area-inset-bottom))}
+
+  /* Act/Location der Woche etwas niedriger, damit die Leiste unten den
+     Knopf „Profil ansehen" nicht verdeckt */
+  .aotw-stage{height:min(600px,calc(100vh - 330px));min-height:380px}
+
+  /* Navigation liegt unten: die Textverweise oben ausblenden, Sprache,
+     Warenkorb und Logo bleiben */
+  .nav-links .nav-link{display:none!important}
+}

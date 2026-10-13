@@ -17,8 +17,12 @@ import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/serve
 import type { Database } from "./database.types";
 import { serverPublicSupabase } from "./publicConfig";
 
+const ALIASES: Record<string, string[]> = {
+  VITE_SUPABASE_URL: ["SUPABASE_URL"],
+  VITE_SUPABASE_ANON_KEY: ["SUPABASE_PUBLISHABLE_KEY", "VITE_SUPABASE_PUBLISHABLE_KEY"],
+};
 function env(key: string): string {
-  const v = process.env[key];
+  const v = [key, ...(ALIASES[key] ?? [])].map((k) => process.env[k]).find(Boolean);
   if (!v) throw new Error(`${key} ist nicht gesetzt`);
   return v;
 }

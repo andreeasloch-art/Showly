@@ -37,7 +37,10 @@ async function userOrNull() {
 async function isAdmin(uid: string | undefined) {
   if (!uid) return false;
   const { data } = await adminClient().from("profiles").select("role").eq("id", uid).maybeSingle();
-  return data?.role === "admin";
+  if (data?.role !== "admin") return false;
+  /* wie requireAdmin: Rolle gilt erst mit bestätigter E-Mail-Adresse */
+  const { data: u } = await adminClient().auth.admin.getUserById(uid);
+  return !!u.user?.email_confirmed_at;
 }
 
 /* ------------------------------------------------------------------ */

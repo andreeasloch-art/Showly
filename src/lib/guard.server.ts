@@ -65,6 +65,10 @@ export const TOO_MANY = "Zu viele Anfragen in kurzer Zeit. Bitte versuche es gle
 export async function requireAdmin() {
   const ctx = await requireUser();
   if (ctx.profile?.role !== "admin") throw new Error("Keine Berechtigung");
+  /* Admin-Rechte hängen an der E-Mail-Adresse (admin_emails). Ohne
+     bestätigte Adresse könnte sich jemand vorab mit dieser Adresse
+     registrieren; deshalb gilt die Rolle erst nach der Bestätigung. */
+  if (!ctx.user.email_confirmed_at) throw new Error("E-Mail-Adresse nicht bestätigt");
   /* Verwaltung nur mit Zwei-Faktor-Anmeldung: Hat die Person 2FA
      eingerichtet, muss die Sitzung damit bestätigt sein (aal2). Ohne
      eingerichtete 2FA lässt ADMIN_REQUIRE_2FA=1 gar nicht erst herein. */

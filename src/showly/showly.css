@@ -2735,6 +2735,7 @@ footer{background:#140826}
 .pb-row:last-child{border-top:1px solid var(--sh-border);padding-top:10px;margin:4px 0 0;font-weight:700;font-size:17px;color:var(--ink)}
 .book-cta{width:100%}
 .book-contact{text-align:center;margin-top:12px}
+.book-contact-note{margin:6px 0 0;font-size:12px;color:var(--sh-muted)}
 .trust-row{display:flex;align-items:center;justify-content:center;gap:7px;font-size:13px;color:var(--sh-muted);margin-top:11px}
 
 /* --- Schmalere Fenster --- */
@@ -2809,6 +2810,7 @@ nav.detail-crumbs{
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
 .m-cta button{flex:0 0 auto;padding:12px 20px;font-size:15px}
+.m-cta button:disabled{opacity:.45;cursor:not-allowed}
 
 /* ==========================================================================
    LOGOFARBEN – Feinabstimmung
@@ -6877,3 +6879,6 @@ html body .tabbar .tab{min-width:0;flex:1 1 0;padding-left:2px;padding-right:2px
 .vn-card-img{aspect-ratio:4/3}
 .vn-gallery .pd-slide{aspect-ratio:4/3;height:auto}
 .search-card .search-wrap{animation:none!important}
+
+/* Fehlermeldung in Formularen (Buchungsdialog) */
+.form-err{margin:4px 0 12px;padding:10px 12px;border-radius:12px;background:#fdecee;color:#9b1c2c;font-size:14px;font-weight:600}

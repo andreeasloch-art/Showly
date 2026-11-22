@@ -4,6 +4,7 @@
  * robots.txt) und ohne Kundennamen. */
 import { createFileRoute } from "@tanstack/react-router";
 import type {} from "@tanstack/react-start";
+import { SITE } from "@/showly/seo";
 
 export const Route = createFileRoute("/api/kalender/$token")({
   server: {
@@ -42,7 +43,7 @@ export const Route = createFileRoute("/api/kalender/$token")({
                 ? "Showly-Anfrage (noch nicht bestätigt)"
                 : `Showly-Auftritt${c.bookings?.figure ? ` – ${c.bookings.figure}` : ""}`,
             ...(c.bookings?.address ? { location: c.bookings.address } : {}),
-            url: "https://showly.eu/portal",
+            url: `${SITE}/portal`,
           }));
           return new Response(buildIcs("Showly-Auftritte", events), {
             headers: {

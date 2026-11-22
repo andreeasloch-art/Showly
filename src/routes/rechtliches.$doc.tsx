@@ -1,5 +1,5 @@
 import { headLang, seoHead } from "@/showly/seo";
-import { createFileRoute, useNavigate, useParams } from "@tanstack/react-router";
+import { createFileRoute, notFound, redirect, useNavigate, useParams } from "@tanstack/react-router";
 import { LEGAL_DOCS, LEGAL_DOCS_ES } from "@/showly/legal";
 import { useShowly } from "@/showly/store";
 import { Footer } from "@/components/showly/Footer";
@@ -77,7 +77,32 @@ function legalHead(doc: string, lang: "de" | "en" | "es") {
   return { ...h, meta };
 }
 
+/* Deutsche und spanische Adressen, die Besucher eintippen oder verlinken.
+   Früher zeigten sie alle das Impressum. */
+const ALIAS: Record<string, string> = {
+  impressum: "imprint",
+  datenschutz: "privacy",
+  datenschutzerklaerung: "privacy",
+  agb: "terms",
+  nutzungsbedingungen: "terms",
+  widerruf: "withdrawal",
+  widerrufsbelehrung: "withdrawal",
+  barrierefreiheit: "accessibility",
+  sicherheit: "security",
+  "aviso-legal": "imprint",
+  privacidad: "privacy",
+  condiciones: "terms",
+  desistimiento: "withdrawal",
+  accesibilidad: "accessibility",
+};
+const KNOWN = new Set(TABS.map(([id]) => id));
+
 export const Route = createFileRoute("/rechtliches/$doc")({
+  beforeLoad: ({ params, search }) => {
+    const id = params.doc.toLowerCase();
+    if (ALIAS[id]) throw redirect({ to: "/rechtliches/$doc", params: { doc: ALIAS[id] }, search, statusCode: 301 });
+    if (!KNOWN.has(id)) throw notFound();
+  },
   head: (ctx) => legalHead(ctx.params.doc, headLang(ctx)),
   component: Legal,
 });

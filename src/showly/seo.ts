@@ -2,11 +2,14 @@
    Sprachvarianten werden über ?lang=de|en|es ausgeliefert. */
 import type { Lang } from "./data";
 
-/* Öffentliche Adresse: die eigene Domain showly.eu. Canonical, Sitemap,
-   robots.txt und Vorschaubilder zeigen darauf. Nur für Tests unter einer
-   anderen Adresse in Lovable unter Secrets VITE_SITE_URL setzen. */
+/* Öffentliche Adresse. Canonical, Sitemap, robots.txt und Vorschaubilder
+   zeigen darauf. Solange die eigene Domain showly.eu noch keine Seite
+   ausliefert (Stand 22.11.2026: „404 Not Found“, kein HTTPS), ist das die
+   Lovable-Adresse; sonst schickt Google Besucher auf eine leere Seite.
+   Sobald showly.eu verbunden ist: in Lovable unter Secrets
+   VITE_SITE_URL=https://showly.eu setzen und neu veröffentlichen. */
 export const SITE = (
-  (import.meta.env?.["VITE_SITE_URL"] as string | undefined) || "https://showly.eu"
+  (import.meta.env?.["VITE_SITE_URL"] as string | undefined) || "https://showly-events.lovable.app"
 ).replace(/\/+$/, "");
 
 /** Vorschaubild beim Teilen (WhatsApp, Facebook, X) und für Google, 1200 × 630 */

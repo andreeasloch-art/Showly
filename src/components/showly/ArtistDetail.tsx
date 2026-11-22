@@ -31,6 +31,13 @@ import { GuaranteeBadge } from "@/components/showly/Guarantee";
 import { CancelPolicyNote } from "@/components/showly/Fair";
 import { cleanSurcharges, surchargeFor, withSurcharge } from "@/showly/surcharges";
 import { freeCancelText } from "@/components/showly/Fair";
+
+/* Fragen vor der Buchung */
+const ASK = {
+  de: { btn: "Frage vor der Buchung", note: "Nach der Buchung schreibt ihr euch direkt im Chat." },
+  en: { btn: "Question before booking", note: "Once booked, you can message each other in the chat." },
+  es: { btn: "Pregunta antes de reservar", note: "Tras la reserva os escribís directamente en el chat." },
+} as const;
 import { countView } from "@/showly/viewCount";
 import { artistParams, artistPath } from "@/showly/slugs";
 
@@ -694,12 +701,14 @@ export function ArtistDetail({ id }: { id: string }) {
               <Icon name="lock" /> {t("book.secure")}
             </div>
             <div className="book-contact">
-              <button
-                className="action-btn"
-                onClick={() => toast(t("msg.sent", { t: L(a.responseTime) }))}
-              >
-                <Icon name="mail" /> {t("book.contact")}
+              {/* Nachrichten an den Künstler laufen erst nach der Buchung
+                  über den Chat zur Buchung. Vorher gehen Fragen ans
+                  Showly-Team; früher kam hier eine Meldung „gesendet“,
+                  obwohl nichts verschickt wurde. */}
+              <button className="action-btn" onClick={() => void navigate({ to: "/hilfe" })}>
+                <Icon name="mail" /> {ASK[(lang as "de" | "en" | "es") ?? "de"]?.btn ?? ASK.de.btn}
               </button>
+              <p className="book-contact-note">{ASK[(lang as "de" | "en" | "es") ?? "de"]?.note ?? ASK.de.note}</p>
             </div>
           </div>
           )}
@@ -742,7 +751,7 @@ export function ArtistDetail({ id }: { id: string }) {
               : t("book.toCal")}
           </span>
         </div>
-        <button onClick={() => (picked ? setModal(true) : scrollToCal())}>
+        <button disabled={!!a.demo && !demoBookable()} onClick={() => (picked ? setModal(true) : scrollToCal())}>
           {picked ? t("book.now") : chooseLbl}
         </button>
       </div>

@@ -14,9 +14,9 @@ import { ContactHint, useContactCheck } from "@/components/showly/ContactHint";
 
 
 const COPY = {
-  de: { toCart: "In den Warenkorb", summaryH: "Zusammenfassung", note: "Deko, Torte und weitere Acts kannst du im Warenkorb dazulegen und alles zusammen bezahlen." },
-  en: { toCart: "Add to cart", summaryH: "Summary", note: "Add decor, a cake or more acts in your cart and pay for everything together." },
-  es: { toCart: "Añadir al carrito", summaryH: "Resumen", note: "Añade decoración, tarta u otros artistas en el carrito y paga todo junto." },
+  de: { toCart: "In den Warenkorb", summaryH: "Zusammenfassung", note: "Deko, Torte und weitere Acts kannst du im Warenkorb dazulegen und alles zusammen bezahlen.", needGuests: "Bitte die Anzahl der Gäste angeben.", needAddr: "Bitte die Adresse der Veranstaltung angeben.", pick: "Bitte wählen", close: "Schließen" },
+  en: { toCart: "Add to cart", summaryH: "Summary", note: "Add decor, a cake or more acts in your cart and pay for everything together.", needGuests: "Please enter the number of guests.", needAddr: "Please enter the event address.", pick: "Please choose", close: "Close" },
+  es: { toCart: "Añadir al carrito", summaryH: "Resumen", note: "Añade decoración, tarta u otros artistas en el carrito y paga todo junto.", needGuests: "Indica el número de invitados.", needAddr: "Indica la dirección del evento.", pick: "Elige una opción", close: "Cerrar" },
 } as const;
 
 export function BookingModal({
@@ -60,12 +60,21 @@ export function BookingModal({
   const total = base;
 
   const [occasion, setOccasion] = useState("");
+  const [err, setErr] = useState<"" | "guests" | "addr">("");
+  /* Ohne Gästezahl und Adresse weiß der Künstler nicht, wohin er kommt */
+  function details(): boolean {
+    const n = Number(g);
+    if (!Number.isInteger(n) || n < 1) return setErr("guests"), false;
+    if (l.trim().length < 5) return setErr("addr"), false;
+    setErr("");
+    return true;
+  }
   const [notes, setNotes] = useState("");
 
   /* Die Buchung kommt in den Warenkorb, bezahlt wird an der Kasse
      zusammen mit Deko und Torten. „Jetzt bezahlen“ geht direkt dorthin. */
   function toCart(payNow: boolean) {
-    if (!okText(notes)) return;
+    if (!okText(notes) || !details()) return;
     /* Passt der Termin samt Fahrtzeit nicht mehr, bleibt das Fenster offen */
     const ok = addCartBooking(
       {
@@ -90,10 +99,10 @@ export function BookingModal({
   return (
     <div>
       <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-        <div className="modal">
+        <div className="modal" role="dialog" aria-modal="true" aria-labelledby="book-mod-h">
           <div className="modal-head">
-            <h2>{step === 1 ? t("mod.request") : C.summaryH}</h2>
-            <button className="modal-close" onClick={onClose}>
+            <h2 id="book-mod-h">{step === 1 ? t("mod.request") : C.summaryH}</h2>
+            <button className="modal-close" onClick={onClose} aria-label={C.close}>
               ✕
             </button>
           </div>
@@ -137,12 +146,17 @@ export function BookingModal({
                 )}
                 <div className="two-col">
                   <div className="input-group">
-                    <label>{t("mod.guests")}</label>
+                    <label htmlFor="mod-guests">{t("mod.guests")} *</label>
                     <input
+                      id="mod-guests"
                       type="number"
+                      inputMode="numeric"
                       min={1}
+                      required
                       placeholder="30"
                       value={g}
+                      aria-invalid={err === "guests" || undefined}
+                      aria-describedby={err === "guests" ? "mod-err" : undefined}
                       onChange={(e) => setG(e.target.value)}
                     />
                   </div>
@@ -164,9 +178,14 @@ export function BookingModal({
                   )}
                 </div>
                 <div className="input-group">
-                  <label>{t("mod.address")}</label>
+                  <label htmlFor="mod-addr">{t("mod.address")} *</label>
                   <input
+                    id="mod-addr"
                     type="text"
+                    required
+                    autoComplete="street-address"
+                    aria-invalid={err === "addr" || undefined}
+                    aria-describedby={err === "addr" ? "mod-err" : undefined}
                     maxLength={120}
                     placeholder={t("mod.addressPh")}
                     value={l}
@@ -174,19 +193,25 @@ export function BookingModal({
                   />
                 </div>
                 <div className="input-group">
-                  <label>{t("mod.occasion")}</label>
-                  <select value={occasion} onChange={(e) => setOccasion(e.target.value)}>
+                  <label htmlFor="mod-occ">{t("mod.occasion")}</label>
+                  <select id="mod-occ" value={occasion} onChange={(e) => setOccasion(e.target.value)}>
+                    <option value="">{C.pick}</option>
                     {["occ1", "occ2", "occ3", "occ4", "occ5"].map((o) => (
                       <option key={o} value={t("mod." + o)}>{t("mod." + o)}</option>
                     ))}
                   </select>
                 </div>
                 <div className="input-group">
-                  <label>{t("mod.notes")}</label>
-                  <textarea rows={2} maxLength={500} placeholder={t("mod.notesPh")} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  <label htmlFor="mod-notes">{t("mod.notes")}</label>
+                  <textarea id="mod-notes" rows={2} maxLength={500} placeholder={t("mod.notesPh")} value={notes} onChange={(e) => setNotes(e.target.value)} />
                   <ContactHint text={notes} />
                 </div>
-                <button className="btn-primary" style={{ width: "100%" }} onClick={() => okText(notes) && setStep(2)}>
+                {err && (
+                  <p id="mod-err" className="form-err" role="alert">
+                    {err === "guests" ? C.needGuests : C.needAddr}
+                  </p>
+                )}
+                <button className="btn-primary" style={{ width: "100%" }} onClick={() => okText(notes) && details() && setStep(2)}>
                   {t("mod.continue")}
                 </button>
               </>

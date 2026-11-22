@@ -2,8 +2,9 @@
  * Mitte wächst das Showly-Logo aus dem Licht.
  *
  * Er startet von selbst, läuft einmal durch (gut vier Sekunden) und blendet
- * dann aus. Ein Tippen schließt ihn sofort. Er kommt bei jedem Öffnen bzw.
- * Neuladen der App, aber nicht beim Wechsel zwischen Seiten.
+ * dann aus. Ein Tippen schließt ihn sofort. Er kommt einmal je Besuch und
+ * nur auf der Startseite; wer direkt ein Profil, die Kasse oder eine
+ * Rechtsseite öffnet, sieht sofort den Inhalt.
  *
  * Abgespielt wird ein echtes Video (H.264, 720 px, 24 Bilder pro Sekunde),
  * das der Grafikchip entschlüsselt. Drei Wege, der erste, der klappt, gewinnt:
@@ -57,7 +58,9 @@ export function Splash() {
   }
 
   useEffect(() => {
-    if (shownThisLoad) {
+    /* no-splash setzt das Startskript in __root.tsx: schon gesehen, nicht
+       die Startseite oder "Bewegung reduzieren" */
+    if (shownThisLoad || document.documentElement.classList.contains("no-splash")) {
       setPhase("gone");
       return;
     }

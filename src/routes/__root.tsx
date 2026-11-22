@@ -150,6 +150,11 @@ const LANG_BOOT_SCRIPT = `(function(){try{
 /* Zeigt der Gestaltung, dass JavaScript laeuft. Nur dann starten Elemente
    unsichtbar und werden beim Scrollen eingeblendet. */
 document.documentElement.setAttribute('data-js','1');
+/* Vorspann nur einmal je Besuch, nur auf der Startseite und nicht bei
+   "Bewegung reduzieren". Entscheidung vor dem ersten Bild, damit er auf
+   anderen Seiten nicht kurz aufblitzt (siehe Splash.tsx). */
+try{var sp=location.pathname==='/'&&!sessionStorage.getItem('showly.splash')&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);
+if(sp){sessionStorage.setItem('showly.splash','1')}else{document.documentElement.classList.add('no-splash')}}catch(e){}
 var q='';try{q=(new URLSearchParams(location.search).get('lang')||'').toLowerCase()}catch(e){}
 var s=null;try{s=localStorage.getItem('showly.lang')}catch(e){}
 var l=(q==='de'||q==='en'||q==='es')?q:s;

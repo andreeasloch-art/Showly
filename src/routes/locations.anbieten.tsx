@@ -539,9 +539,9 @@ function Offer() {
                   </label>
                   {d.on ? (
                     <>
-                      <input type="time" value={d.from} onChange={(e) => setWeek((w) => w.map((x, k) => (k === i ? { ...x, from: e.target.value } : x)))} />
+                      <input type="time" aria-label={`${DAYS[i]} geöffnet ab`} value={d.from} onChange={(e) => setWeek((w) => w.map((x, k) => (k === i ? { ...x, from: e.target.value } : x)))} />
                       <span>bis</span>
-                      <input type="time" value={d.to} onChange={(e) => setWeek((w) => w.map((x, k) => (k === i ? { ...x, to: e.target.value } : x)))} />
+                      <input type="time" aria-label={`${DAYS[i]} geöffnet bis`} value={d.to} onChange={(e) => setWeek((w) => w.map((x, k) => (k === i ? { ...x, to: e.target.value } : x)))} />
                     </>
                   ) : (
                     <span className="vn-muted">geschlossen</span>

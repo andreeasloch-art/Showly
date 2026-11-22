@@ -6498,7 +6498,17 @@ body:has(.modal-overlay, .feed26-modal, [aria-modal="true"]) .tabbar{display:non
 .consent-cat small{display:block;font-size:12.5px;line-height:1.45;color:var(--sh-muted)}
 .consent-cat b small{display:inline;font-weight:400}
 .consent-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
-@media (max-width:420px){.consent-btns{grid-template-columns:1fr}}
+/* Handy: kompakt, die drei Knöpfe nebeneinander, damit das Banner nicht
+   die halbe Seite verdeckt */
+@media (max-width:600px){
+  .consent{padding:14px 14px 12px;border-radius:16px}
+  .consent h2{font-size:15px;margin-bottom:4px}
+  .consent p{font-size:13px;line-height:1.45}
+  .consent-btns{gap:6px;margin-top:10px}
+  .consent-btn{font-size:13px;padding:6px 4px}
+  .consent-links{margin-top:8px!important;font-size:12px!important}
+}
+@media (max-width:330px){.consent-btns{grid-template-columns:1fr}}
 .consent-btn{min-height:44px;padding:8px 10px;border-radius:12px;border:1.5px solid #3b2d6b;background:#fff;color:#2a1f52;font:600 14px/1.2 var(--font-body);cursor:pointer}
 .consent-btn:hover{background:#f1ecfb}
 .consent-btn:focus-visible{outline:3px solid #5b2bd1;outline-offset:2px}
@@ -6882,3 +6892,6 @@ html body .tabbar .tab{min-width:0;flex:1 1 0;padding-left:2px;padding-right:2px
 
 /* Fehlermeldung in Formularen (Buchungsdialog) */
 .form-err{margin:4px 0 12px;padding:10px 12px;border-radius:12px;background:#fdecee;color:#9b1c2c;font-size:14px;font-weight:600}
+
+/* Vorspann übersprungen (Startskript in __root.tsx) */
+.no-splash .splash{display:none!important}

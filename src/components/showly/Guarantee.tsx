@@ -89,12 +89,12 @@ export function GuaranteeSection() {
                 <tr key={row}>
                   <th scope="row">{row}</th>
                   <td className="us">
-                    <span className="guar-yes" aria-label="ja">
+                    <span className="guar-yes" role="img" aria-label={lang === "en" ? "yes" : lang === "es" ? "sí" : "ja"}>
                       <Icon name="check" />
                     </span>
                   </td>
                   <td>
-                    <span className="guar-no" aria-label="nein">
+                    <span className="guar-no" role="img" aria-label={lang === "de" ? "nein" : "no"}>
                       <Icon name="close" />
                     </span>
                   </td>

@@ -83,8 +83,11 @@ export function ConsentBanner() {
     });
   }, []);
 
+  /* Fokus nur, wenn jemand die Einstellungen selbst öffnet. Beim ersten
+     Besuch erscheint das Banner von allein; dort soll es niemandem den
+     Fokus wegnehmen (und keinen Fokusrahmen auf „Alle ablehnen“ zeigen). */
   useEffect(() => {
-    if (open) first.current?.focus();
+    if (open && detail) first.current?.focus();
   }, [open, detail]);
 
   if (!open) return null;

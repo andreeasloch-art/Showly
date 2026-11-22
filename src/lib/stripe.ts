@@ -1,4 +1,8 @@
-import { loadStripe, type Stripe } from "@stripe/stripe-js";
+/* "pure": Stripe.js wird erst geladen, wenn eine Zahlungsmaske wirklich
+   gebraucht wird (getStripe). Der normale Einstieg lädt das Skript schon beim
+   Einbinden, also auf jeder Seite und vor jeder Einwilligung. */
+import { loadStripe } from "@stripe/stripe-js/pure";
+import type { Stripe } from "@stripe/stripe-js";
 
 type StripeEnv = "sandbox" | "live";
 

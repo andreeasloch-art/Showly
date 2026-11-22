@@ -17,6 +17,11 @@ export const sendPurchaseConfirmation = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data }): Promise<MailResult> => {
+    /* Empfänger und Text kommen hier vom Browser. Mit Datenbank verschickt
+       der Server die Bestätigungen selbst (notify.server.ts); dieser Weg
+       bleibt dann gesperrt, sonst ließe er sich als Spam-Versand nutzen. */
+    const { backendOnServer } = await import("@/lib/stripeEnv.server");
+    if (backendOnServer()) return { sent: false, skipped: true };
     const key = process.env["RESEND_API_KEY"];
     const from = process.env["SHOWLY_MAIL_FROM"] || "Showly <onboarding@resend.dev>";
     if (!key) return { sent: false, skipped: true };

@@ -4,6 +4,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { StripeEnv } from "@/lib/stripe.server";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 async function me() {
   try {
@@ -24,7 +25,7 @@ async function openQuote(requestId: number, uid: string) {
 export const quoteCheckout = createServerFn({ method: "POST" })
   .inputValidator((d: { requestId: number; returnUrl: string; environment: StripeEnv }) => {
     if (!Number.isInteger(d.requestId) || !/^https?:\/\//.test(String(d.returnUrl))) throw new Error("Ungültig");
-    return { requestId: d.requestId, returnUrl: String(d.returnUrl), environment: d.environment === "live" ? ("live" as const) : ("sandbox" as const) };
+    return { requestId: d.requestId, returnUrl: String(d.returnUrl), environment: serverStripeEnv() };
   })
   .handler(async ({ data }): Promise<{ clientSecret: string } | { error: string }> => {
     const ctx = await me();
@@ -68,7 +69,7 @@ export const quoteCheckout = createServerFn({ method: "POST" })
 export const quoteSettle = createServerFn({ method: "POST" })
   .inputValidator((d: { sessionId: string; environment: StripeEnv }) => {
     if (!/^cs_[A-Za-z0-9_]+$/.test(String(d.sessionId))) throw new Error("Ungültig");
-    return { sessionId: String(d.sessionId), environment: d.environment === "live" ? ("live" as const) : ("sandbox" as const) };
+    return { sessionId: String(d.sessionId), environment: serverStripeEnv() };
   })
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();

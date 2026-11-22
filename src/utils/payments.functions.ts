@@ -4,6 +4,10 @@ import {
   createStripeClient,
   getStripeErrorMessage,
 } from "@/lib/stripe.server";
+import { backendOnServer, sameSiteUrl, serverStripeEnv } from "@/lib/stripeEnv.server";
+import { getRequestHeader } from "@tanstack/react-start/server";
+
+const returnOk = (url: string) => sameSiteUrl(url, getRequestHeader("x-forwarded-host") ?? getRequestHeader("host"));
 
 type CheckoutSessionResult = { clientSecret: string; holdKey?: string; holdUntil?: string } | { error: string };
 
@@ -15,7 +19,9 @@ export interface CheckoutLineInput {
   priceId?: string;
 }
 
-/** Checkout für Buchungen (dynamisch, pro Stunde) und Shop-Artikel (Katalogpreise). */
+/** Checkout nur für den Übungsbetrieb ohne Datenbank.
+ *  Die Beträge kommen hier vom Browser. Mit Datenbank ist dieser Weg deshalb
+ *  gesperrt; dort rechnet createCartCheckout bzw. der Top-Act-Weg selbst. */
 export const createShowlyCheckout = createServerFn({ method: "POST" })
   .inputValidator(
     (data: {
@@ -43,8 +49,11 @@ export const createShowlyCheckout = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+    if (backendOnServer()) return { error: "Dieser Zahlungsweg ist abgeschaltet." };
+    if (!returnOk(data.returnUrl)) return { error: "Ungültige Rücksprungadresse" };
     try {
-      const stripe = createStripeClient(data.environment);
+      /* Übungsbetrieb: nie echtes Geld */
+      const stripe = createStripeClient("sandbox");
 
       // Katalogpreise auflösen (lookup_key), sonst dynamischer Preis.
       const keys = Array.from(
@@ -90,7 +99,7 @@ export const verifyShowlySession = createServerFn({ method: "POST" })
   })
   .handler(async ({ data }): Promise<{ paid: boolean; error?: string }> => {
     try {
-      const stripe = createStripeClient(data.environment);
+      const stripe = createStripeClient(backendOnServer() ? serverStripeEnv() : "sandbox");
       const session = await stripe.checkout.sessions.retrieve(data.sessionId);
       return { paid: session.payment_status === "paid" };
     } catch (error) {
@@ -188,10 +197,13 @@ export const createCartCheckout = createServerFn({ method: "POST" })
         if (b.pkg !== undefined && !/^[a-zA-Z0-9_-]{1,40}$/.test(b.pkg)) throw new Error("Invalid package");
       }
       if (!/^https?:\/\//.test(data.returnUrl)) throw new Error("Invalid return url");
+      /* Test oder live bestimmt der Server, nicht der Browser */
+      data = { ...data, environment: serverStripeEnv() };
       return data;
     },
   )
   .handler(async ({ data }): Promise<CheckoutSessionResult> => {
+    if (!returnOk(data.returnUrl)) return { error: "Ungültige Rücksprungadresse" };
     const { priceLines } = await import("@/showly/pricing");
     const lang = data.locale ?? "de";
     const name = (v: unknown) =>

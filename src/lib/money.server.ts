@@ -13,12 +13,13 @@
  * auszahlt oder erstattet: Stripe bekommt einen Idempotenz-Schlüssel, und
  * die Datenbank merkt sich, was schon passiert ist. */
 import { adminClient } from "./supabase.server";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 import { createStripeClient, getStripeErrorMessage } from "./stripe.server";
 import { sendMail } from "./mail.server";
 
 /** Die Umgebung bestimmt der Server, wie bei der Ausweisprüfung */
 export function stripeEnv(): "sandbox" | "live" {
-  return process.env["STRIPE_LIVE_API_KEY"] && process.env["NODE_ENV"] === "production" ? "live" : "sandbox";
+  return serverStripeEnv();
 }
 
 const euro = (cents: number) => (cents / 100).toFixed(2).replace(".", ",") + " €";

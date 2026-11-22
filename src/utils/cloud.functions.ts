@@ -18,6 +18,7 @@ import { provisionFelder, type CloudAction } from "@/showly/cloudRules";
 
 import type { RecordResult } from "@/lib/cart.server";
 import { cleanSnapshot, type Snapshot } from "@/showly/cartSnapshot";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 export type { RecordResult };
 
@@ -39,7 +40,8 @@ export const recordCart = createServerFn({ method: "POST" })
       if (data.holdKey !== undefined && !/^[0-9a-f]{32}$/.test(data.holdKey)) throw new Error("Ungültige Reservierung");
       if (data.environment !== undefined && data.environment !== "sandbox" && data.environment !== "live")
         throw new Error("Ungültige Umgebung");
-      return { ...data, snapshot: cleanSnapshot(data.snapshot) };
+      /* Test oder live bestimmt der Server, nicht der Browser */
+      return { ...data, environment: serverStripeEnv(), snapshot: cleanSnapshot(data.snapshot) };
     },
   )
   .handler(async ({ data }): Promise<RecordResult> => {
@@ -379,7 +381,7 @@ export const connectOnboarding = createServerFn({ method: "POST" })
   .inputValidator((d: { returnUrl: string; environment: StripeEnv }) => {
     if (!/^https?:\/\/[^\s]+$/.test(d.returnUrl)) throw new Error("Ungültige Adresse");
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
-    return d;
+    return { ...d, environment: serverStripeEnv() };
   })
   .handler(async ({ data }): Promise<{ url: string } | { error: string } | { skipped: true }> => {
     const ctx = await userOrNull();
@@ -425,7 +427,7 @@ export const connectOnboarding = createServerFn({ method: "POST" })
 export const connectStatus = createServerFn({ method: "POST" })
   .inputValidator((d: { environment: StripeEnv }) => {
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
-    return d;
+    return { ...d, environment: serverStripeEnv() };
   })
   .handler(async ({ data }): Promise<{ state: "none" | "incomplete" | "ready" } | { skipped: true } | { error: string }> => {
     const ctx = await userOrNull();

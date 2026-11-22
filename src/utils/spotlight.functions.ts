@@ -7,6 +7,7 @@ import { adminClient, requireUser } from "@/lib/supabase.server";
 import { TOO_MANY, allow } from "@/lib/guard.server";
 import type { StripeEnv } from "@/lib/stripe.server";
 import { SPOTLIGHT_PRICE, SPOTLIGHT_SLOTS, citySlug } from "@/showly/spotlight";
+import { serverStripeEnv } from "@/lib/stripeEnv.server";
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const todayBerlin = () => new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(new Date());
@@ -97,7 +98,7 @@ export const topActCheckout = createServerFn({ method: "POST" })
         tagline: String(d.tagline || "").trim().slice(0, 120),
         startISO: ISO.test(String(d.startISO || "")) ? String(d.startISO) : undefined,
         returnUrl: String(d.returnUrl),
-        environment: d.environment === "live" ? ("live" as const) : ("sandbox" as const),
+        environment: serverStripeEnv(),
         kind: kindOf(d.kind),
       };
     },
@@ -218,7 +219,7 @@ export const topActCheckout = createServerFn({ method: "POST" })
 export const topActSettle = createServerFn({ method: "POST" })
   .inputValidator((d: { sessionId: string; environment: StripeEnv }) => {
     if (!/^cs_[A-Za-z0-9_]+$/.test(String(d.sessionId))) throw new Error("Ungültig");
-    return { sessionId: String(d.sessionId), environment: d.environment === "live" ? ("live" as const) : ("sandbox" as const) };
+    return { sessionId: String(d.sessionId), environment: serverStripeEnv() };
   })
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const { settleSpotlight } = await import("@/lib/spotlight.server");

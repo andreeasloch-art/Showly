@@ -16,6 +16,19 @@ Prüfen jederzeit unter https://showly-events.lovable.app/api/status
 | Datenbank-Indizes (Migration 0026) | ✅ eingespielt |
 | Handy-App zeigt auf die neue Adresse (`capacitor.config.ts`) | ✅ (wirkt mit dem nächsten App-Build) |
 
+## Sicherheitskorrekturen vom 22.11.2026 (Zweig `claude/keen-davinci-ajpygx`)
+
+Noch nicht live. Damit sie wirken:
+
+1. Zweig in den Hauptzweig übernehmen, dann in Lovable **Veröffentlichen**.
+2. **Migration 0029** einspielen: Lovable → Cloud → SQL-Editor, Inhalt von
+   `supabase/migrations/0029_schreibrechte_schaerfen.sql` einfügen, ausführen.
+   Erscheint der Hinweis „doppelte Nummern“, sag Bescheid.
+3. Prüfen: `https://showly-events.lovable.app/rechtliches/datenschutz` leitet
+   auf die Datenschutzerklärung weiter.
+
+Rückweg: Der Stand davor ist Commit `b7836da` (Lovable-Versionsverlauf).
+
 ## Offen – nur du kannst das
 
 1. **Impressum mit echten Firmendaten.** Steht noch auf „Muster“. Pflicht vor dem Start.
@@ -31,8 +44,10 @@ Prüfen jederzeit unter https://showly-events.lovable.app/api/status
 4. **E-Mail-Versand** (`mail: false`): Konto bei Resend anlegen, Domain bestätigen,
    `RESEND_API_KEY` und `SHOWLY_MAIL_FROM` (z. B. `Showly <hallo@deine-domain.de>`)
    in Lovable unter Secrets setzen. Ohne das gehen keine Bestätigungen raus.
-5. **Eigene Domain** (z. B. showly.eu): in Lovable unter Domains verbinden und
-   `VITE_SITE_URL` auf die Domain setzen. Danach die Adresse der automatischen
+5. **Eigene Domain** showly.eu (liegt bei Strato, zeigt zurzeit „404 Not Found“
+   und hat kein HTTPS): in Lovable unter Domains verbinden und danach
+   `VITE_SITE_URL=https://showly.eu` setzen. Bis dahin zeigen Google und
+   Vorschaubilder auf die Lovable-Adresse. Danach die Adresse der automatischen
    Aufgaben umstellen (sag mir Bescheid, ich mache das).
 6. **Datensicherung:** In Lovable/Supabase prüfen, ob tägliche Sicherungen im
    Tarif enthalten sind. Zusätzlich wöchentlich in der Verwaltung → „Datensicherung“

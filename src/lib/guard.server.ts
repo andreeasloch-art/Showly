@@ -33,8 +33,7 @@ export function clientIp(): string {
   return fwd.split(",")[0]?.trim() || getRequestHeader("x-real-ip") || "unknown";
 }
 
-/** true: erlaubt. Bei einer Störung der Datenbank wird nicht blockiert,
- *  damit echte Kunden nicht an einem Zählerfehler scheitern. */
+/** true: erlaubt. Bei einer Störung der Datenbank: siehe STRICT. */
 /* Datensparsamkeit: In der Zählertabelle steht nie die IP-Adresse oder
    Nutzerkennung selbst, nur ein gekürzter Hash davon. Die Einträge
    werden nach 2 Tagen gelöscht (hit_rate_limit). */
@@ -44,18 +43,27 @@ async function pseudonym(who: string): Promise<string> {
   return Array.from(new Uint8Array(buf).slice(0, 12), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/* Heikle Aktionen (Konten, Nachrichten, Uploads, Kasse, Auszahlungskonto):
+   Ist der Zähler gestört, wird abgelehnt statt durchgewinkt. Sonst ließe
+   sich bei einem Datenbankfehler unbegrenzt registrieren, schreiben oder
+   hochladen. Diese Aktionen brauchen die Datenbank ohnehin; ein echter Kunde
+   verliert dadurch nichts, was ohne Störung ginge. Für Ansichten, Fehler-
+   meldungen und Buchungsaktionen bleibt es beim Durchlassen. */
+export const STRICT: ReadonlySet<LimitKey> = new Set<LimitKey>(["signup", "support", "report", "connect", "upload", "cart", "message"]);
+
 export async function allow(key: LimitKey, who: string): Promise<boolean> {
   const [max, seconds] = LIMITS[key];
+  const onFailure = !STRICT.has(key);
   try {
     const { data, error } = await adminClient().rpc("hit_rate_limit", {
       p_bucket: `${key}:${await pseudonym(who)}`,
       p_max: max,
       p_seconds: seconds,
     });
-    if (error) return true;
+    if (error) return onFailure;
     return data !== false;
   } catch {
-    return true;
+    return onFailure;
   }
 }
 

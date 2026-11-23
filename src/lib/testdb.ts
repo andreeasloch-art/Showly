@@ -15,6 +15,9 @@ do $$ begin
   if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated nologin; end if;
   if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role nologin bypassrls; end if;
 end $$;
+-- wie bei Supabase: der Dienstschlüssel umgeht die Zugriffsregeln (auch wenn ein
+-- anderer Test die Rolle schon ohne dieses Recht angelegt hat)
+alter role service_role bypassrls;
 create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
 create schema auth;

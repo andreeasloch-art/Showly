@@ -23,7 +23,7 @@ async function openQuote(requestId: number, uid: string) {
 
 /** Zahlungsmaske für die Differenz zum neuen Preis */
 export const quoteCheckout = createServerFn({ method: "POST" })
-  .inputValidator((d: { requestId: number; returnUrl: string; environment: StripeEnv }) => {
+  .validator((d: { requestId: number; returnUrl: string; environment: StripeEnv }) => {
     if (!Number.isInteger(d.requestId) || !/^https?:\/\//.test(String(d.returnUrl))) throw new Error("Ungültig");
     return { requestId: d.requestId, returnUrl: String(d.returnUrl), environment: serverStripeEnv() };
   })
@@ -67,7 +67,7 @@ export const quoteCheckout = createServerFn({ method: "POST" })
 
 /** Nach der Zahlung (Rückkehr aus Stripe); der Webhook macht dasselbe */
 export const quoteSettle = createServerFn({ method: "POST" })
-  .inputValidator((d: { sessionId: string; environment: StripeEnv }) => {
+  .validator((d: { sessionId: string; environment: StripeEnv }) => {
     if (!/^cs_[A-Za-z0-9_]+$/.test(String(d.sessionId))) throw new Error("Ungültig");
     return { sessionId: String(d.sessionId), environment: serverStripeEnv() };
   })
@@ -80,7 +80,7 @@ export const quoteSettle = createServerFn({ method: "POST" })
 
 /** Neuen Preis ablehnen: Bestellung entfällt, alles zurück */
 export const quoteDecline = createServerFn({ method: "POST" })
-  .inputValidator((d: { requestId: number }) => {
+  .validator((d: { requestId: number }) => {
     if (!Number.isInteger(d.requestId)) throw new Error("Ungültig");
     return { requestId: d.requestId };
   })
@@ -115,7 +115,7 @@ export const quoteDecline = createServerFn({ method: "POST" })
 
 /** Anfrage ohne Zahlung an eine echte Konditorei schicken */
 export const sendSweetRequest = createServerFn({ method: "POST" })
-  .inputValidator((d: { sweetId: number; dateISO: string; qty: number; city: string; wishes: string }) => {
+  .validator((d: { sweetId: number; dateISO: string; qty: number; city: string; wishes: string }) => {
     if (!Number.isInteger(d.sweetId) || !/^\d{4}-\d{2}-\d{2}$/.test(String(d.dateISO))) throw new Error("Ungültig");
     return {
       sweetId: d.sweetId,
@@ -177,7 +177,7 @@ export const sendSweetRequest = createServerFn({ method: "POST" })
 
 /** Angebot für den Warenkorb laden (Link aus der Mail: /checkout?angebot=ID) */
 export const offerForCart = createServerFn({ method: "POST" })
-  .inputValidator((d: { requestId: number }) => {
+  .validator((d: { requestId: number }) => {
     if (!Number.isInteger(d.requestId) || d.requestId < 1) throw new Error("Ungültig");
     return { requestId: d.requestId };
   })

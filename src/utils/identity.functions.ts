@@ -56,7 +56,7 @@ function mapStatus(
  *  Das Selfie ist ein biometrisches Merkmal (Art. 9 DSGVO); ohne
  *  ausdrückliche Einwilligung startet die Prüfung nicht. */
 export const startIdentityCheck = createServerFn({ method: "POST" })
-  .inputValidator((d: { consent: boolean }) => {
+  .validator((d: { consent: boolean }) => {
     if (d?.consent !== true) throw new Error("Einwilligung fehlt");
     return { consent: true as const };
   })

@@ -62,7 +62,7 @@ const list = (v: unknown, n: number, max: number) =>
   (Array.isArray(v) ? v : []).map((x) => s(x, max)).filter(Boolean).slice(0, n);
 
 export const saveArtistProfileCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: ProfilePatch) => ({
+  .validator((d: ProfilePatch) => ({
     artistId: int(d.artistId, 0, 1e9),
     name: s(d.name, 80),
     desc: s(d.desc, 4000),
@@ -117,7 +117,7 @@ export const saveArtistProfileCloud = createServerFn({ method: "POST" })
  * Einmal kostenlos umbuchen
  * ------------------------------------------------------------------------ */
 export const rebookBooking = createServerFn({ method: "POST" })
-  .inputValidator((d: { bookingId: number; day: string; slot: string }) => {
+  .validator((d: { bookingId: number; day: string; slot: string }) => {
     if (!DAY_RE.test(String(d.day)) || !SLOT_RE.test(String(d.slot))) throw new Error("Ungültiger Termin");
     return { bookingId: int(d.bookingId, 0, 1e12), day: String(d.day), slot: String(d.slot) };
   })
@@ -161,7 +161,7 @@ export const rebookBooking = createServerFn({ method: "POST" })
  * Auszahlung schneller gegen Gebühr
  * ------------------------------------------------------------------------ */
 export const choosePayoutSpeed = createServerFn({ method: "POST" })
-  .inputValidator((d: { payoutId: number; speed: string }) => ({ payoutId: int(d.payoutId, 0, 1e12), speed: String(d.speed) }))
+  .validator((d: { payoutId: number; speed: string }) => ({ payoutId: int(d.payoutId, 0, 1e12), speed: String(d.speed) }))
   .handler(async ({ data }): Promise<{ ok: true; payoutOn: string; feeCents: number; netCents: number } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -229,7 +229,7 @@ const cleanRef = (r: Ref): Ref => ({
 });
 
 export const evidenceUploadUrl = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: Ref; mime: string; bytes: number }) => ({ ref: cleanRef(d.ref), mime: String(d.mime || ""), bytes: int(d.bytes, 0, 1e9) }))
+  .validator((d: { ref: Ref; mime: string; bytes: number }) => ({ ref: cleanRef(d.ref), mime: String(d.mime || ""), bytes: int(d.bytes, 0, 1e9) }))
   .handler(async ({ data }): Promise<{ path: string; token: string } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -278,7 +278,7 @@ async function checkEvidence(db: ReturnType<typeof adminClient>, ref: Ref, paths
 
 /** Signierte Adressen zum Ansehen der Nachweise (für Beteiligte und Team) */
 export const evidenceUrls = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: Ref; paths: string[] }) => ({ ref: cleanRef(d.ref), paths: (Array.isArray(d.paths) ? d.paths : []).map(String).slice(0, 30) }))
+  .validator((d: { ref: Ref; paths: string[] }) => ({ ref: cleanRef(d.ref), paths: (Array.isArray(d.paths) ? d.paths : []).map(String).slice(0, 30) }))
   .handler(async ({ data }): Promise<Record<string, string>> => {
     const ctx = await me();
     if (!ctx) return {};
@@ -363,7 +363,7 @@ async function settle(db: ReturnType<typeof adminClient>, c: ComplaintRow, cents
 }
 
 export const createComplaint = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { ref: Ref; category: string; body: string; evidence: string[]; lateMin?: number; playedMin?: number }) => ({
       ref: cleanRef(d.ref),
       category: String(d.category),
@@ -448,7 +448,7 @@ export const createComplaint = createServerFn({ method: "POST" })
 
 /** Stellungnahme, Angebot, Annahme, Weiterleiten ans Team, Zurückziehen */
 export const complaintAction = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { id: number; op: "statement" | "offer" | "accept" | "escalate" | "withdraw"; text?: string; cents?: number }) => ({
       id: int(d.id, 0, 1e12),
       op: (["statement", "offer", "accept", "escalate", "withdraw"] as const).includes(d.op) ? d.op : "statement",
@@ -526,7 +526,7 @@ export const myComplaints = createServerFn({ method: "POST" }).handler(async ():
 
 /** Verwaltung: offene Reklamationen und Entscheidung (höchstens 5 Tage) */
 export const adminComplaints = createServerFn({ method: "POST" })
-  .inputValidator((d: { op: "list" } | { op: "decide"; id: number; cents: number; decision: string }) => d)
+  .validator((d: { op: "list" } | { op: "decide"; id: number; cents: number; decision: string }) => d)
   .handler(async ({ data }): Promise<{ list: (ComplaintRow & { flagged: boolean; title: string })[] } | { error: string }> => {
     try {
       const { requireAdmin } = await import("@/lib/guard.server");
@@ -566,7 +566,7 @@ export const adminComplaints = createServerFn({ method: "POST" })
  * Verleih: Übergabeprotokoll und Schadenskatalog
  * ------------------------------------------------------------------------ */
 export const handoverRecord = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; step: "out" | "back"; photos: string[]; note?: string }) => ({
+  .validator((d: { orderId: number; step: "out" | "back"; photos: string[]; note?: string }) => ({
     orderId: int(d.orderId, 0, 1e12),
     step: d.step === "back" ? ("back" as const) : ("out" as const),
     photos: Array.isArray(d.photos) ? d.photos.map(String) : [],
@@ -603,7 +603,7 @@ export const handoverRecord = createServerFn({ method: "POST" })
   });
 
 export const handoverConfirm = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; step: "out" | "back" }) => ({ orderId: int(d.orderId, 0, 1e12), step: d.step === "back" ? ("back" as const) : ("out" as const) }))
+  .validator((d: { orderId: number; step: "out" | "back" }) => ({ orderId: int(d.orderId, 0, 1e12), step: d.step === "back" ? ("back" as const) : ("out" as const) }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -621,7 +621,7 @@ export const handoverConfirm = createServerFn({ method: "POST" })
 
 /** Schaden nach Katalog melden (bis 72 h nach Rückgabe); Rest der Kaution sofort zurück */
 export const reportDamage = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; items: { key: string; qty?: number }[]; valueCents?: number; lateDays?: number; note?: string }) => ({
+  .validator((d: { orderId: number; items: { key: string; qty?: number }[]; valueCents?: number; lateDays?: number; note?: string }) => ({
     orderId: int(d.orderId, 0, 1e12),
     items: (Array.isArray(d.items) ? d.items : []).slice(0, 10).map((i) => ({ key: s(i?.key, 20), qty: int(i?.qty ?? 1, 1, 20) })),
     valueCents: int(d.valueCents, 0, 1e8),
@@ -679,7 +679,7 @@ export const reportDamage = createServerFn({ method: "POST" })
 
 /** Kunde widerspricht dem Schadensabzug: wird zur Reklamation */
 export const objectDamage = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; text: string }) => ({ orderId: int(d.orderId, 0, 1e12), text: s(d.text, 2000) }))
+  .validator((d: { orderId: number; text: string }) => ({ orderId: int(d.orderId, 0, 1e12), text: s(d.text, 2000) }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -710,7 +710,7 @@ export const objectDamage = createServerFn({ method: "POST" })
  * Bewertungen: Antwort des Anbieters, Bewertung des Kunden (verdeckt)
  * ------------------------------------------------------------------------ */
 export const replyReview = createServerFn({ method: "POST" })
-  .inputValidator((d: { reviewId: number; text: string }) => ({ reviewId: int(d.reviewId, 0, 1e12), text: s(d.text, 2000) }))
+  .validator((d: { reviewId: number; text: string }) => ({ reviewId: int(d.reviewId, 0, 1e12), text: s(d.text, 2000) }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -727,7 +727,7 @@ export const replyReview = createServerFn({ method: "POST" })
   });
 
 export const reviewGuest = createServerFn({ method: "POST" })
-  .inputValidator((d: { bookingId: number; rating: number; text?: string }) => ({
+  .validator((d: { bookingId: number; rating: number; text?: string }) => ({
     bookingId: int(d.bookingId, 0, 1e12),
     rating: int(d.rating, 1, 5),
     text: s(d.text, 2000),

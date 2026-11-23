@@ -14,7 +14,7 @@ export type PublicArtistRow = Omit<
 >;
 
 export const publicArtist = createServerFn({ method: "GET" })
-  .inputValidator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
+  .validator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
   .handler(async ({ data }): Promise<PublicArtistRow | null> => {
     if (data.id < 100000) return null;
     try {
@@ -47,7 +47,7 @@ export const parseBakers = (w: Wire | null | undefined): PublicBaker[] => {
 };
 
 export const publicBaker = createServerFn({ method: "GET" })
-  .inputValidator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
+  .validator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
   .handler(async ({ data }): Promise<Wire | null> => {
     if (data.id < 100000) return null;
     try {
@@ -70,7 +70,7 @@ export interface LandingData {
 /** Echte Anbieter für eine Stadtseite (landing.ts): wer dort wohnt oder
  *  mit seinem Umkreis hinkommt. Beispielprofile zählen nicht. */
 export const landingData = createServerFn({ method: "GET" })
-  .inputValidator((d: { service: string; city: string }) => ({ service: String(d?.service || ""), city: String(d?.city || "") }))
+  .validator((d: { service: string; city: string }) => ({ service: String(d?.service || ""), city: String(d?.city || "") }))
   .handler(async ({ data }): Promise<LandingData> => {
     const { serviceBySlug, cityBySlug, serves } = await import("@/showly/landing");
     const { slugify } = await import("@/showly/slugs");

@@ -179,7 +179,7 @@ export const storyFeed = createServerFn({ method: "GET" }).handler(
 
 /* ------------------------------------------------------------------ */
 export const postStory = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { mediaId: string; kind: StoryKind; caption?: string }) => {
       if (!UUID.test(String(d.mediaId))) throw new Error("Ungültige Datei");
       if (!KINDS.includes(d.kind)) throw new Error("Ungültige Art");
@@ -343,7 +343,7 @@ export const myStories = createServerFn({ method: "GET" }).handler(
 
 /* ------------------------------------------------------------------ */
 export const deleteStory = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: string }) => {
+  .validator((d: { id: string }) => {
     if (!UUID.test(String(d.id))) throw new Error("Ungültige Kennung");
     return { id: String(d.id) };
   })

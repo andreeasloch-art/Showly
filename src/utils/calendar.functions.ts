@@ -81,7 +81,7 @@ export const myCalendars = createServerFn({ method: "GET" }).handler(async (): P
 });
 
 export const addCalendarFeed = createServerFn({ method: "POST" })
-  .inputValidator((d: { url: string; label?: string }) => ({
+  .validator((d: { url: string; label?: string }) => ({
     url: String(d?.url ?? "").slice(0, 2000),
     label: typeof d?.label === "string" ? d.label.trim().slice(0, 60) : "",
   }))
@@ -112,7 +112,7 @@ export const addCalendarFeed = createServerFn({ method: "POST" })
   });
 
 export const removeCalendarFeed = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
+  .validator((d: { id: number }) => ({ id: Math.trunc(Number(d?.id)) || 0 }))
   .handler(async ({ data }): Promise<CalendarStatus | { error: string }> => {
     const id = await myArtistId();
     if (!id) return { error: "Nur mit eigenem Künstlerprofil möglich." };

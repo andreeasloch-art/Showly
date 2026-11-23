@@ -61,7 +61,7 @@ function firstFree(
 
 /** Wie sieht es in einer Stadt aus? Wie viele Plätze sind heute frei, ab wann geht es */
 export const topActStatus = createServerFn({ method: "POST" })
-  .inputValidator((d: { city: string; weeks?: number; kind?: Kind }) => ({
+  .validator((d: { city: string; weeks?: number; kind?: Kind }) => ({
     city: String(d.city || "").trim().slice(0, 80),
     weeks: Math.max(1, Math.min(4, Math.round(Number(d.weeks) || 1))),
     kind: kindOf(d.kind),
@@ -89,7 +89,7 @@ export const activeTopActs = createServerFn({ method: "GET" }).handler(async () 
 
 /** Zeitraum reservieren und die Zahlungsmaske öffnen */
 export const topActCheckout = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { city: string; weeks: number; tagline: string; startISO?: string; returnUrl: string; environment: StripeEnv; kind?: Kind }) => {
       if (!/^https?:\/\//.test(String(d.returnUrl))) throw new Error("Ungültig");
       return {
@@ -217,7 +217,7 @@ export const topActCheckout = createServerFn({ method: "POST" })
 
 /** Nach der Rückkehr aus Stripe: Zahlung prüfen, Platz fest buchen */
 export const topActSettle = createServerFn({ method: "POST" })
-  .inputValidator((d: { sessionId: string; environment: StripeEnv }) => {
+  .validator((d: { sessionId: string; environment: StripeEnv }) => {
     if (!/^cs_[A-Za-z0-9_]+$/.test(String(d.sessionId))) throw new Error("Ungültig");
     return { sessionId: String(d.sessionId), environment: serverStripeEnv() };
   })

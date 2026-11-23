@@ -9,7 +9,7 @@ type MailResult = { sent: boolean; skipped?: boolean; error?: string };
  * Ohne RESEND_API_KEY wird nichts gesendet (kein Fehler für den Nutzer).
  */
 export const sendPurchaseConfirmation = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: { to: string; subject: string; lines: string[]; total: string }) => {
       if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.to)) throw new Error("Invalid email");
       if (!data.subject) throw new Error("Missing subject");

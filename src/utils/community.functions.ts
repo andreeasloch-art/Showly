@@ -169,7 +169,7 @@ export const listCommunity = createServerFn({ method: "GET" }).handler(
  * Bewertungen
  * ------------------------------------------------------------------------ */
 export const addReviewCloud = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { artistId: number; name: string; rating: number; text: string; eventDate?: string; media: unknown; sub?: unknown }) => ({
       artistId: Number.isInteger(d.artistId) && d.artistId > 0 ? d.artistId : 0,
       name: s(d.name, 60),
@@ -235,7 +235,7 @@ export const addReviewCloud = createServerFn({ method: "POST" })
   });
 
 export const deleteReviewCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
+  .validator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -247,7 +247,7 @@ export const deleteReviewCloud = createServerFn({ method: "POST" })
  * Event-Blog
  * ------------------------------------------------------------------------ */
 export const addPostCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { name: string; text: string; city?: string; artistIds: unknown; media: unknown }) => ({
+  .validator((d: { name: string; text: string; city?: string; artistIds: unknown; media: unknown }) => ({
     name: s(d.name, 60),
     text: s(d.text, 5000),
     city: s(d.city, 80) || null,
@@ -290,7 +290,7 @@ export const addPostCloud = createServerFn({ method: "POST" })
   });
 
 export const deletePostCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
+  .validator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -299,7 +299,7 @@ export const deletePostCloud = createServerFn({ method: "POST" })
   });
 
 export const toggleLikeCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
+  .validator((d: { id: number }) => ({ id: Number(d.id) | 0 }))
   .handler(async ({ data }): Promise<{ liked: boolean } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -320,7 +320,7 @@ export const toggleLikeCloud = createServerFn({ method: "POST" })
   });
 
 export const addCommentCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { postId: number; name: string; text: string }) => ({
+  .validator((d: { postId: number; name: string; text: string }) => ({
     postId: Number(d.postId) | 0,
     name: s(d.name, 60),
     text: s(d.text, 2000),
@@ -344,7 +344,7 @@ export const addCommentCloud = createServerFn({ method: "POST" })
  * Kalender: freie Tage selbst sperren (eigenes Profil)
  * ------------------------------------------------------------------------ */
 export const setBlockCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { artistId: number; day: string; slot: string; blocked: boolean }) => {
+  .validator((d: { artistId: number; day: string; slot: string; blocked: boolean }) => {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(d.day))) throw new Error("Ungültiges Datum");
     return { artistId: Number(d.artistId) | 0, day: d.day, slot: s(d.slot, 20), blocked: d.blocked === true };
   })
@@ -375,7 +375,7 @@ export const setBlockCloud = createServerFn({ method: "POST" })
 
 /** Mehrere ganze Tage sperren oder freigeben (Urlaub, Abwesenheit) */
 export const setDaysBlockedCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { artistId: number; days: string[]; blocked: boolean }) => {
+  .validator((d: { artistId: number; days: string[]; blocked: boolean }) => {
     const days = Array.isArray(d.days) ? d.days.map(String).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)) : [];
     if (!days.length || days.length > 120) throw new Error("Ungültiger Zeitraum");
     return { artistId: Number(d.artistId) | 0, days: [...new Set(days)], blocked: d.blocked === true };
@@ -398,7 +398,7 @@ export const setDaysBlockedCloud = createServerFn({ method: "POST" })
 
 /** Arbeitszeiten je Wochentag speichern (null = keine Einschränkung) */
 export const setWorkHoursCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { artistId: number; workHours: unknown }) => ({
+  .validator((d: { artistId: number; workHours: unknown }) => ({
     artistId: Number(d.artistId) | 0,
     workHours: d.workHours === null ? null : cleanWorkHours(d.workHours),
   }))
@@ -415,7 +415,7 @@ export const setWorkHoursCloud = createServerFn({ method: "POST" })
 
 /** Pakete der Planer (Basic/Premium/Luxus) speichern; Einstiegspreis = günstigstes Paket */
 export const setPackagesCloud = createServerFn({ method: "POST" })
-  .inputValidator((d: { artistId: number; packages: unknown }) => ({
+  .validator((d: { artistId: number; packages: unknown }) => ({
     artistId: Number(d.artistId) | 0,
     packages: cleanPackages(d.packages),
   }))
@@ -439,7 +439,7 @@ export const setPackagesCloud = createServerFn({ method: "POST" })
 
 /** Gesperrte und gebuchte Zeitfenster der Datenbank-Profile, ab heute */
 export const listAvailability = createServerFn({ method: "POST" })
-  .inputValidator((d: { artistIds: number[] }) => ({
+  .validator((d: { artistIds: number[] }) => ({
     artistIds: (Array.isArray(d.artistIds) ? d.artistIds : []).map(Number).filter((n) => n > 0).slice(0, 200),
   }))
   .handler(async ({ data }): Promise<Record<number, Record<string, string[]>>> => {

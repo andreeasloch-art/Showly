@@ -33,7 +33,7 @@ async function userOrNull() {
 
 
 export const recordCart = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: { snapshot: Snapshot; sessionId?: string; environment?: StripeEnv; holdKey?: string }) => {
       if (data.sessionId !== undefined && !/^[a-zA-Z0-9_-]{8,200}$/.test(data.sessionId))
         throw new Error("Ungültige Sitzung");
@@ -61,7 +61,7 @@ export type ActionResult = { ok: true; result: string } | { error: string } | { 
 const KINDS = new Set(["respond", "cancelArtist", "cancelCustomer", "reportNoShow", "confirmPresence", "checkin", "claim"]);
 
 export const bookingAction = createServerFn({ method: "POST" })
-  .inputValidator((data: { bookingId: number; action: CloudAction }) => {
+  .validator((data: { bookingId: number; action: CloudAction }) => {
     if (!Number.isInteger(data.bookingId) || data.bookingId <= 0) throw new Error("Ungültige Buchung");
     if (!data.action || !KINDS.has(data.action.kind)) throw new Error("Ungültige Aktion");
     const a = data.action;
@@ -304,7 +304,7 @@ export interface ArtistSignup {
 }
 
 export const registerArtist = createServerFn({ method: "POST" })
-  .inputValidator((d: ArtistSignup) => {
+  .validator((d: ArtistSignup) => {
     const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
     const out: ArtistSignup = {
       cat: s(d.cat, 40),
@@ -378,7 +378,7 @@ export const registerArtist = createServerFn({ method: "POST" })
  * Connect ist im Stripe-Dashboard für das Showly-Konto freigeschaltet.
  * ------------------------------------------------------------------------ */
 export const connectOnboarding = createServerFn({ method: "POST" })
-  .inputValidator((d: { returnUrl: string; environment: StripeEnv }) => {
+  .validator((d: { returnUrl: string; environment: StripeEnv }) => {
     if (!/^https?:\/\/[^\s]+$/.test(d.returnUrl)) throw new Error("Ungültige Adresse");
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
     return { ...d, environment: serverStripeEnv() };
@@ -425,7 +425,7 @@ export const connectOnboarding = createServerFn({ method: "POST" })
   });
 
 export const connectStatus = createServerFn({ method: "POST" })
-  .inputValidator((d: { environment: StripeEnv }) => {
+  .validator((d: { environment: StripeEnv }) => {
     if (d.environment !== "sandbox" && d.environment !== "live") throw new Error("Ungültige Umgebung");
     return { ...d, environment: serverStripeEnv() };
   })

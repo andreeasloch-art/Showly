@@ -97,7 +97,7 @@ export const deleteMyAccount = createServerFn({ method: "POST" }).handler(
 const TARGETS: ReportTarget[] = ["post", "comment", "review", "profile", "story"];
 
 export const reportContent = createServerFn({ method: "POST" })
-  .inputValidator((d: { target: ReportTarget; id: string; reason: string; details?: string }) => {
+  .validator((d: { target: ReportTarget; id: string; reason: string; details?: string }) => {
     if (!TARGETS.includes(d.target)) throw new Error("Unbekanntes Ziel");
     return {
       target: d.target,

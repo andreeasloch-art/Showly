@@ -108,7 +108,7 @@ async function documentsAllowed(ref: ThreadRef): Promise<boolean> {
 }
 
 export const chatUploadUrl = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: ThreadRef; mime: string; bytes: number }) => ({
+  .validator((d: { ref: ThreadRef; mime: string; bytes: number }) => ({
     ref: checkRef(d.ref),
     mime: String(d.mime || ""),
     bytes: Math.round(Number(d.bytes) || 0),
@@ -166,7 +166,7 @@ async function checkAttachment(ref: ThreadRef, a: { path: string; name: string }
 }
 
 export const listMessages = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: ThreadRef }) => ({ ref: checkRef(d.ref) }))
+  .validator((d: { ref: ThreadRef }) => ({ ref: checkRef(d.ref) }))
   .handler(async ({ data }): Promise<{ messages: ChatMessage[]; role: Role } | { error: string }> => {
     let ctx;
     try {
@@ -216,7 +216,7 @@ export const listMessages = createServerFn({ method: "POST" })
   });
 
 export const sendMessage = createServerFn({ method: "POST" })
-  .inputValidator((d: { ref: ThreadRef; body: string; attachment?: { path: string; name: string } }) => {
+  .validator((d: { ref: ThreadRef; body: string; attachment?: { path: string; name: string } }) => {
     const att = d.attachment && typeof d.attachment.path === "string" ? { path: d.attachment.path.slice(0, 200), name: String(d.attachment.name || "") } : null;
     const body = String(d.body || "").trim() || (att ? att.name.slice(0, 120) || "Datei" : "");
     if (!body) throw new Error("Leere Nachricht");

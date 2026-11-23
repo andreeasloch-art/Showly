@@ -23,7 +23,7 @@ export interface CheckoutLineInput {
  *  Die Beträge kommen hier vom Browser. Mit Datenbank ist dieser Weg deshalb
  *  gesperrt; dort rechnet createCartCheckout bzw. der Top-Act-Weg selbst. */
 export const createShowlyCheckout = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: {
       lines: CheckoutLineInput[];
       description: string;
@@ -93,7 +93,7 @@ export const createShowlyCheckout = createServerFn({ method: "POST" })
 
 /** Serverseitige Prüfung: Wurde die Checkout-Session wirklich bezahlt? */
 export const verifyShowlySession = createServerFn({ method: "POST" })
-  .inputValidator((data: { sessionId: string; environment: StripeEnv }) => {
+  .validator((data: { sessionId: string; environment: StripeEnv }) => {
     if (!/^[a-zA-Z0-9_-]+$/.test(data.sessionId)) throw new Error("Invalid sessionId");
     return data;
   })
@@ -130,7 +130,7 @@ async function saveDraft(sessionId: string, environment: StripeEnv, snapshot: un
 }
 
 export const createCartCheckout = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (data: {
       shop: import("@/showly/pricing").CartShopLine[];
       bookings: {
@@ -415,7 +415,7 @@ export const createCartCheckout = createServerFn({ method: "POST" })
 
 /** Kasse abgebrochen: reservierte Termine sofort wieder freigeben */
 export const releaseCartHold = createServerFn({ method: "POST" })
-  .inputValidator((d: { holdKey: string }) => {
+  .validator((d: { holdKey: string }) => {
     if (!/^[0-9a-f]{32}$/.test(String(d?.holdKey))) throw new Error("Ungültig");
     return { holdKey: d.holdKey };
   })

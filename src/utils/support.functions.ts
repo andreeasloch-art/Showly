@@ -19,7 +19,7 @@ async function uidOrNull(): Promise<string | null> {
 const TOPICS: SupportTopic[] = ["booking", "payment", "account", "provider", "report", "other"];
 
 export const createTicket = createServerFn({ method: "POST" })
-  .inputValidator((d: { email: string; name?: string; topic: SupportTopic; body: string; hp?: string; captcha?: string }) => {
+  .validator((d: { email: string; name?: string; topic: SupportTopic; body: string; hp?: string; captcha?: string }) => {
     const email = String(d.email || "").trim().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Bitte eine gültige E-Mail-Adresse angeben");
     const body = String(d.body || "").trim().slice(0, 4000);
@@ -66,7 +66,7 @@ export const myTickets = createServerFn({ method: "POST" }).handler(async () => 
 
 /** Fehler aus der App festhalten, damit sie in der Verwaltung sichtbar sind */
 export const logClientError = createServerFn({ method: "POST" })
-  .inputValidator((d: { message: string; stack?: string; url?: string; ua?: string }) => ({
+  .validator((d: { message: string; stack?: string; url?: string; ua?: string }) => ({
     message: String(d.message || "Unbekannter Fehler").slice(0, 1000),
     stack: d.stack ? String(d.stack).slice(0, 8000) : null,
     url: d.url ? String(d.url).slice(0, 500) : null,
@@ -91,7 +91,7 @@ export const logClientError = createServerFn({ method: "POST" })
  * mit Inhalt, Datum und Uhrzeit per E-Mail (dauerhafter Datenträger).
  * ------------------------------------------------------------------------ */
 export const submitWithdrawal = createServerFn({ method: "POST" })
-  .inputValidator((d: { name: string; email: string; contract: string; note?: string; hp?: string }) => {
+  .validator((d: { name: string; email: string; contract: string; note?: string; hp?: string }) => {
     const email = String(d.email || "").trim().slice(0, 200);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Bitte eine gültige E-Mail-Adresse angeben");
     const name = String(d.name || "").trim().slice(0, 120);

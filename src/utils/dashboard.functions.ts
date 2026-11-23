@@ -32,7 +32,7 @@ export function weekStart(dayISO: string): string {
  * Aufruf zählen (Profilseite)
  * ------------------------------------------------------------------------ */
 export const trackView = createServerFn({ method: "POST" })
-  .inputValidator((d: { kind: string; ref: number }) => ({
+  .validator((d: { kind: string; ref: number }) => ({
     kind: d.kind === "baker" || d.kind === "deco" ? d.kind : "artist",
     ref: Math.max(0, Math.round(Number(d.ref)) || 0),
   }))
@@ -183,7 +183,7 @@ export const providerOverview = createServerFn({ method: "POST" }).handler(async
  * Urlaubsmodus: bis zu einem Datum keine neuen Buchungen/Bestellungen
  * ------------------------------------------------------------------------ */
 export const setAwayMode = createServerFn({ method: "POST" })
-  .inputValidator((d: { until: string | null }) => ({ until: d.until && /^\d{4}-\d{2}-\d{2}$/.test(d.until) ? d.until : null }))
+  .validator((d: { until: string | null }) => ({ until: d.until && /^\d{4}-\d{2}-\d{2}$/.test(d.until) ? d.until : null }))
   .handler(async ({ data }): Promise<{ ok: true; blocked: number } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -219,7 +219,7 @@ export const setAwayMode = createServerFn({ method: "POST" })
  * Abrechnung eines Monats als CSV (Übersicht der Gutschriften)
  * ------------------------------------------------------------------------ */
 export const monthStatement = createServerFn({ method: "POST" })
-  .inputValidator((d: { month: string }) => ({ month: /^\d{4}-\d{2}$/.test(d.month) ? d.month : new Date().toISOString().slice(0, 7) }))
+  .validator((d: { month: string }) => ({ month: /^\d{4}-\d{2}$/.test(d.month) ? d.month : new Date().toISOString().slice(0, 7) }))
   .handler(async ({ data }): Promise<{ csv: string; filename: string } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };

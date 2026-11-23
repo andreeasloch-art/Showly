@@ -55,7 +55,7 @@ export interface RegisterInput {
 }
 
 export const registerMedia = createServerFn({ method: "POST" })
-  .inputValidator((d: RegisterInput) => {
+  .validator((d: RegisterInput) => {
     if (typeof d.path !== "string" || d.path.length > 200) throw new Error("Ungültiger Pfad");
     if (d.kind !== "image" && d.kind !== "video") throw new Error("Ungültige Art");
     return {
@@ -153,7 +153,7 @@ export interface MediaInfo {
 
 /** Adressen für Anzeige; nur was die fragende Person sehen darf */
 export const mediaUrls = createServerFn({ method: "POST" })
-  .inputValidator((d: { ids: string[] }) => ({
+  .validator((d: { ids: string[] }) => ({
     ids: Array.from(new Set((d.ids || []).map(String).filter((x) => UUID.test(x)))).slice(0, 80),
   }))
   .handler(async ({ data }): Promise<{ items: MediaInfo[] }> => {
@@ -186,7 +186,7 @@ export const mediaUrls = createServerFn({ method: "POST" })
 
 /* ------------------------------------------------------------------ */
 export const deleteMyMedia = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: string }) => {
+  .validator((d: { id: string }) => {
     if (!UUID.test(String(d.id))) throw new Error("Ungültige Kennung");
     return { id: String(d.id) };
   })
@@ -204,7 +204,7 @@ export const deleteMyMedia = createServerFn({ method: "POST" })
 /* ------------------------------------------------------------------ */
 /** Galerie des eigenen Künstlerprofils speichern (nur eigene Dateien) */
 export const saveArtistMedia = createServerFn({ method: "POST" })
-  .inputValidator((d: { items: { id: string; kind: string; ratio?: number }[] }) => ({
+  .validator((d: { items: { id: string; kind: string; ratio?: number }[] }) => ({
     items: (d.items || [])
       .filter((m) => UUID.test(String(m.id)))
       .slice(0, 8)
@@ -244,7 +244,7 @@ export interface AdminMediaRow {
 }
 
 export const adminMedia = createServerFn({ method: "POST" })
-  .inputValidator((d: { filter: "pending" | "all" }) => ({ filter: d.filter === "all" ? "all" : "pending" }))
+  .validator((d: { filter: "pending" | "all" }) => ({ filter: d.filter === "all" ? "all" : "pending" }))
   .handler(async ({ data }): Promise<{ rows: AdminMediaRow[] } | { error: string }> => {
     const ctx = await userOrNull();
     if (!(await isAdmin(ctx?.user.id))) return { error: "Keine Berechtigung" };
@@ -283,7 +283,7 @@ export const adminMedia = createServerFn({ method: "POST" })
   });
 
 export const adminMediaDecide = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: string; action: "approve" | "reject"; text?: string }) => {
+  .validator((d: { id: string; action: "approve" | "reject"; text?: string }) => {
     if (!UUID.test(String(d.id))) throw new Error("Ungültige Kennung");
     if (d.action !== "approve" && d.action !== "reject") throw new Error("Ungültige Aktion");
     return { id: String(d.id), action: d.action, text: String(d.text || "").trim().slice(0, 1000) };

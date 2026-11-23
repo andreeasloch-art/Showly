@@ -4,7 +4,7 @@
 import { createServerFn } from "@tanstack/react-start";
 
 export const rentalCheck = createServerFn({ method: "POST" })
-  .inputValidator((d: { itemId: number; from: string; to: string; qty: number }) => {
+  .validator((d: { itemId: number; from: string; to: string; qty: number }) => {
     const iso = /^\d{4}-\d{2}-\d{2}$/;
     if (!Number.isInteger(d.itemId) || !iso.test(String(d.from)) || !iso.test(String(d.to))) throw new Error("Ungültig");
     return { itemId: d.itemId, from: d.from, to: d.to, qty: Math.max(1, Math.min(99, Math.round(Number(d.qty)) || 1)) };

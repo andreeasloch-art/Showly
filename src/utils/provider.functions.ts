@@ -87,7 +87,7 @@ function cleanProviderData(kind: ProviderKind, d: Record<string, unknown>) {
 }
 
 export const saveProvider = createServerFn({ method: "POST" })
-  .inputValidator((d: { kind: ProviderKind; data: Record<string, unknown> }) => {
+  .validator((d: { kind: ProviderKind; data: Record<string, unknown> }) => {
     if (d.kind !== "baker" && d.kind !== "deco" && d.kind !== "location") throw new Error("Ungültige Art");
     if (!d.data || typeof d.data !== "object") throw new Error("Angaben fehlen");
     return { kind: d.kind, data: cleanProviderData(d.kind, d.data) };
@@ -157,7 +157,7 @@ export interface OfferInput {
 }
 
 export const saveOffer = createServerFn({ method: "POST" })
-  .inputValidator((d: OfferInput) => {
+  .validator((d: OfferInput) => {
     if (d.kind !== "sweet" && d.kind !== "deco") throw new Error("Ungültige Art");
     const x = d.data || {};
     const data =
@@ -246,7 +246,7 @@ export const saveOffer = createServerFn({ method: "POST" })
   });
 
 export const removeOffer = createServerFn({ method: "POST" })
-  .inputValidator((d: { offerId: number }) => {
+  .validator((d: { offerId: number }) => {
     if (!Number.isInteger(d.offerId)) throw new Error("Ungültiges Angebot");
     return d;
   })
@@ -277,7 +277,7 @@ export const providerInbox = createServerFn({ method: "POST" }).handler(async ()
  *  wird der Zustand festgehalten und die Kaution erstattet, abzüglich eines
  *  begründeten Betrags für Schäden, Reinigung oder Verspätung (AGB § 14). */
 export const shopOrderAction = createServerFn({ method: "POST" })
-  .inputValidator((d: { orderId: number; action: "shipped" | "returned"; keepCents?: number; note?: string }) => {
+  .validator((d: { orderId: number; action: "shipped" | "returned"; keepCents?: number; note?: string }) => {
     if (!Number.isInteger(d.orderId) || (d.action !== "shipped" && d.action !== "returned")) throw new Error("Ungültig");
     return {
       orderId: d.orderId,
@@ -321,7 +321,7 @@ export const shopOrderAction = createServerFn({ method: "POST" })
 
 /** Anbieter beantwortet eine Torten-Anfrage: annehmen (mit Endpreis) oder ablehnen */
 export const respondSweet = createServerFn({ method: "POST" })
-  .inputValidator((d: { requestId: number; accept: boolean; priceCents?: number; note?: string }) => {
+  .validator((d: { requestId: number; accept: boolean; priceCents?: number; note?: string }) => {
     if (!Number.isInteger(d.requestId)) throw new Error("Ungültige Anfrage");
     return {
       requestId: d.requestId,

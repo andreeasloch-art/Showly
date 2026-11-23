@@ -123,7 +123,7 @@ export const adminOverview = createServerFn({ method: "POST" }).handler(
 
 /* ------------------------------------------------------------------ */
 export const adminList = createServerFn({ method: "POST" })
-  .inputValidator((d: { section: AdminSection }) => d)
+  .validator((d: { section: AdminSection }) => d)
   .handler(async ({ data }): Promise<{ json: string } | { error: string }> => {
     if (!(await guard())) return DENIED;
     const rows = await listRows(data.section);
@@ -252,7 +252,7 @@ export type AdminAction =
     };
 
 export const adminAct = createServerFn({ method: "POST" })
-  .inputValidator((d: AdminAction) => {
+  .validator((d: AdminAction) => {
     if (!Number.isInteger(d.id) || d.id <= 0)
       throw new Error("Ungültige Kennung");
     if ("text" in d && d.text !== undefined)
@@ -524,7 +524,7 @@ export const adminRunDaily = createServerFn({ method: "POST" }).handler(async ()
 /* ------------------------------------------------------------------ */
 /** Provision je Kategorie oder Anbieter */
 export const adminFees = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (d: { op: "list" } | { op: "set"; scope: string; ref: string; rate: string | number } | { op: "delete"; id: number }) => d,
   )
   .handler(async ({ data }): Promise<{ rules: { id: number; scope: string; ref: string; rate: number }[]; standard: number } | { error: string }> => {
@@ -564,7 +564,7 @@ export type PromoInfo = {
 };
 
 export const adminPromos = createServerFn({ method: "POST" })
-  .inputValidator(
+  .validator(
     (
       d:
         | { op: "list"; environment: StripeEnv }
@@ -655,7 +655,7 @@ export interface AdminReport {
 }
 
 export const adminReport = createServerFn({ method: "POST" })
-  .inputValidator((d: { from: string; to: string }) => {
+  .validator((d: { from: string; to: string }) => {
     const iso = /^\d{4}-\d{2}-\d{2}$/;
     if (!iso.test(d.from) || !iso.test(d.to)) throw new Error("Ungültiger Zeitraum");
     return d;

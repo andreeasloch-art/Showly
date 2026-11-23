@@ -30,7 +30,7 @@ export type BelegKurz = Pick<
 /** Eigene Belege: als Kunde (Rechnungen, Quittungen, Storno) und als Anbieter
  *  (im eigenen Namen ausgestellt, Provisionsrechnungen, Abrechnungen) */
 export const meineBelege = createServerFn({ method: "POST" })
-  .inputValidator((d: { jahr?: number }) => ({ jahr: Number.isInteger(d?.jahr) ? d.jahr! : null }))
+  .validator((d: { jahr?: number }) => ({ jahr: Number.isInteger(d?.jahr) ? d.jahr! : null }))
   .handler(async ({ data }): Promise<{ belege: BelegKurz[]; abrechnungen: AuszahlungRow[] } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -73,7 +73,7 @@ export const meineBelege = createServerFn({ method: "POST" })
 
 /** Kurz gültiger Link zum PDF bzw. zur E-Rechnung eines eigenen Belegs */
 export const belegLink = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number; xml?: boolean }) => ({ id: Math.trunc(Number(d?.id)) || 0, xml: !!d?.xml }))
+  .validator((d: { id: number; xml?: boolean }) => ({ id: Math.trunc(Number(d?.id)) || 0, xml: !!d?.xml }))
   .handler(async ({ data }): Promise<{ url: string } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -89,7 +89,7 @@ export const belegLink = createServerFn({ method: "POST" })
 
 /** Alle Belege eines Jahres als ZIP (für Anbieter und ihre Steuerberatung) */
 export const belegeZip = createServerFn({ method: "POST" })
-  .inputValidator((d: { jahr: number }) => ({ jahr: Math.min(2100, Math.max(2024, Math.trunc(Number(d?.jahr)) || new Date().getFullYear())) }))
+  .validator((d: { jahr: number }) => ({ jahr: Math.min(2100, Math.max(2024, Math.trunc(Number(d?.jahr)) || new Date().getFullYear())) }))
   .handler(async ({ data }): Promise<{ filename: string; base64: string; anzahl: number } | { error: string }> => {
     const ctx = await me();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -152,7 +152,7 @@ export const steuerdatenLaden = createServerFn({ method: "POST" }).handler(async
 });
 
 export const steuerdatenSpeichern = createServerFn({ method: "POST" })
-  .inputValidator((d: Record<string, unknown>) => ({
+  .validator((d: Record<string, unknown>) => ({
     typ: d["typ"] === "gewerblich" || d["typ"] === "kleinunternehmer" ? (d["typ"] as "gewerblich" | "kleinunternehmer") : ("privat" as const),
     name: s(d["name"], 120),
     firma: s(d["firma"], 160),
@@ -215,7 +215,7 @@ export const steuerdatenSpeichern = createServerFn({ method: "POST" })
 /** Strafgebühr, Schaden oder sonstigen Abzug anlegen (ohne USt); wird mit
  *  der nächsten Auszahlung verrechnet und in der Wochenabrechnung gezeigt */
 export const adminAbzug = createServerFn({ method: "POST" })
-  .inputValidator((d: { anbieter: string; art: string; betragCent: number; grund: string; buchungId?: number }) => ({
+  .validator((d: { anbieter: string; art: string; betragCent: number; grund: string; buchungId?: number }) => ({
     anbieter: s(d?.anbieter, 200),
     art: d?.art === "schaden" || d?.art === "sonstiges" ? d.art : ("strafgebuehr" as const),
     betragCent: Math.min(10_000_000, Math.max(1, Math.round(Number(d?.betragCent)) || 0)),
@@ -246,7 +246,7 @@ export const adminAbzug = createServerFn({ method: "POST" })
 
 /** Buchung (Teilbestellung) ganz oder teilweise stornieren, ggf. mit Stornogebühr */
 export const adminStornieren = createServerFn({ method: "POST" })
-  .inputValidator((d: { buchungId: number; betragCent?: number; grund: string; stornogebuehrCent?: number }) => ({
+  .validator((d: { buchungId: number; betragCent?: number; grund: string; stornogebuehrCent?: number }) => ({
     buchungId: Math.trunc(Number(d?.buchungId)) || 0,
     betragCent: d?.betragCent ? Math.max(1, Math.round(Number(d.betragCent))) : undefined,
     grund: s(d?.grund, 300) || "Storno",
@@ -263,7 +263,7 @@ export const adminStornieren = createServerFn({ method: "POST" })
 
 /** DATEV-Buchungsstapel aller Provisionsrechnungen eines Jahres */
 export const adminDatev = createServerFn({ method: "POST" })
-  .inputValidator((d: { jahr: number }) => ({ jahr: Math.trunc(Number(d?.jahr)) || new Date().getFullYear() }))
+  .validator((d: { jahr: number }) => ({ jahr: Math.trunc(Number(d?.jahr)) || new Date().getFullYear() }))
   .handler(async ({ data }): Promise<{ filename: string; csv: string } | { error: string }> => {
     const ctx = await admin();
     if (!ctx) return { error: "Keine Berechtigung" };
@@ -292,7 +292,7 @@ export const adminDatev = createServerFn({ method: "POST" })
 /** DAC7: Anbieter mit Umsätzen eines Jahres und ihren Meldedaten (Grundlage
  *  für die Meldung an das BZSt bis 31.1. des Folgejahres) */
 export const adminDac7 = createServerFn({ method: "POST" })
-  .inputValidator((d: { jahr: number }) => ({ jahr: Math.trunc(Number(d?.jahr)) || new Date().getFullYear() - 1 }))
+  .validator((d: { jahr: number }) => ({ jahr: Math.trunc(Number(d?.jahr)) || new Date().getFullYear() - 1 }))
   .handler(async ({ data }): Promise<{ filename: string; csv: string } | { error: string }> => {
     const ctx = await admin();
     if (!ctx) return { error: "Keine Berechtigung" };

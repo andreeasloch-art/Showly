@@ -9,7 +9,7 @@ import type { SmsError } from "@/lib/sms.server";
 const phoneIn = (d: { phone?: unknown }) => String(d?.phone ?? "").slice(0, 32);
 
 export const sendSmsCode = createServerFn({ method: "POST" })
-  .inputValidator((d: { phone: string; lang?: string; captcha?: string }) => ({
+  .validator((d: { phone: string; lang?: string; captcha?: string }) => ({
     phone: phoneIn(d),
     lang: d?.lang === "en" || d?.lang === "es" ? d.lang : "de",
     captcha: typeof d?.captcha === "string" ? d.captcha.slice(0, 4096) : undefined,
@@ -23,7 +23,7 @@ export const sendSmsCode = createServerFn({ method: "POST" })
   });
 
 export const checkSmsCode = createServerFn({ method: "POST" })
-  .inputValidator((d: { phone: string; code: string }) => ({
+  .validator((d: { phone: string; code: string }) => ({
     phone: phoneIn(d),
     code: String(d?.code ?? "").slice(0, 12),
   }))

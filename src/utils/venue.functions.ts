@@ -79,7 +79,7 @@ export const myVenueBookings = createServerFn({ method: "POST" }).handler(async 
 
 /** Anbieter sagt eine Anfrage zu oder ab. Absage: alles zurück an den Kunden. */
 export const respondVenue = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number; accept: boolean }) => ({ id: Math.round(Number(d.id)), accept: d.accept === true }))
+  .validator((d: { id: number; accept: boolean }) => ({ id: Math.round(Number(d.id)), accept: d.accept === true }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await ctxOrNull();
     if (!ctx) return { error: "Bitte melde dich an" };
@@ -138,7 +138,7 @@ export const respondVenue = createServerFn({ method: "POST" })
 
 /** Anbieter meldet nach dem Event einen Schaden: die Kaution bleibt gehalten, Showly prüft */
 export const reportVenueDamage = createServerFn({ method: "POST" })
-  .inputValidator((d: { id: number; text: string }) => ({ id: Math.round(Number(d.id)), text: String(d.text || "").slice(0, 1500) }))
+  .validator((d: { id: number; text: string }) => ({ id: Math.round(Number(d.id)), text: String(d.text || "").slice(0, 1500) }))
   .handler(async ({ data }): Promise<{ ok: true } | { error: string }> => {
     const ctx = await ctxOrNull();
     if (!ctx) return { error: "Bitte melde dich an" };

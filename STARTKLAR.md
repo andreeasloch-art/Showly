@@ -21,10 +21,21 @@ Prüfen jederzeit unter https://showly-events.lovable.app/api/status
 Noch nicht live. Damit sie wirken:
 
 1. Zweig in den Hauptzweig übernehmen, dann in Lovable **Veröffentlichen**.
-2. **Migration 0029** einspielen: Lovable → Cloud → SQL-Editor, Inhalt von
-   `supabase/migrations/0029_schreibrechte_schaerfen.sql` einfügen, ausführen.
+2. **Migrationen 0029 und 0030** einspielen: Lovable → Cloud → SQL-Editor,
+   nacheinander den Inhalt von
+   `supabase/migrations/0029_schreibrechte_schaerfen.sql` und
+   `supabase/migrations/0030_datensicherung.sql` einfügen, jeweils ausführen.
    Erscheint der Hinweis „doppelte Nummern“, sag Bescheid.
-3. Prüfen: `https://showly-events.lovable.app/rechtliches/datenschutz` leitet
+3. **Warnungen per Mail:** sobald Resend eingerichtet ist, kommen Warnungen an
+   alle Adressen in `admin_emails`. Weitere Empfänger: in Lovable unter Secrets
+   `SHOWLY_ALERT_EMAIL` (mehrere mit Komma).
+4. **Ausfallwächter:** läuft auf GitHub alle 30 Minuten, sobald der Zweig im
+   Hauptzweig ist. Mail bei Ausfall: GitHub → Settings → Notifications →
+   Actions → „Send notifications for failed workflows only“ einschalten.
+5. **Datensicherung:** jeden Montag automatisch; Anleitung zum Zurückspielen in
+   `docs/datensicherung.md`. Einmal im Monat in der Verwaltung zusätzlich
+   herunterladen und verschlüsselt ablegen.
+6. Prüfen: `https://showly-events.lovable.app/rechtliches/datenschutz` leitet
    auf die Datenschutzerklärung weiter.
 
 Rückweg: Der Stand davor ist Commit `b7836da` (Lovable-Versionsverlauf).

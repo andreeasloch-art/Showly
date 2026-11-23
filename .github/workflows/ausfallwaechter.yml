@@ -1,0 +1,44 @@
+# Ausfallwächter: prüft alle 30 Minuten, ob Showly erreichbar ist und die
+# Datenbank antwortet (/api/status liefert "ok": true).
+#
+# Schlägt die Prüfung dreimal hintereinander fehl, wird dieser Lauf rot, und
+# GitHub schickt eine Mail an das Konto, das diese Datei zuletzt geändert hat
+# (GitHub → Settings → Notifications → Actions: „Failed workflows only“).
+# Eine ausgefallene Seite kann sich nicht selbst melden, deshalb läuft das
+# hier außerhalb von Lovable.
+#
+# Andere Adresse (z. B. nach dem Umzug auf showly.eu): unter Settings →
+# Secrets and variables → Actions → Variables die Variable STATUS_URL setzen.
+# Hinweis: GitHub pausiert Zeitpläne in öffentlichen Repositories nach 60
+# Tagen ohne Commit; dann hier unter Actions wieder einschalten.
+name: Ausfallwächter
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Showly erreichbar?
+        env:
+          URL: ${{ vars.STATUS_URL || 'https://showly-events.lovable.app/api/status' }}
+        run: |
+          for i in 1 2 3; do
+            body=$(curl -sS -m 20 -w '\n%{http_code}' "$URL" || true)
+            code=$(echo "$body" | tail -n1)
+            if [ "$code" = "200" ] && echo "$body" | grep -q '"ok":true'; then
+              echo "Showly läuft: $(echo "$body" | head -n1)"
+              exit 0
+            fi
+            echo "Versuch $i: HTTP $code"
+            sleep 30
+          done
+          echo "::error::Showly antwortet nicht richtig ($URL). Antwort: $(echo "$body" | head -c 300)"
+          exit 1

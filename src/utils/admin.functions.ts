@@ -471,43 +471,16 @@ export const adminExport = createServerFn({ method: "POST" }).handler(
   async (): Promise<{ json: string } | { error: string }> => {
     if (!(await guard())) return DENIED;
     await audit("export", null);
-    const a = adminClient();
-    const tables = [
-      "profiles",
-      "artists",
-      "availability",
-      "bookings",
-      "booking_codes",
-      "penalties",
-      "vouchers",
-      "payouts",
-      "payout_accounts",
-      "sweet_requests",
-      "shop_orders",
-      "providers",
-      "provider_offers",
-      "messages",
-      "reviews",
-      "posts",
-      "post_comments",
-      "post_likes",
-      "post_artists",
-      "reports",
-      "blocks",
-      "support_tickets",
-      "verifications",
-    ] as const;
-    const out: Record<string, unknown[]> = {};
-    for (const t of tables) {
-      const { data } = await a.from(t).select("*").limit(10000);
-      out[t] = data || [];
+    /* Vollständige Sicherung: alle Tabellen, seitenweise, samt Konten.
+       Früher nur 23 Tabellen und höchstens 1000 Zeilen je Tabelle. Dasselbe
+       Format wie die wöchentliche Sicherung; zurückspielen mit
+       scripts/sicherung/wiederherstellen.mjs (docs/datensicherung.md). */
+    try {
+      const { collectBackup } = await import("@/lib/backup.server");
+      return { json: JSON.stringify(await collectBackup()) };
+    } catch (e) {
+      return { error: "Sicherung fehlgeschlagen: " + (e instanceof Error ? e.message : String(e)).slice(0, 300) };
     }
-    return {
-      json: JSON.stringify({
-        exportedAt: new Date().toISOString(),
-        tables: out,
-      }),
-    };
   },
 );
 

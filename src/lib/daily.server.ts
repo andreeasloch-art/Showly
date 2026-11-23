@@ -22,6 +22,8 @@ export interface DailyResult {
   calendars: { ok: number; failed: number };
   mails: { reminders: number; reviews: number; returns: number };
   fair: { deposits: number; reviews: number; escalated: number; reminders: number; checkins: number };
+  /** Auffälligkeiten aus der täglichen Prüfung (alert.server.ts); leer = alles gut */
+  warnings: string[];
 }
 
 export async function runDaily(): Promise<DailyResult> {
@@ -116,5 +118,9 @@ export async function runDaily(): Promise<DailyResult> {
     .delete()
     .lt("created_at", new Date(Date.now() - 30 * 86400000).toISOString())
     .then(undefined, () => null);
-  return { lapsed, reminded, payouts, calendars, mails, fair };
+  const { healthCheck } = await import("./alert.server");
+  const warnings = await healthCheck({ payoutsFailed: payouts.failed, calendarsFailed: calendars.failed }).catch((e) => [
+    "Tägliche Prüfung fehlgeschlagen: " + String(e instanceof Error ? e.message : e),
+  ]);
+  return { lapsed, reminded, payouts, calendars, mails, fair, warnings };
 }
